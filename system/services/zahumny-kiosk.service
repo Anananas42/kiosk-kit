@@ -1,0 +1,27 @@
+[Unit]
+Description=Zahumny Kiosk App
+After=network.target
+
+[Service]
+Type=simple
+User=kiosk
+Group=kiosk
+WorkingDirectory=/opt/zahumny-kiosk
+ExecStart=/usr/bin/node packages/server/dist/index.js
+EnvironmentFile=/opt/zahumny-kiosk/.env
+Restart=always
+RestartSec=5
+
+# Sandboxing
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/zahumny-kiosk/data
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

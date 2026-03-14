@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ensureKc, parsePrice, formatPrice, getDeliveryDateLabel } from '@zahumny/shared';
 import type { CatalogCategory, CatalogItem } from '@zahumny/shared';
-import ContextBar from '../components/ContextBar.js';
+import ScreenHeader from '../components/ScreenHeader.js';
 import Tile from '../components/Tile.js';
 
 const QUANTITIES = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -38,42 +38,47 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
 
   return (
     <div className="screen">
-      <ContextBar buyer={buyer} category={category.name} item={item.name} />
+      <ScreenHeader
+        title="Potvrďte záznam"
+        onBack={onBack}
+        backLabel="Zpět na položky"
+        crumbs={[
+          { label: 'Kupující', value: `#${buyer}` },
+          { label: 'Kategorie', value: category.name },
+        ]}
+      />
       <div className="screen-body">
-        <button className="btn-back" onClick={onBack} type="button">
-          &larr; Zpět na položky
-        </button>
-
-        <div className={`confirm-card${isPastry ? ' confirm-card--pastry' : ''}`}>
-          <div className="confirm-card__name">{item.name}</div>
-          <div className="confirm-card__meta">
+        {/* Item identity — big and prominent */}
+        <div className={`confirm-hero${isPastry ? ' confirm-hero--pastry' : ''}`}>
+          <div className="confirm-hero__name">{item.name}</div>
+          <div className="confirm-hero__meta">
             {item.quantity && !isPastry && <span>{item.quantity}</span>}
             {unitPrice > 0 && <span>{ensureKc(item.price)}{isPastry ? '/ks' : ''}</span>}
           </div>
         </div>
 
+        {/* Pastry: inline quantity picker */}
         {isPastry && (
-          <>
-            <div className="confirm-qty">
-              <div className="confirm-qty__label">Počet kusů</div>
-              <div className="tile-grid tile-grid--quantity">
-                {QUANTITIES.map((q) => (
-                  <Tile
-                    key={q}
-                    label={String(q)}
-                    variant={q === qty ? 'add' : 'neutral'}
-                    onClick={() => setQty(q)}
-                  />
-                ))}
-              </div>
+          <div className="confirm-qty">
+            <div className="confirm-qty__label">Počet kusů</div>
+            <div className="tile-grid tile-grid--quantity">
+              {QUANTITIES.map((q) => (
+                <Tile
+                  key={q}
+                  label={String(q)}
+                  variant={q === qty ? 'add' : 'neutral'}
+                  onClick={() => setQty(q)}
+                />
+              ))}
             </div>
-            {deliveryDate && (
-              <div className="delivery-notice">
-                Dodání: <strong>{deliveryDate}</strong>
-                {totalPrice > 0 && <> &middot; Celkem: <strong>{priceLabel}</strong></>}
-              </div>
-            )}
-          </>
+          </div>
+        )}
+
+        {deliveryDate && (
+          <div className="delivery-notice">
+            Dodání: <strong>{deliveryDate}</strong>
+            {totalPrice > 0 && <> &middot; Celkem: <strong>{priceLabel}</strong></>}
+          </div>
         )}
 
         {error && (
@@ -83,6 +88,7 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
           </div>
         )}
 
+        {/* Actions pinned to bottom */}
         {isSending ? (
           <div className="sending-overlay">Odesílám&hellip;</div>
         ) : (

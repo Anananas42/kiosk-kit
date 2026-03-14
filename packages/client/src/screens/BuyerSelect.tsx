@@ -1,5 +1,6 @@
 import type { Apartment } from '@zahumny/shared';
 import Tile from '../components/Tile.js';
+import ScreenHeader from '../components/ScreenHeader.js';
 
 interface BuyerSelectProps {
   apartments: Apartment[];
@@ -10,8 +11,8 @@ interface BuyerSelectProps {
 export default function BuyerSelect({ apartments, onSelect, error }: BuyerSelectProps) {
   return (
     <div className="screen">
+      <ScreenHeader title="Vyberte apartmán" />
       <div className="screen-body">
-        <div className="screen-title">Vyber číslo apartmánu</div>
         {apartments.length === 0 ? (
           <div className="empty-state">
             {error ? 'Nelze načíst data' : 'Načítám\u2026'}

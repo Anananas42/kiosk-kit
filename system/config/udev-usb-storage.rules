@@ -1,0 +1,2 @@
+# Block USB mass storage devices
+ACTION=="add", SUBSYSTEMS=="usb", DRIVERS=="usb-storage", ATTR{authorized}="0"

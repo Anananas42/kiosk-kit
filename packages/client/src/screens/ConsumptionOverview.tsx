@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { parsePrice, type EvidenceRow } from '@zahumny/shared';
 import { fetchOverview } from '../api.js';
+import ScreenHeader from '../components/ScreenHeader.js';
 
 interface AggregatedItem {
   added: number;
@@ -67,11 +68,12 @@ export default function ConsumptionOverview({ buyer, onBack }: ConsumptionOvervi
 
   return (
     <div className="screen">
-      <div className="overview-header">
-        <button className="btn-back" onClick={onBack} type="button">← Zpět</button>
-        <span className="screen-title">Konzumace kupující #{buyer}</span>
-      </div>
-      <div className="screen-body">
+      <ScreenHeader
+        title={`Konzumace #${buyer}`}
+        onBack={onBack}
+        backLabel="Zpět"
+      />
+      <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
         {records === null && !error && (

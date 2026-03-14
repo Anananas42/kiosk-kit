@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PASTRY_CATEGORIES, getDeliveryDate, formatDateCs, type EvidenceRow } from '@zahumny/shared';
 import { fetchOverview } from '../api.js';
+import ScreenHeader from '../components/ScreenHeader.js';
 
 function aggregatePastryOrders(records: EvidenceRow[], buyer: number): Record<string, Record<string, number>> {
   const dayMap: Record<string, Record<string, number>> = {};
@@ -41,11 +42,12 @@ export default function PastryOrdersOverview({ buyer, onBack }: PastryOrdersOver
 
   return (
     <div className="screen">
-      <div className="overview-header">
-        <button className="btn-back" onClick={onBack} type="button">← Zpět</button>
-        <span className="screen-title">Objednávky pečiva – kupující #{buyer}</span>
-      </div>
-      <div className="screen-body">
+      <ScreenHeader
+        title={`Objednávky pečiva #${buyer}`}
+        onBack={onBack}
+        backLabel="Zpět"
+      />
+      <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
         {records === null && !error && (

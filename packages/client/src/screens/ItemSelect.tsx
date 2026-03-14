@@ -1,7 +1,7 @@
 import type { CatalogCategory, CatalogItem } from '@zahumny/shared';
 import { ensureKc } from '@zahumny/shared';
 import Tile from '../components/Tile.js';
-import ContextBar from '../components/ContextBar.js';
+import ScreenHeader from '../components/ScreenHeader.js';
 
 interface ItemSelectProps {
   buyer: number;
@@ -20,12 +20,16 @@ function itemSubtitle(item: CatalogItem): string {
 export default function ItemSelect({ buyer, category, onSelect, onBack }: ItemSelectProps) {
   return (
     <div className="screen">
-      <ContextBar buyer={buyer} category={category.name} />
+      <ScreenHeader
+        title="Vyberte položku"
+        onBack={onBack}
+        backLabel="Zpět na kategorie"
+        crumbs={[
+          { label: 'Kupující', value: `#${buyer}` },
+          { label: 'Kategorie', value: category.name },
+        ]}
+      />
       <div className="screen-body">
-        <button className="btn-back" onClick={onBack} type="button">
-          &larr; Zpět na kategorie
-        </button>
-        <div className="screen-title">Vyberte položku</div>
         <div className="tile-grid tile-grid--items">
           {category.items.map((item) => (
             <Tile

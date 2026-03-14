@@ -1,6 +1,6 @@
 import type { CatalogCategory } from '@zahumny/shared';
 import Tile from '../components/Tile.js';
-import ContextBar from '../components/ContextBar.js';
+import ScreenHeader from '../components/ScreenHeader.js';
 
 interface CategorySelectProps {
   buyer: number;
@@ -14,12 +14,13 @@ interface CategorySelectProps {
 export default function CategorySelect({ buyer, catalog, onSelect, onOverview, onPastryOrders, onMainMenu }: CategorySelectProps) {
   return (
     <div className="screen">
-      <ContextBar buyer={buyer} />
+      <ScreenHeader
+        title="Vyberte kategorii"
+        onBack={onMainMenu}
+        backLabel="Změnit kupujícího"
+        crumbs={[{ label: 'Kupující', value: `#${buyer}` }]}
+      />
       <div className="screen-body">
-        <button className="btn-back" onClick={onMainMenu} type="button">
-          &larr; Změnit kupujícího
-        </button>
-        <div className="screen-title">Vyberte kategorii</div>
         <div className="tile-grid tile-grid--categories">
           {catalog.map((cat) => (
             <Tile
