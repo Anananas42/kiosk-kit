@@ -5,6 +5,7 @@ import type {
   RecordRequest,
   RecordResponse,
   ApartmentsResponse,
+  ItemCountResponse,
 } from '@zahumny/shared';
 
 export async function fetchCatalog(): Promise<CatalogCategory[]> {
@@ -24,6 +25,11 @@ export async function fetchHealth(): Promise<HealthResponse> {
 
 export async function fetchOverview(): Promise<OverviewResponse> {
   const res = await fetch('/api/overview');
+  return res.json();
+}
+
+export async function fetchItemCount(buyer: number, item: string): Promise<ItemCountResponse> {
+  const res = await fetch(`/api/item-count?buyer=${buyer}&item=${encodeURIComponent(item)}`);
   return res.json();
 }
 

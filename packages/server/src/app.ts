@@ -8,6 +8,7 @@ import { catalogRoute } from './routes/catalog.js';
 import { apartmentsRoute } from './routes/apartments.js';
 import { recordRoute } from './routes/record.js';
 import { overviewRoute } from './routes/overview.js';
+import { itemCountRoute } from './routes/item-count.js';
 
 export function createApp(
   cache: CacheStore,
@@ -29,6 +30,7 @@ export function createApp(
   app.route('/api/apartments', apartmentsRoute(cache));
   app.route('/api/record', recordRoute(queue, setOnline));
   app.route('/api/overview', overviewRoute(queue));
+  app.route('/api/item-count', itemCountRoute(queue));
 
   // Serve static client files in production
   app.use('/*', serveStatic({ root: './packages/client/dist' }));

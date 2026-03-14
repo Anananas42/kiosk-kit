@@ -87,6 +87,7 @@ export default function App() {
   }, [pastryCategories]);
 
   const handleItemSelect = useCallback((item: CatalogItem) => {
+    setConfirmError(null);
     setState((s) => ({ ...s, item, screen: 'confirm' }));
   }, []);
 
@@ -96,6 +97,7 @@ export default function App() {
 
   const handleRepeat = useCallback(() => {
     if (!lastOrder) return;
+    setConfirmError(null);
     setState({
       screen: 'confirm',
       buyer: lastOrder.buyer,

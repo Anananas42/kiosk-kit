@@ -59,3 +59,7 @@ export interface OverviewResponse {
 export interface ApartmentsResponse {
   apartments: Apartment[];
 }
+
+export interface ItemCountResponse {
+  count: number;
+}
