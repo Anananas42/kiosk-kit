@@ -228,7 +228,7 @@ fi
 
 info "Disabling unnecessary services"
 
-for svc in bluetooth cups avahi-daemon; do
+for svc in bluetooth cups; do
     if systemctl is-enabled "$svc" &>/dev/null 2>&1; then
         systemctl disable --now "$svc" 2>/dev/null || true
     fi
