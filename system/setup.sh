@@ -135,6 +135,7 @@ if [ "$(tty)" = "/dev/tty1" ]; then
         sleep 2
     done
 
+    export WLR_NO_HARDWARE_CURSORS=1
     export XCURSOR_THEME=emptycursor
     export XCURSOR_SIZE=1
     exec cage -- chromium \
