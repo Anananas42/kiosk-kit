@@ -333,13 +333,14 @@ body {
 }
 
 .tile--overview {
-  background: var(--color-surface);
-  color: var(--color-muted);
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
 }
 
 .tile--overview:hover {
-  background: #f8fafc;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 /* Font sizing: scale with container */
