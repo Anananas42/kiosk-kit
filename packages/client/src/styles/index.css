@@ -81,6 +81,25 @@ body {
   flex-shrink: 0;
 }
 
+/* ===== Success flash ===== */
+.success-flash {
+  background: #d4edda;
+  border-bottom: 2px solid var(--color-add);
+  color: #155724;
+  text-align: center;
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  animation: flash-slide-down 1.5s ease-out forwards;
+}
+
+@keyframes flash-slide-down {
+  0% { opacity: 1; transform: translateY(0); }
+  70% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-100%); }
+}
+
 /* ===== Context bar ===== */
 .context-bar {
   background: var(--color-context-bg);
@@ -102,7 +121,7 @@ body {
 }
 
 .context-bar__label {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   opacity: 0.7;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -111,12 +130,12 @@ body {
 
 .context-bar__value {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.15rem;
 }
 
 /* ===== Screen title ===== */
 .screen-title {
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--color-text);
   margin-bottom: 4px;
@@ -128,7 +147,7 @@ body {
   gap: 12px;
   flex: 1;
   min-height: 0;
-  align-content: stretch;
+  align-content: start;
 }
 
 .tile-grid--buyers {
@@ -147,69 +166,8 @@ body {
   grid-template-columns: repeat(4, 1fr);
 }
 
-@media (max-width: 700px) {
-  :root {
-    --tile-font: 1.5rem;
-  }
-
-  .tile-grid--buyers {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .tile-grid--items {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .screen-body {
-    padding: 10px;
-    gap: 8px;
-  }
-
-  .tile-grid {
-    gap: 8px;
-  }
-
-  .tile {
-    padding: 10px 6px;
-  }
-
-  .context-bar__item {
-    padding: 8px 10px;
-  }
-
-  .screen-title {
-    font-size: 1.4rem;
-    margin-bottom: 2px;
-  }
-
-  .tile--category {
-    font-size: 1.3rem;
-  }
-
-  .tile--item {
-    font-size: 1.15rem;
-  }
-
-  .context-bar__value {
-    font-size: 1.1rem;
-  }
-
-  .btn-confirm {
-    font-size: 1.8rem;
-  }
-
-  .btn-confirm--cancel {
-    font-size: 1.4rem;
-  }
-
-  .confirm-row__value {
-    font-size: 1.4rem;
-  }
-
-  .overview-row {
-    grid-template-columns: 2fr 40px 1fr 1fr 1fr;
-    padding: 10px 12px;
-    font-size: 1rem;
-  }
+.tile-grid--quantity {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 /* ===== Tile ===== */
@@ -224,13 +182,14 @@ body {
   justify-content: center;
   gap: 6px;
   padding: 14px 10px;
-  font-size: var(--tile-font);
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
   text-align: center;
   line-height: 1.2;
   -webkit-tap-highlight-color: transparent;
+  container-type: inline-size;
+  overflow: hidden;
 }
 
 .tile:active {
@@ -272,7 +231,6 @@ body {
 .tile--category {
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 1.1rem;
 }
 
 .tile--category:hover {
@@ -283,7 +241,6 @@ body {
 .tile--item {
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 1rem;
   min-height: 80px;
 }
 
@@ -296,29 +253,27 @@ body {
   background: #6D3C00;
   color: #fff;
   border-color: #6D3C00;
-  font-size: 1.1rem;
-  border-style: dashed;
+  border-style: solid;
   border-width: 3px;
-  opacity: 0.85;
+  opacity: 1;
 }
 
 .tile--overview:hover {
   background: #5e3400;
   border-color: #5e3400;
-  opacity: 1;
 }
 
 .tile-icon {
-  font-size: 2rem;
+  font-size: calc(var(--tile-font-cqi, 5) * 1.6 * 1cqi);
   line-height: 1;
 }
 
 .tile-label {
-  font-size: inherit;
+  font-size: calc(var(--tile-font-cqi, 5) * 1cqi);
 }
 
 .tile-subtitle {
-  font-size: 0.75rem;
+  font-size: calc(var(--tile-font-cqi, 5) * 0.55 * 1cqi);
   font-weight: 500;
   opacity: 0.7;
   margin-top: 2px;
@@ -327,26 +282,34 @@ body {
 /* ===== Operation tiles (full height half-screen) ===== */
 .tile--operation {
   min-height: 200px;
-  font-size: 3rem;
-}
-
-.tile--operation .tile-icon {
-  font-size: 4rem;
 }
 
 .tile--operation .tile-label {
-  font-size: 1.4rem;
+  font-size: calc(var(--tile-font-cqi, 5) * 0.8 * 1cqi);
 }
 
 /* ===== Confirm screen ===== */
 .confirm-summary {
-  background: var(--color-surface);
+  background: #fef3e0;
   border: 2px solid var(--color-border);
+  border-top: 4px solid var(--color-add);
   border-radius: var(--radius);
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.confirm-summary__item-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.confirm-summary__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .confirm-row {
@@ -364,14 +327,14 @@ body {
 
 .confirm-row__label {
   color: var(--color-muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .confirm-row__value {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   font-weight: 700;
 }
 
@@ -384,37 +347,21 @@ body {
 }
 
 .confirm-actions {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin-top: 8px;
-  flex: 1;
-  min-height: 0;
-  align-content: stretch;
-}
-
-.confirm-actions--three {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
-}
-
-.confirm-actions--three .btn-confirm--cancel {
-  grid-column: 1 / -1;
-}
-
-.confirm-actions--four {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
 }
 
 .btn-confirm {
   padding: 20px;
   border: none;
   border-radius: var(--radius);
-  font-size: 1.6rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.08s ease, opacity 0.1s ease;
   color: #fff;
+  font-size: 1.3rem;
 }
 
 .btn-confirm:active {
@@ -424,6 +371,8 @@ body {
 
 .btn-confirm--add {
   background: var(--color-add);
+  min-height: 100px;
+  font-size: 1.5rem;
 }
 
 .btn-confirm--add:hover {
@@ -431,21 +380,24 @@ body {
 }
 
 .btn-confirm--remove {
-  background: var(--color-remove);
+  background: transparent;
+  color: var(--color-remove);
+  border: 2px solid var(--color-remove);
+  padding: 14px 20px;
+  font-size: 1.1rem;
+  min-height: auto;
 }
 
 .btn-confirm--remove:hover {
-  background: var(--color-remove-hover);
+  background: #fde8e8;
 }
 
 .btn-confirm--cancel {
   background: var(--color-neutral);
-  font-size: 1.2rem;
 }
 
 .btn-confirm--overview {
   background: #6D3C00;
-  font-size: 1.1rem;
 }
 
 .btn-confirm--overview:hover {
@@ -495,7 +447,7 @@ body {
 
 .overview-row {
   display: grid;
-  grid-template-columns: 2fr 50px 90px 90px 90px;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
   align-items: center;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -590,8 +542,8 @@ body {
   background: none;
   border: 2px solid var(--color-border);
   border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 1rem;
+  padding: 12px 20px;
+  font-size: 1.1rem;
   cursor: pointer;
   color: var(--color-muted);
   font-weight: 600;
@@ -696,4 +648,70 @@ body {
   padding: 40px;
   font-size: 1.2rem;
   color: var(--color-muted);
+}
+
+/* ===== Empty state ===== */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  font-size: 1.2rem;
+  color: var(--color-muted);
+}
+
+/* ===== Landscape tablet (1000x720) ===== */
+@media (min-width: 701px) and (max-height: 800px) {
+  .screen-body { padding: 12px; gap: 10px; }
+  .tile-grid { gap: 8px; }
+  .tile { min-height: 70px; padding: 10px 8px; }
+}
+
+/* ===== Small screen (7" tablet) ===== */
+@media (max-width: 700px) {
+  .tile-grid--buyers {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tile-grid--categories {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tile-grid--items {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .screen-body {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .tile-grid {
+    gap: 6px;
+  }
+
+  .context-bar__item {
+    padding: 8px 10px;
+  }
+
+  .screen-title {
+    font-size: 1.6rem;
+    margin-bottom: 2px;
+  }
+
+  .context-bar__value {
+    font-size: 1.2rem;
+  }
+
+  .confirm-row__value {
+    font-size: 1.5rem;
+  }
+
+  .overview-row {
+    grid-template-columns: 2fr 40px 1fr 1fr 1fr;
+    padding: 10px 12px;
+    font-size: 1.1rem;
+  }
+
+  .tile {
+    padding: 8px 4px;
+  }
 }
