@@ -9,12 +9,13 @@ import OfflineBanner from './components/OfflineBanner.js';
 import SuccessFlash from './components/SuccessFlash.js';
 import BuyerSelect from './screens/BuyerSelect.js';
 import CategorySelect from './screens/CategorySelect.js';
+import PastryCategorySelect from './screens/PastryCategorySelect.js';
 import ItemSelect from './screens/ItemSelect.js';
 import Confirm from './screens/Confirm.js';
 import ConsumptionOverview from './screens/ConsumptionOverview.js';
 import PastryOrdersOverview from './screens/PastryOrdersOverview.js';
 
-type Screen = 'buyer' | 'category' | 'item' | 'confirm' | 'overview' | 'pastry-orders';
+type Screen = 'buyer' | 'category' | 'pastry-category' | 'item' | 'confirm' | 'overview' | 'pastry-orders';
 
 interface AppState {
   screen: Screen;
@@ -49,9 +50,10 @@ export default function App() {
   const isOffline = useHealth();
   const { catalog, apartments, reload, error: catalogError } = useCatalog();
 
+  const pastryCategories = catalog.filter((cat) => PASTRY_CATEGORIES.has(cat.name));
+
   useEffect(() => { startFlushTimer(); }, []);
 
-  // Clear repeat button after timeout
   useEffect(() => {
     if (!lastOrder) return;
     clearTimeout(repeatTimer.current);
@@ -74,6 +76,15 @@ export default function App() {
   const handleCategorySelect = useCallback((category: CatalogCategory) => {
     setState((s) => ({ ...s, category, screen: 'item' }));
   }, []);
+
+  const handlePastryEntry = useCallback(() => {
+    // If only one pastry category, skip straight to items
+    if (pastryCategories.length === 1) {
+      setState((s) => ({ ...s, category: pastryCategories[0], screen: 'item' }));
+    } else {
+      setState((s) => ({ ...s, screen: 'pastry-category' }));
+    }
+  }, [pastryCategories]);
 
   const handleItemSelect = useCallback((item: CatalogItem) => {
     setState((s) => ({ ...s, item, screen: 'confirm' }));
@@ -128,7 +139,6 @@ export default function App() {
       return;
     }
 
-    // Synchronous for storno — needs server-side balance validation
     setConfirmError(null);
     setIsSending(true);
     try {
@@ -178,8 +188,18 @@ export default function App() {
           catalog={catalog}
           onSelect={handleCategorySelect}
           onOverview={() => setState((s) => ({ ...s, screen: 'overview' }))}
-          onPastryOrders={() => setState((s) => ({ ...s, screen: 'pastry-orders' }))}
+          onPastry={handlePastryEntry}
           onMainMenu={reset}
+        />
+      )}
+
+      {state.screen === 'pastry-category' && state.buyer !== null && (
+        <PastryCategorySelect
+          buyer={state.buyer}
+          categories={pastryCategories}
+          onSelect={handleCategorySelect}
+          onViewOrders={() => setState((s) => ({ ...s, screen: 'pastry-orders' }))}
+          onBack={() => setState((s) => ({ ...s, screen: 'category' }))}
         />
       )}
 
@@ -216,7 +236,7 @@ export default function App() {
       {state.screen === 'pastry-orders' && state.buyer !== null && (
         <PastryOrdersOverview
           buyer={state.buyer}
-          onBack={() => setState((s) => ({ ...s, screen: 'category' }))}
+          onBack={() => setState((s) => ({ ...s, screen: state.category ? 'pastry-category' as Screen : 'category' }))}
         />
       )}
     </div>

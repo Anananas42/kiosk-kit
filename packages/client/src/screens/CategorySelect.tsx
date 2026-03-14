@@ -1,4 +1,4 @@
-import type { CatalogCategory } from '@zahumny/shared';
+import { PASTRY_CATEGORIES, type CatalogCategory } from '@zahumny/shared';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
@@ -7,11 +7,13 @@ interface CategorySelectProps {
   catalog: CatalogCategory[];
   onSelect: (category: CatalogCategory) => void;
   onOverview: () => void;
-  onPastryOrders: () => void;
+  onPastry: () => void;
   onMainMenu: () => void;
 }
 
-export default function CategorySelect({ buyer, catalog, onSelect, onOverview, onPastryOrders, onMainMenu }: CategorySelectProps) {
+export default function CategorySelect({ buyer, catalog, onSelect, onOverview, onPastry, onMainMenu }: CategorySelectProps) {
+  const mainCategories = catalog.filter((cat) => !PASTRY_CATEGORIES.has(cat.name));
+
   return (
     <div className="screen">
       <ScreenHeader
@@ -22,7 +24,7 @@ export default function CategorySelect({ buyer, catalog, onSelect, onOverview, o
       />
       <div className="screen-body">
         <div className="tile-grid tile-grid--categories">
-          {catalog.map((cat) => (
+          {mainCategories.map((cat) => (
             <Tile
               key={cat.id}
               label={cat.name}
@@ -32,7 +34,7 @@ export default function CategorySelect({ buyer, catalog, onSelect, onOverview, o
           ))}
         </div>
         <div className="category-footer">
-          <Tile label="Objednávky pečiva" icon="🥐" variant="overview" onClick={onPastryOrders} />
+          <Tile label="Objednat pečivo" icon="🥐" variant="overview" onClick={onPastry} />
           <Tile label="Přehled konzumace" icon="📊" variant="overview" onClick={onOverview} />
         </div>
       </div>
