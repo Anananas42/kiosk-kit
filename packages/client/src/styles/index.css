@@ -85,13 +85,18 @@ body {
 }
 
 .offline-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
   background: var(--color-offline-bg);
-  border-bottom: 2px solid var(--color-offline-border);
+  border: 2px solid var(--color-offline-border);
   color: var(--color-offline-text);
-  text-align: center;
-  padding: 8px 12px;
-  font-size: 1rem;
+  padding: 12px 20px;
+  font-size: 1.1rem;
   font-weight: 600;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 200;
 }
 
 .success-flash {
@@ -132,7 +137,7 @@ body {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  min-height: 64px;
+  min-height: 96px;
 }
 
 .screen-header__back {
@@ -140,8 +145,8 @@ body {
   background: rgba(255,255,255,0.08);
   border: none;
   border-right: 1px solid rgba(255,255,255,0.12);
-  padding: 0 24px;
-  font-size: 1.4rem;
+  padding: 0 28px;
+  font-size: 1.6rem;
   font-weight: 600;
   cursor: pointer;
   color: var(--color-header-text);
@@ -160,27 +165,27 @@ body {
 .screen-header__center {
   flex: 1;
   text-align: center;
-  padding: 12px 16px;
+  padding: 16px 16px;
   min-width: 0;
 }
 
 .screen-header__title {
-  font-size: 2.2rem;
+  font-size: 2.3rem;
   font-weight: 700;
   line-height: 1.2;
 }
 
 /* First screen (no back button) gets a bigger header */
 .screen-header:not(:has(.screen-header__back)) {
-  min-height: 90px;
+  min-height: 110px;
 }
 
 .screen-header:not(:has(.screen-header__back)) .screen-header__title {
-  font-size: 2.6rem;
+  font-size: 3rem;
 }
 
 .screen-header__crumbs {
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   opacity: 0.75;
   margin-top: 2px;
 }
@@ -345,7 +350,7 @@ body {
 
 /* Font sizing: scale with container */
 .tile-label {
-  font-size: clamp(1rem, 12cqi, 2rem);
+  font-size: clamp(1.1rem, 12cqi, 2.2rem);
   word-break: break-word;
   overflow-wrap: anywhere;
   max-width: 100%;
@@ -368,6 +373,10 @@ body {
 .tile-grid--buyers .tile-label,
 .tile-grid--quantity .tile-label {
   font-size: clamp(2rem, 30cqi, 6rem);
+}
+
+.tile-grid--categories .tile-label {
+  font-size: clamp(1.5rem, 16cqi, 3rem);
 }
 
 .tile-grid--buyers .tile-subtitle,
@@ -651,7 +660,7 @@ body {
 .category-footer .tile {
   flex: 1;
   min-width: 0;
-  min-height: 60px;
+  min-height: 90px;
 }
 
 /* ===== Delivery notice ===== */

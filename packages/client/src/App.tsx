@@ -162,13 +162,14 @@ export default function App() {
   return (
     <div className="app">
       <div className="toast-layer">
-        <OfflineBanner isOffline={isOffline} />
         {secondsLeft !== null && (
           <div className="inactivity-warning" onClick={dismissWarning}>
             Neaktivita — resetuji za {secondsLeft}s &middot; <strong>Klepněte pro pokračování</strong>
           </div>
         )}
       </div>
+
+      <OfflineBanner isOffline={isOffline} />
 
       {lastSuccess && (
         <SuccessFlash message={lastSuccess} onDone={() => setLastSuccess(null)} />
