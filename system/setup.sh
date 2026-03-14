@@ -135,6 +135,8 @@ if [ "$(tty)" = "/dev/tty1" ]; then
         sleep 2
     done
 
+    export XCURSOR_THEME=emptycursor
+    export XCURSOR_SIZE=1
     exec cage -- chromium \
         --kiosk \
         --noerrdialogs \
@@ -158,6 +160,9 @@ chmod 644 "/home/$KIOSK_USER/.bash_profile"
 # ---------------------------------------------------------------------------
 
 info "Installing Chromium policies"
+
+# Transparent cursor theme (touchscreen kiosk — no visible pointer)
+python3 "$REPO_DIR/system/config/make-empty-cursor.py"
 
 mkdir -p /etc/chromium/policies/managed
 install -m 644 "$REPO_DIR/system/config/chromium-policies.json" \
