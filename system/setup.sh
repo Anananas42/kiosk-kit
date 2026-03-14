@@ -34,6 +34,7 @@ apt-get update -qq
 apt-get install -y -qq \
     cage \
     chromium \
+    fonts-noto-color-emoji \
     nftables \
     nodejs \
     rsync \
