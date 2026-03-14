@@ -256,6 +256,8 @@ else
     info "  Add the .pub key to GitHub as a read-only deploy key"
 fi
 
+export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY_DST -o StrictHostKeyChecking=accept-new"
+
 # Install deploy timer + service
 install -m 644 "$REPO_DIR/system/services/zahumny-kiosk-deploy.service" /etc/systemd/system/
 install -m 644 "$REPO_DIR/system/services/zahumny-kiosk-deploy.timer" /etc/systemd/system/
