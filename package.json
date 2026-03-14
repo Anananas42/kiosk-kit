@@ -1,0 +1,17 @@
+{
+  "name": "zahumny-kiosk",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n server,client \"pnpm --filter @zahumny/server dev\" \"pnpm --filter @zahumny/client dev\"",
+    "build": "pnpm --filter @zahumny/shared build && pnpm --filter @zahumny/server build && pnpm --filter @zahumny/client build",
+    "start": "node packages/server/dist/index.js",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}

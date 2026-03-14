@@ -1,0 +1,39 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { serveStatic } from '@hono/node-server/serve-static';
+import type { CacheStore } from './cache/store.js';
+import type { QueueStore } from './queue/store.js';
+import { healthRoute } from './routes/health.js';
+import { catalogRoute } from './routes/catalog.js';
+import { apartmentsRoute } from './routes/apartments.js';
+import { recordRoute } from './routes/record.js';
+import { overviewRoute } from './routes/overview.js';
+
+export function createApp(
+  cache: CacheStore,
+  queue: QueueStore,
+  getOnline: () => boolean,
+  setOnline: (online: boolean) => void,
+) {
+  const app = new Hono();
+
+  app.onError((err, c) => {
+    console.error('[server] Unhandled error:', err.message);
+    return c.json({ error: 'Internal server error' }, 500);
+  });
+
+  app.use('/api/*', cors());
+
+  app.route('/api/health', healthRoute(queue, getOnline));
+  app.route('/api/catalog', catalogRoute(cache));
+  app.route('/api/apartments', apartmentsRoute(cache));
+  app.route('/api/record', recordRoute(queue, setOnline));
+  app.route('/api/overview', overviewRoute(queue));
+
+  // Serve static client files in production
+  app.use('/*', serveStatic({ root: './packages/client/dist' }));
+  // SPA fallback
+  app.use('/*', serveStatic({ root: './packages/client/dist', path: 'index.html' }));
+
+  return app;
+}

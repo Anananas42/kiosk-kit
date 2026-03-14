@@ -1,0 +1,26 @@
+{
+  "name": "@zahumny/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@zahumny/shared": "workspace:*",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "googleapis": "^148.0.0",
+    "hono": "^4.7.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.4",
+    "tsup": "^8.3.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
