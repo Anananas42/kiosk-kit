@@ -228,11 +228,14 @@ fi
 
 info "Disabling unnecessary services"
 
-for svc in bluetooth cups; do
+for svc in bluetooth cups lightdm; do
     if systemctl is-enabled "$svc" &>/dev/null 2>&1; then
         systemctl disable --now "$svc" 2>/dev/null || true
     fi
 done
+
+# Ensure console target (no desktop environment)
+systemctl set-default multi-user.target
 
 # ---------------------------------------------------------------------------
 # 13. Auto-deploy (daily git pull)
