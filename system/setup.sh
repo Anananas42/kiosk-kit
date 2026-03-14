@@ -33,7 +33,7 @@ fi
 apt-get update -qq
 apt-get install -y -qq \
     cage \
-    chromium-browser \
+    chromium \
     nftables \
     nodejs \
     rsync \
@@ -134,7 +134,7 @@ if [ "$(tty)" = "/dev/tty1" ]; then
         sleep 2
     done
 
-    exec cage -- chromium-browser \
+    exec cage -- chromium \
         --kiosk \
         --noerrdialogs \
         --disable-infobars \
@@ -157,9 +157,9 @@ chmod 644 "/home/$KIOSK_USER/.bash_profile"
 
 info "Installing Chromium policies"
 
-mkdir -p /etc/chromium-browser/policies/managed
+mkdir -p /etc/chromium/policies/managed
 install -m 644 "$REPO_DIR/system/config/chromium-policies.json" \
-    /etc/chromium-browser/policies/managed/zahumny-kiosk.json
+    /etc/chromium/policies/managed/zahumny-kiosk.json
 
 # ---------------------------------------------------------------------------
 # 9. Security hardening
