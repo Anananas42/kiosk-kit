@@ -144,6 +144,7 @@ if [ "$(tty)" = "/dev/tty1" ]; then
         --disable-session-crashed-bubble \
         --disable-component-update \
         --autoplay-policy=no-user-gesture-required \
+        --password-store=basic \
         http://localhost:3001
 fi
 PROFILE

@@ -1,5 +1,5 @@
 {
-  "URLAllowlist": ["http://localhost:3001/*"],
+  "URLAllowlist": ["localhost:3001"],
   "URLBlocklist": ["*"],
   "DeveloperToolsAvailability": 2,
   "DownloadRestrictions": 3,
