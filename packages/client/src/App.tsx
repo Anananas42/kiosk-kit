@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { PASTRY_CATEGORIES, parsePrice, formatPrice, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
@@ -23,6 +23,12 @@ interface AppState {
   item: CatalogItem | null;
 }
 
+interface LastOrder {
+  buyer: number;
+  category: CatalogCategory;
+  item: CatalogItem;
+}
+
 const INITIAL_STATE: AppState = {
   screen: 'buyer',
   buyer: null,
@@ -30,16 +36,28 @@ const INITIAL_STATE: AppState = {
   item: null,
 };
 
+const REPEAT_TIMEOUT = 10_000;
+
 export default function App() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isSending, setIsSending] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [lastSuccess, setLastSuccess] = useState<string | null>(null);
+  const [lastOrder, setLastOrder] = useState<LastOrder | null>(null);
+  const repeatTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const isOffline = useHealth();
   const { catalog, apartments, reload, error: catalogError } = useCatalog();
 
   useEffect(() => { startFlushTimer(); }, []);
+
+  // Clear repeat button after timeout
+  useEffect(() => {
+    if (!lastOrder) return;
+    clearTimeout(repeatTimer.current);
+    repeatTimer.current = setTimeout(() => setLastOrder(null), REPEAT_TIMEOUT);
+    return () => clearTimeout(repeatTimer.current);
+  }, [lastOrder]);
 
   const reset = useCallback(() => {
     setState(INITIAL_STATE);
@@ -58,13 +76,22 @@ export default function App() {
   }, []);
 
   const handleItemSelect = useCallback((item: CatalogItem) => {
-    // All items go directly to confirm — pastry quantity is selected there
     setState((s) => ({ ...s, item, screen: 'confirm' }));
   }, []);
 
   const handleBackToCategory = useCallback(() => {
     setState((s) => ({ ...s, item: null, category: null, screen: 'category' }));
   }, []);
+
+  const handleRepeat = useCallback(() => {
+    if (!lastOrder) return;
+    setState({
+      screen: 'confirm',
+      buyer: lastOrder.buyer,
+      category: lastOrder.category,
+      item: lastOrder.item,
+    });
+  }, [lastOrder]);
 
   const handleConfirm = useCallback(async (operation: '+' | '-', quantity: number) => {
     const isPastry = PASTRY_CATEGORIES.has(state.category!.name);
@@ -92,6 +119,11 @@ export default function App() {
         ? `${quantity}\u00d7 ${state.item!.name}`
         : state.item!.name;
       setLastSuccess(`Přidáno: ${label}`);
+      setLastOrder({
+        buyer: state.buyer!,
+        category: state.category!,
+        item: state.item!,
+      });
       reset();
       return;
     }
@@ -119,9 +151,6 @@ export default function App() {
     <div className="app">
       <div className="toast-layer">
         <OfflineBanner isOffline={isOffline} />
-        {lastSuccess && (
-          <SuccessFlash message={lastSuccess} onDone={() => setLastSuccess(null)} />
-        )}
         {secondsLeft !== null && (
           <div className="inactivity-warning" onClick={dismissWarning}>
             Neaktivita — resetuji za {secondsLeft}s &middot; <strong>Klepněte pro pokračování</strong>
@@ -129,8 +158,18 @@ export default function App() {
         )}
       </div>
 
+      {lastSuccess && (
+        <SuccessFlash message={lastSuccess} onDone={() => setLastSuccess(null)} />
+      )}
+
       {state.screen === 'buyer' && (
-        <BuyerSelect apartments={apartments} onSelect={handleBuyerSelect} error={catalogError} />
+        <BuyerSelect
+          apartments={apartments}
+          onSelect={handleBuyerSelect}
+          error={catalogError}
+          lastOrder={lastOrder}
+          onRepeat={handleRepeat}
+        />
       )}
 
       {state.screen === 'category' && state.buyer !== null && (

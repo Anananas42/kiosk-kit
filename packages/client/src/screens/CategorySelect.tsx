@@ -15,7 +15,7 @@ export default function CategorySelect({ buyer, catalog, onSelect, onOverview, o
   return (
     <div className="screen">
       <ScreenHeader
-        title="Vyberte kategorii"
+        title="📋 Vyberte kategorii"
         onBack={onMainMenu}
         backLabel="Změnit kupujícího"
         crumbs={[{ label: 'Kupující', value: `#${buyer}` }]}

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 interface Crumb {
   label: string;
   value: string;
@@ -8,9 +10,10 @@ interface ScreenHeaderProps {
   onBack?: () => void;
   backLabel?: string;
   crumbs?: Crumb[];
+  right?: ReactNode;
 }
 
-export default function ScreenHeader({ title, onBack, backLabel, crumbs }: ScreenHeaderProps) {
+export default function ScreenHeader({ title, onBack, backLabel, crumbs, right }: ScreenHeaderProps) {
   const backContent = onBack ? `\u2190 ${backLabel ?? ''}` : null;
 
   return (
@@ -33,8 +36,8 @@ export default function ScreenHeader({ title, onBack, backLabel, crumbs }: Scree
           </div>
         )}
       </div>
-      {backContent && (
-        <div className="screen-header__spacer" aria-hidden="true">{backContent}</div>
+      {right ?? (
+        backContent && <div className="screen-header__spacer" aria-hidden="true">{backContent}</div>
       )}
     </div>
   );

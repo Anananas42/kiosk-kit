@@ -21,7 +21,7 @@ export default function ItemSelect({ buyer, category, onSelect, onBack }: ItemSe
   return (
     <div className="screen">
       <ScreenHeader
-        title="Vyberte položku"
+        title="🛒 Vyberte položku"
         onBack={onBack}
         backLabel="Zpět na kategorie"
         crumbs={[

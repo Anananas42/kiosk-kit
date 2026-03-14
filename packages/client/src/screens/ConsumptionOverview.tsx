@@ -69,7 +69,7 @@ export default function ConsumptionOverview({ buyer, onBack }: ConsumptionOvervi
   return (
     <div className="screen">
       <ScreenHeader
-        title={`Konzumace #${buyer}`}
+        title={`📊 Konzumace #${buyer}`}
         onBack={onBack}
         backLabel="Zpět"
       />

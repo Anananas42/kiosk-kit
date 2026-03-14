@@ -43,7 +43,7 @@ export default function PastryOrdersOverview({ buyer, onBack }: PastryOrdersOver
   return (
     <div className="screen">
       <ScreenHeader
-        title={`Objednávky pečiva #${buyer}`}
+        title={`🥐 Objednávky pečiva #${buyer}`}
         onBack={onBack}
         backLabel="Zpět"
       />

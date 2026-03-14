@@ -39,7 +39,7 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
   return (
     <div className="screen">
       <ScreenHeader
-        title="Potvrďte záznam"
+        title="✅ Potvrďte záznam"
         onBack={onBack}
         backLabel="Zpět na položky"
         crumbs={[
