@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { ensureKc, parsePrice, formatPrice, getDeliveryDateLabel } from '@zahumny/shared';
 import type { CatalogCategory, CatalogItem } from '@zahumny/shared';
+import { ensureKc, formatPrice, getDeliveryDateLabel, parsePrice } from '@zahumny/shared';
+import { useState } from 'react';
 import ScreenHeader from '../components/ScreenHeader.js';
 import Tile from '../components/Tile.js';
 
@@ -29,8 +29,8 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
   const deliveryDate = isPastry ? getDeliveryDateLabel() : null;
 
   const addLabel = priceLabel
-    ? `Přidat ${qtyLabel}za ${priceLabel}`
-    : `Přidat ${qtyLabel}${item.name}`;
+    ? `Přidat`
+    : `✅ Přidat ${qtyLabel}${item.name}`;
 
   const stornoLabel = isPastry
     ? `Odebrat 1\u00d7 ${item.name}`
@@ -42,18 +42,14 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
         title="✅ Potvrďte záznam"
         onBack={onBack}
         backLabel="Zpět na položky"
-        crumbs={[
-          { label: 'Kupující', value: `#${buyer}` },
-          { label: 'Kategorie', value: category.name },
-        ]}
       />
       <div className="screen-body">
-        {/* Item identity — big and prominent */}
-        <div className={`confirm-hero${isPastry ? ' confirm-hero--pastry' : ''}`}>
-          <div className="confirm-hero__name">{item.name}</div>
-          <div className="confirm-hero__meta">
-            {item.quantity && !isPastry && <span>{item.quantity}</span>}
-            {unitPrice > 0 && <span>{ensureKc(item.price)}{isPastry ? '/ks' : ''}</span>}
+        <div className="confirm-card">
+          <div className="confirm-info-row">#{buyer}</div>
+          <div className="confirm-info-row">{item.name}</div>
+          <div className="confirm-info-row confirm-info-row--muted">
+            {item.quantity && !isPastry ? `${item.quantity} · ` : ''}
+            {priceLabel || ''}
           </div>
         </div>
 
@@ -88,7 +84,6 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
           </div>
         )}
 
-        {/* Actions pinned to bottom */}
         {isSending ? (
           <div className="sending-overlay">Odesílám&hellip;</div>
         ) : (
