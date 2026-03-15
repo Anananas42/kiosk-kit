@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { daySheetName, buildDaySheetValues } from './pastry.js';
+import { daySheetName, buildDaySheetValues, buildFormatRequests } from './pastry.js';
 
 describe('daySheetName', () => {
   it('formats ISO date to Czech sheet name', () => {
@@ -31,9 +31,9 @@ describe('buildDaySheetValues', () => {
 
     const result = buildDaySheetValues(records, pastryNames, noDelivery, '2026-03-15', labels);
     expect(result).toEqual([
-      ['Položka', 'Apt 1', 'Apt 5', 'Apt 12', 'Celkem'],
-      ['Houska', '', '', 1, 1],
-      ['Rohlík', 2, 1, '', 3],
+      ['Položka', 'ID', 'Apt 1', 'Apt 5', 'Apt 12', 'Celkem'],
+      ['Houska', '', '', '', 1, 1],
+      ['Rohlík', '', 2, 1, '', 3],
     ]);
   });
 
@@ -66,9 +66,9 @@ describe('buildDaySheetValues', () => {
     // Let's just verify the function works with the records present.
     const result = buildDaySheetValues(records, pastryNames, noDelivery, '2026-03-15', labels);
     expect(result).toEqual([
-      ['Položka', 'Apt 1', 'Apt 5', 'Celkem'],
-      ['Houska', '', 1, 1],
-      ['Rohlík', 2, '', 2],
+      ['Položka', 'ID', 'Apt 1', 'Apt 5', 'Celkem'],
+      ['Houska', '', '', 1, 1],
+      ['Rohlík', '', 2, '', 2],
     ]);
   });
 
@@ -76,8 +76,76 @@ describe('buildDaySheetValues', () => {
     const records = [rec(99, 'Rohlík', '2026-03-14T08:00:00Z')];
     const result = buildDaySheetValues(records, pastryNames, noDelivery, '2026-03-15', labels);
     expect(result).toEqual([
-      ['Položka', '99', 'Celkem'],
-      ['Rohlík', 1, 1],
+      ['Položka', 'ID', '99', 'Celkem'],
+      ['Rohlík', '', 1, 1],
     ]);
+  });
+});
+
+describe('buildFormatRequests', () => {
+  it('returns expected request types for day sheet spec', () => {
+    const requests = buildFormatRequests({
+      sheetId: 42,
+      frozenRows: 1,
+      columnWidths: [
+        { startIndex: 0, endIndex: 1, width: 200 },
+        { startIndex: 1, endIndex: 2, width: 80 },
+        { startIndex: 2, endIndex: 5, width: 60 },
+        { startIndex: 5, endIndex: 6, width: 70 },
+      ],
+      totalRows: 4,
+      totalCols: 6,
+      highlightLastCol: true,
+    });
+
+    const types = requests.map((r) => Object.keys(r)[0]);
+    expect(types).toEqual([
+      'updateSheetProperties',
+      'updateDimensionProperties',
+      'updateDimensionProperties',
+      'updateDimensionProperties',
+      'updateDimensionProperties',
+      'repeatCell', // header
+      'repeatCell', // last col highlight
+      'updateBorders', // medium border below frozen
+      'updateBorders', // thin grid
+    ]);
+
+    // Verify frozen rows
+    const frozen = requests[0].updateSheetProperties!;
+    expect(frozen.properties?.gridProperties?.frozenRowCount).toBe(1);
+    expect(frozen.properties?.sheetId).toBe(42);
+
+    // Verify header targets row 0 only
+    const header = requests[5].repeatCell!;
+    expect(header.range?.startRowIndex).toBe(0);
+    expect(header.range?.endRowIndex).toBe(1);
+
+    // Verify last col highlight targets data rows only
+    const lastCol = requests[6].repeatCell!;
+    expect(lastCol.range?.startRowIndex).toBe(1);
+    expect(lastCol.range?.endRowIndex).toBe(4);
+    expect(lastCol.range?.startColumnIndex).toBe(5);
+  });
+
+  it('includes window row for overview spec', () => {
+    const requests = buildFormatRequests({
+      sheetId: 0,
+      frozenRows: 2,
+      columnWidths: [{ startIndex: 0, endIndex: 3, width: 100 }],
+      totalRows: 5,
+      totalCols: 3,
+      windowRow: true,
+    });
+
+    const types = requests.map((r) => Object.keys(r)[0]);
+    // Should have window row repeatCell but no last col highlight
+    expect(types).toContain('repeatCell');
+    const windowReq = requests.find((r) =>
+      r.repeatCell?.cell?.userEnteredFormat?.textFormat?.italic,
+    );
+    expect(windowReq).toBeDefined();
+    expect(windowReq!.repeatCell!.range?.startRowIndex).toBe(1);
+    expect(windowReq!.repeatCell!.range?.endRowIndex).toBe(2);
   });
 });
