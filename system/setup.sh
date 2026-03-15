@@ -33,10 +33,12 @@ fi
 apt-get update -qq
 apt-get install -y -qq \
     sway \
+    swayidle \
     chromium \
     fonts-noto-color-emoji \
     nftables \
     nodejs \
+    python3-evdev \
     rsync \
     >/dev/null
 
@@ -102,6 +104,11 @@ if [[ -d "$REPO_DIR/credentials" ]]; then
     chmod 700 "$INSTALL_DIR/credentials"
 fi
 
+# Display sleep script (touch-blocking DPMS handler)
+mkdir -p "$INSTALL_DIR/system/config"
+install -o "$KIOSK_USER" -g "$KIOSK_USER" -m 755 \
+    "$REPO_DIR/system/config/display-sleep.py" "$INSTALL_DIR/system/config/display-sleep.py"
+
 # Data dir (writable by app)
 mkdir -p "$INSTALL_DIR/data"
 chown "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR/data"
@@ -138,6 +145,8 @@ cat > "/home/$KIOSK_USER/.config/sway/config" << 'SWAYCONF'
 seat * hide_cursor 1
 default_border none
 default_floating_border none
+
+exec swayidle -w timeout 900 '/opt/zahumny-kiosk/system/config/display-sleep.py'
 
 exec chromium \
     --kiosk \

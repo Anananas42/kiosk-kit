@@ -123,7 +123,9 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 ### Display Behavior
 
 - **15s idle**: app dims (70% dark overlay, fades in over 1s)
-- **Touch**: dismisses dim overlay
+- **15min idle**: display turns off via DPMS (`swayidle`)
+- **Touch when off**: first touch wakes the display but is consumed (evdev grab prevents it from reaching the app)
+- **Touch when dimmed**: dismisses dim overlay
 - **Cursor**: hidden (sway `hide_cursor 1` — invisible on touchscreen)
 
 ### Security Layers
@@ -155,6 +157,7 @@ system/
     ├── chromium-policies.json        # Browser lockdown policies
     ├── deploy-key                    # Read-only GitHub deploy key (private)
     ├── deploy-key.pub                # Deploy key (public)
+    ├── display-sleep.py              # DPMS off + evdev grab (touch-safe display sleep)
     ├── getty-autologin.conf          # tty1 autologin drop-in
     ├── make-empty-cursor.py          # Generates transparent cursor theme
     ├── nftables.conf                 # Firewall rules
