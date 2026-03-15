@@ -1,39 +1,43 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 
-const IDLE_MS = 15_000;
-const WAKE_COOLDOWN_MS = 5_000;
+const DIM_MS = 15_000;
+const DPMS_MS = 900_000; // 15 minutes — must match swayidle timeout
+const DPMS_WAKE_COOLDOWN_MS = 5_000;
 
 export function useIdleDim() {
   const [dimmed, setDimmed] = useState(false);
   const [waking, setWaking] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const idleSinceRef = useRef(Date.now());
 
   const resetTimer = useCallback(() => {
+    idleSinceRef.current = Date.now();
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setDimmed(true), IDLE_MS);
+    timerRef.current = setTimeout(() => setDimmed(true), DIM_MS);
   }, []);
 
-  // Reset idle timer on any touch (when not dimmed/waking)
   useEffect(() => {
     resetTimer();
-    window.addEventListener('pointerdown', resetTimer);
+
+    const onTouch = () => {
+      const idleDuration = Date.now() - idleSinceRef.current;
+
+      // If display was likely off (DPMS), block touches while it powers on
+      if (idleDuration >= DPMS_MS) {
+        setWaking(true);
+        setTimeout(() => setWaking(false), DPMS_WAKE_COOLDOWN_MS);
+      }
+
+      setDimmed(false);
+      resetTimer();
+    };
+
+    window.addEventListener('pointerdown', onTouch);
     return () => {
       clearTimeout(timerRef.current);
-      window.removeEventListener('pointerdown', resetTimer);
+      window.removeEventListener('pointerdown', onTouch);
     };
   }, [resetTimer]);
 
-  // Called by the overlay's pointerdown — absorbs the wake touch
-  // Overlay stays up during cooldown to block touches from reaching the UI
-  const wake = useCallback(() => {
-    setDimmed(false);
-    setWaking(true);
-    resetTimer();
-    setTimeout(() => setWaking(false), WAKE_COOLDOWN_MS);
-  }, [resetTimer]);
-
-  // Show overlay when dimmed OR during wake cooldown
-  const blocked = dimmed || waking;
-
-  return { blocked, wake };
+  return { dimmed, waking };
 }
