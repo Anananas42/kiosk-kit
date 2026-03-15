@@ -196,7 +196,21 @@ ssh zahumny@100.x.y.z      # Tailscale IP
 
 The `--ssh` flag enables Tailscale SSH, which works independently of OpenSSH.
 
-The nftables firewall allows outbound UDP 41641 (WireGuard) and accepts all traffic on the `tailscale0` interface.
+**ACL policy**: Tailscale ACLs are configured at https://login.tailscale.com/admin/acls to be one-directional — admin devices can reach the Pi, but the Pi cannot initiate connections to anything on the tailnet. The current policy:
+
+```jsonc
+{
+  // Only admin devices (your desktop) can reach the Pi.
+  "grants": [
+    {"src": ["autogroup:admin"], "dst": ["100.97.224.3"], "ip": ["*"]}
+  ],
+  "ssh": [
+    {"action": "check", "src": ["autogroup:member"], "dst": ["autogroup:self"], "users": ["autogroup:nonroot", "root"]}
+  ]
+}
+```
+
+**Firewall**: nftables allows outbound UDP 41641 (WireGuard) and accepts all traffic on the `tailscale0` interface.
 
 ### Connecting to Remote WiFi
 
