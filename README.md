@@ -136,7 +136,7 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 | `exec` in .bash_profile | Shell access after sway exits |
 | Chromium `--kiosk` | Address bar, keyboard shortcuts |
 | Chromium managed policies | DevTools, downloads, file:// URLs, non-localhost navigation |
-| nftables firewall | Network access beyond SSH in + HTTP/HTTPS/DNS/NTP/DHCP out |
+| nftables firewall | Network access beyond SSH/Tailscale in + HTTP/HTTPS/DNS/NTP/DHCP/WireGuard out |
 | USB storage block (udev) | Mounting USB drives |
 | SysRq disable | Alt+SysRq kernel shortcuts |
 | kiosk user (no sudo) | Privilege escalation |
@@ -175,6 +175,28 @@ system/
 | `/home/kiosk/.config/sway/config` | Sway compositor config |
 | `/etc/chromium/policies/managed/` | Chromium policy JSON |
 | `/etc/nftables.conf` | Firewall rules |
+
+### Remote Access (Tailscale)
+
+The Pi runs [Tailscale](https://tailscale.com/) for remote access from anywhere, without port forwarding or knowing the Pi's local IP. This is critical since the Pi is deployed ~200km away.
+
+Tailscale is installed by `setup.sh`. After installation, authenticate once:
+
+```bash
+sudo tailscale up --ssh
+# opens a URL to authenticate in your Tailscale account
+```
+
+Once authenticated, you can SSH from any device on your tailnet:
+
+```bash
+ssh zahumny@raspberrypi    # Tailscale hostname
+ssh zahumny@100.x.y.z      # Tailscale IP
+```
+
+The `--ssh` flag enables Tailscale SSH, which works independently of OpenSSH.
+
+The nftables firewall allows outbound UDP 41641 (WireGuard) and accepts all traffic on the `tailscale0` interface.
 
 ### Connecting to Remote WiFi
 

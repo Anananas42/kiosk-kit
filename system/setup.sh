@@ -40,6 +40,11 @@ apt-get install -y -qq \
     rsync \
     >/dev/null
 
+# Tailscale (idempotent — skips if already installed)
+if ! command -v tailscale &>/dev/null; then
+    curl -fsSL https://tailscale.com/install.sh | sh
+fi
+
 # pnpm
 if ! command -v pnpm &>/dev/null; then
     corepack enable
