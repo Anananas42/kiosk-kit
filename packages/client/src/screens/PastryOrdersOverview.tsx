@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { PASTRY_CATEGORIES, getDeliveryDate, formatDateCs, type EvidenceRow } from '@zahumny/shared';
+import { getDeliveryDate, formatDateCs, type EvidenceRow } from '@zahumny/shared';
 import { fetchOverview } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
-function aggregatePastryOrders(records: EvidenceRow[], buyer: number): Record<string, Record<string, number>> {
+function aggregatePastryOrders(records: EvidenceRow[], buyer: number, pastryNames: Set<string>): Record<string, Record<string, number>> {
   const dayMap: Record<string, Record<string, number>> = {};
 
   for (const r of records) {
-    if (!PASTRY_CATEGORIES.has(r.category)) continue;
+    if (!pastryNames.has(r.category)) continue;
     if (Number(r.buyer) !== buyer) continue;
     const deliveryDate = getDeliveryDate(r.timestamp);
     if (!deliveryDate) continue;
@@ -21,10 +21,11 @@ function aggregatePastryOrders(records: EvidenceRow[], buyer: number): Record<st
 
 interface PastryOrdersOverviewProps {
   buyer: number;
+  pastryNames: Set<string>;
   onBack: () => void;
 }
 
-export default function PastryOrdersOverview({ buyer, onBack }: PastryOrdersOverviewProps) {
+export default function PastryOrdersOverview({ buyer, pastryNames, onBack }: PastryOrdersOverviewProps) {
   const [records, setRecords] = useState<EvidenceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +35,7 @@ export default function PastryOrdersOverview({ buyer, onBack }: PastryOrdersOver
       .catch(() => setError('Nepodařilo se načíst data.'));
   }, []);
 
-  const dayMap = records ? aggregatePastryOrders(records, buyer) : {};
+  const dayMap = records ? aggregatePastryOrders(records, buyer, pastryNames) : {};
   const days = Object.keys(dayMap).sort().reverse();
   const hasAny = days.some((day) => Object.values(dayMap[day]).some((qty) => qty > 0));
 

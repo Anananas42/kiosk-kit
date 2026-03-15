@@ -1,6 +1,7 @@
-import { PASTRY_CATEGORIES, SYNC_INTERVAL_MS } from '@zahumny/shared';
+import { SYNC_INTERVAL_MS } from '@zahumny/shared';
 import type { QueueStore } from './store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
+import { getPastryCategories } from '../sheets/catalog.js';
 import { updatePastrySheet } from '../sheets/pastry.js';
 
 export function startSyncInterval(queue: QueueStore, onStatusChange: (online: boolean) => void): void {
@@ -10,6 +11,7 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
 
     const successIds: string[] = [];
     let hasPastry = false;
+    let pastryNames: Set<string> | null = null;
 
     for (const entry of entries) {
       try {
@@ -26,7 +28,9 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
 
         await appendRow(entry);
         successIds.push(entry.id);
-        if (PASTRY_CATEGORIES.has(entry.category)) hasPastry = true;
+
+        if (!pastryNames) pastryNames = await getPastryCategories();
+        if (pastryNames.has(entry.category)) hasPastry = true;
       } catch (err) {
         console.error(`[sync] Failed for ${entry.id}:`, (err as Error).message);
         onStatusChange(false);

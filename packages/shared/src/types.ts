@@ -12,6 +12,7 @@ export interface CatalogItem {
 export interface CatalogCategory {
   id: string;
   name: string;
+  pastry: boolean;
   items: CatalogItem[];
 }
 

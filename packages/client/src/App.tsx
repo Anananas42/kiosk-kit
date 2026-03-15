@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { PASTRY_CATEGORIES, REPEAT_ORDER_MS, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
+import { REPEAT_ORDER_MS, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
@@ -51,7 +51,8 @@ export default function App() {
   const dimmed = useIdleDim();
   const { catalog, apartments, reload, error: catalogError } = useCatalog();
 
-  const pastryCategories = catalog.filter((cat) => PASTRY_CATEGORIES.has(cat.name));
+  const pastryCategories = catalog.filter((cat) => cat.pastry);
+  const pastryNames = new Set(pastryCategories.map((cat) => cat.name));
 
   useEffect(() => { startFlushTimer(); }, []);
 
@@ -108,7 +109,7 @@ export default function App() {
   }, [lastOrder]);
 
   const handleConfirm = useCallback(async (operation: '+' | '-', quantity: number) => {
-    const isPastry = PASTRY_CATEGORIES.has(state.category!.name);
+    const isPastry = state.category!.pastry;
     const count = operation === '+' ? quantity : -quantity;
 
     const recordData = {
@@ -215,7 +216,7 @@ export default function App() {
           buyer={state.buyer}
           category={state.category}
           item={state.item}
-          isPastry={PASTRY_CATEGORIES.has(state.category.name)}
+          isPastry={state.category.pastry}
           onConfirm={handleConfirm}
           onBack={() => setState((s) => ({ ...s, item: null, screen: 'item' }))}
           isSending={isSending}
@@ -234,6 +235,7 @@ export default function App() {
       {state.screen === 'pastry-orders' && state.buyer !== null && (
         <PastryOrdersOverview
           buyer={state.buyer}
+          pastryNames={pastryNames}
           onBack={() => setState((s) => ({ ...s, screen: state.category ? 'pastry-category' as Screen : 'category' }))}
         />
       )}

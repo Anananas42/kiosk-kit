@@ -1,4 +1,4 @@
-import { PASTRY_CATEGORIES, type CatalogCategory } from '@zahumny/shared';
+import type { CatalogCategory } from '@zahumny/shared';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
@@ -12,7 +12,7 @@ interface CategorySelectProps {
 }
 
 export default function CategorySelect({ buyer, catalog, onSelect, onOverview, onPastry, onMainMenu }: CategorySelectProps) {
-  const mainCategories = catalog.filter((cat) => !PASTRY_CATEGORIES.has(cat.name));
+  const mainCategories = catalog.filter((cat) => !cat.pastry);
 
   return (
     <div className="screen">

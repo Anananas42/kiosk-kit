@@ -33,15 +33,15 @@ export function validateRecordRequest(body: unknown): { ok: true; data: RecordRe
   };
 }
 
-export function validateCatalog(rows: string[][]): CatalogCategory[] {
+export function validateCatalog(rows: string[][], pastryType: string): CatalogCategory[] {
   const order: string[] = [];
   const map: Record<string, CatalogCategory> = {};
 
-  for (const [cat, itemName, quantity = '', price = ''] of rows) {
+  for (const [cat, type = '', itemName, quantity = '', price = ''] of rows) {
     if (!cat || !itemName) continue;
     if (!map[cat]) {
       const id = cat.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      map[cat] = { id, name: cat, items: [] };
+      map[cat] = { id, name: cat, pastry: type.trim().toLowerCase() === pastryType, items: [] };
       order.push(cat);
     }
     map[cat].items.push({ name: itemName.trim(), quantity: quantity.trim(), price: price.trim() });

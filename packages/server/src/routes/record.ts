@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { PASTRY_CATEGORIES, validateRecordRequest, type RecordEntry } from '@zahumny/shared';
+import { validateRecordRequest, type RecordEntry } from '@zahumny/shared';
 import type { QueueStore } from '../queue/store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
+import { getPastryCategories } from '../sheets/catalog.js';
 import { updatePastrySheet } from '../sheets/pastry.js';
 import { env } from '../env.js';
 import { withLock } from '../lock.js';
@@ -45,7 +46,8 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
           await appendRow(entry);
           setOnline(true);
 
-          if (PASTRY_CATEGORIES.has(entry.category)) {
+          const pastryNames = await getPastryCategories();
+          if (pastryNames.has(entry.category)) {
             updatePastrySheet().catch((err) =>
               console.error('[sheets] Pastry update failed:', (err as Error).message),
             );

@@ -1,6 +1,7 @@
-import { PASTRY_SHEET, PASTRY_CATEGORIES, getDeliveryDate } from '@zahumny/shared';
+import { PASTRY_SHEET, getDeliveryDate } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { readRecords } from './evidence.js';
+import { getPastryCategories } from './catalog.js';
 import { env } from '../env.js';
 
 function pastryWindowLabel(deliveryDateStr: string): string {
@@ -16,6 +17,7 @@ function pastryWindowLabel(deliveryDateStr: string): string {
 
 export async function updatePastrySheet(): Promise<void> {
   const sheets = await getSheetsClient();
+  const pastryNames = await getPastryCategories();
   const records = await readRecords();
 
   const pivot: Record<string, Record<string, number>> = {};
@@ -23,7 +25,7 @@ export async function updatePastrySheet(): Promise<void> {
   const itemSet = new Set<string>();
 
   for (const r of records) {
-    if (!PASTRY_CATEGORIES.has(r.category)) continue;
+    if (!pastryNames.has(r.category)) continue;
     const dd = getDeliveryDate(r.timestamp);
     if (!dd) continue;
     itemSet.add(r.item);
