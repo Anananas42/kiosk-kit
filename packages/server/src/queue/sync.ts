@@ -52,7 +52,7 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
         try {
           await updatePastryDaySheets();
         } catch (err) {
-          console.error('[sync] Pastry day sheets update failed:', err);
+          console.error('[sync] Pastry day sheets update failed:', (err as Error).message);
         }
       }
     }

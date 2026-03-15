@@ -4,7 +4,7 @@ import { validateRecordRequest, type RecordEntry } from '@zahumny/shared';
 import type { QueueStore } from '../queue/store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { getPastryCategories } from '../sheets/catalog.js';
-import { updatePastrySheet } from '../sheets/pastry.js';
+import { updatePastrySheet, updatePastryDaySheets } from '../sheets/pastry.js';
 import { env } from '../env.js';
 import { withLock } from '../lock.js';
 
@@ -50,6 +50,9 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
           if (pastryNames.has(entry.category)) {
             updatePastrySheet().catch((err) =>
               console.error('[sheets] Pastry update failed:', (err as Error).message),
+            );
+            updatePastryDaySheets().catch((err) =>
+              console.error('[sheets] Pastry day sheets update failed:', (err as Error).message),
             );
           }
 

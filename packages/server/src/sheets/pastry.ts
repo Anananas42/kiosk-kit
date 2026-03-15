@@ -165,7 +165,6 @@ function todayPrague(): string {
  * Only creates sheets for today and future delivery dates.
  */
 export async function updatePastryDaySheets(): Promise<void> {
-  console.log('[sheets] Day sheets: starting');
   const sheets = await getSheetsClient();
   const pastryNames = await getPastryCategories();
   const records = await readRecords();
@@ -189,7 +188,6 @@ export async function updatePastryDaySheets(): Promise<void> {
   }
 
   const dates = Object.keys(pivot).sort();
-  console.log(`[sheets] Day sheets: today=${today}, dates with orders: [${dates.join(', ')}], pastry records: ${records.filter(r => pastryNames.has(r.category)).length}`);
   if (dates.length === 0) return;
 
   // Fetch existing sheet titles once
