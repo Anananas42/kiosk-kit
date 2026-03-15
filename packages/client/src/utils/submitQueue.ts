@@ -1,9 +1,8 @@
-import type { RecordRequest } from '@zahumny/shared';
+import { SUBMIT_FLUSH_INTERVAL_MS, type RecordRequest } from '@zahumny/shared';
 import { postRecord } from '../api.js';
 import { cacheGet, cacheSet } from './cache.js';
 
 const QUEUE_KEY = 'pendingRecords';
-const FLUSH_INTERVAL = 30_000;
 
 interface PendingRecord {
   id: string;
@@ -57,6 +56,6 @@ async function flush(): Promise<void> {
 
 export function startFlushTimer(): void {
   if (flushTimer) return;
-  flushTimer = setInterval(flush, FLUSH_INTERVAL);
+  flushTimer = setInterval(flush, SUBMIT_FLUSH_INTERVAL_MS);
   window.addEventListener('online', () => void flush());
 }

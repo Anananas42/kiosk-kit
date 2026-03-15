@@ -1,4 +1,4 @@
-import { PASTRY_CATEGORIES } from '@zahumny/shared';
+import { PASTRY_CATEGORIES, SYNC_INTERVAL_MS } from '@zahumny/shared';
 import type { QueueStore } from './store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { updatePastrySheet } from '../sheets/pastry.js';
@@ -49,5 +49,5 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
         }
       }
     }
-  }, 30_000);
+  }, SYNC_INTERVAL_MS);
 }

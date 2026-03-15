@@ -1,10 +1,9 @@
-import type { EvidenceRow } from '@zahumny/shared';
+import { RECORDS_CACHE_TTL_MS, type EvidenceRow } from '@zahumny/shared';
 
 let cached: { data: EvidenceRow[]; ts: number } | null = null;
-const TTL = 5_000;
 
 export function getCachedRecords(): EvidenceRow[] | null {
-  if (cached && Date.now() - cached.ts < TTL) return cached.data;
+  if (cached && Date.now() - cached.ts < RECORDS_CACHE_TTL_MS) return cached.data;
   return null;
 }
 

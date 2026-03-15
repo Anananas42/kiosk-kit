@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+import { INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS } from '@zahumny/shared';
 
-const TIMEOUT_MS = 60_000;
-const WARNING_MS = 10_000;
 
 export function useInactivityReset(active: boolean, onReset: () => void) {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -23,7 +22,7 @@ export function useInactivityReset(active: boolean, onReset: () => void) {
       setSecondsLeft(null);
 
       warningTimer = setTimeout(() => {
-        let remaining = Math.ceil(WARNING_MS / 1000);
+        let remaining = Math.ceil(INACTIVITY_WARNING_MS / 1000);
         setSecondsLeft(remaining);
         countdownInterval = setInterval(() => {
           remaining -= 1;
@@ -34,7 +33,7 @@ export function useInactivityReset(active: boolean, onReset: () => void) {
             setSecondsLeft(remaining);
           }
         }, 1000);
-      }, TIMEOUT_MS - WARNING_MS);
+      }, INACTIVITY_TIMEOUT_MS - INACTIVITY_WARNING_MS);
     };
 
     startTimers();

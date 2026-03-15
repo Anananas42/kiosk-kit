@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { PASTRY_CATEGORIES, parsePrice, formatPrice, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
+import { PASTRY_CATEGORIES, REPEAT_ORDER_MS, parsePrice, formatPrice, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
@@ -38,7 +38,6 @@ const INITIAL_STATE: AppState = {
   item: null,
 };
 
-const REPEAT_TIMEOUT = 10_000;
 
 export default function App() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
@@ -59,7 +58,7 @@ export default function App() {
   useEffect(() => {
     if (!lastOrder) return;
     clearTimeout(repeatTimer.current);
-    repeatTimer.current = setTimeout(() => setLastOrder(null), REPEAT_TIMEOUT);
+    repeatTimer.current = setTimeout(() => setLastOrder(null), REPEAT_ORDER_MS);
     return () => clearTimeout(repeatTimer.current);
   }, [lastOrder]);
 

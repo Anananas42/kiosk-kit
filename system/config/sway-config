@@ -1,3 +1,8 @@
+# Sway compositor config for kiosk mode.
+# App-level timing constants live in packages/shared/src/config.ts.
+# Display-off timeout (900s) and wake grab hold (1.5s) are system-level
+# and kept here / in display-sleep.py respectively.
+
 seat * hide_cursor 1
 default_border none
 default_floating_border none

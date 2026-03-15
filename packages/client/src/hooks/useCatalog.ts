@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { CatalogCategory, Apartment } from '@zahumny/shared';
+import { CATALOG_RELOAD_INTERVAL_MS, type CatalogCategory, type Apartment } from '@zahumny/shared';
 import { fetchCatalog, fetchApartments } from '../api.js';
 import { cacheGet, cacheSet } from '../utils/cache.js';
 
@@ -34,7 +34,7 @@ export function useCatalog() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    const id = setInterval(load, 5 * 60_000);
+    const id = setInterval(load, CATALOG_RELOAD_INTERVAL_MS);
     return () => clearInterval(id);
   }, [load]);
 
