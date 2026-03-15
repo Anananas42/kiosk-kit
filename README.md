@@ -42,6 +42,7 @@ The app uses **header-based column lookup** — columns are matched by header na
 | **[Katalog]** | Product catalog | Kategorie, Typ, Název, množství, cena, Sazba DPH |
 | **[Evidence]** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
 | **[Přehled pečiva]** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
+| **[Pečivo config]** | Pastry ordering/delivery schedule | Den, Objednávky, Doručení |
 
 App-managed sheet tabs are prefixed with `[brackets]` to distinguish them from manual/reporting sheets.
 
@@ -51,6 +52,43 @@ The `Typ` column in the Katalog sheet controls how a category behaves in the UI.
 
 To add a new pastry category, just add rows to the Katalog sheet with `Typ` set to `pečivo`. No code changes needed.
 
+### Pastry ordering schedule ([Pečivo config])
+
+The `[Pečivo config]` sheet controls when pastry ordering and delivery are available, per weekday:
+
+| Den | Objednávky | Doručení |
+|-----|-----------|----------|
+| Pondělí | ano | ano |
+| Úterý | ano | ano |
+| ... | ... | ... |
+| Sobota | ne | ne |
+| Neděle | ne | ne |
+
+- **Objednávky** (`ano`/`ne`): Whether residents can place pastry orders on that day. When set to `ne`, the app shows an info banner instead of the category tiles.
+- **Doručení** (`ano`/`ne`): Whether pastries are delivered on that day. When set to `ne`, the delivery date calculation skips that day. For example, if Saturday and Sunday are `ne`, an order placed Friday evening will show Monday as the delivery date.
+
+Changes take effect within 5 minutes (catalog reload interval). To create the sheet on a fresh spreadsheet:
+
+```bash
+pnpm --filter @zahumny/server create-pastry-config
+```
+
+### Data model
+
+Each transaction record carries a signed `count` field — positive for additions, negative for removals. For regular items, count is always `+1`/`-1`. For pastries, it reflects the quantity picker (e.g., `+3` for ordering 3 pastries). The `quantity` field (e.g., "0.5l", "250g") is purely a display label and has no logical meaning in the backend.
+
+### API endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/catalog` | GET | Product catalog (categories + items) |
+| `/api/apartments` | GET | Apartment list |
+| `/api/health` | GET | Server health + queue depth |
+| `/api/record` | POST | Submit a consumption record |
+| `/api/overview` | GET | All evidence records |
+| `/api/item-count` | GET | Balance for a specific buyer+item |
+| `/api/pastry-config` | GET | Pastry ordering/delivery day schedule |
+
 ## Development
 
 ```bash
@@ -59,6 +97,14 @@ cp .env.example .env   # fill in SPREADSHEET_ID
 # place service-account.json in credentials/
 pnpm dev               # starts server + client with hot reload
 ```
+
+## Testing
+
+```bash
+pnpm test     # runs all tests (vitest)
+```
+
+Tests are co-located with source files (`*.test.ts`). Coverage includes price parsing, catalog validation, delivery date calculation (with skip-day logic), balance computation, and header-based column mapping.
 
 ## Building
 
@@ -148,7 +194,7 @@ sudo systemctl start zahumny-kiosk-deploy.service
 sudo bash /opt/zahumny-kiosk-repo/system/deploy.sh
 ```
 
-The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentials/` — only app code is updated.
+The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentials/` — only app code is updated. After rebuilding, it clears the Chromium cache and restarts sway to ensure the browser loads fresh frontend assets.
 
 ### Display Behavior
 
