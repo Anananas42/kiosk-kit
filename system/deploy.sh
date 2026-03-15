@@ -65,7 +65,16 @@ chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR"
 info "Installing dependencies and building"
 su - "$KIOSK_USER" -c "cd $INSTALL_DIR && pnpm install --frozen-lockfile && pnpm build"
 
+info "Clearing Chromium cache"
+rm -rf "/home/$KIOSK_USER/.cache/chromium"
+
 info "Restarting service"
 systemctl restart zahumny-kiosk.service
+
+# Force Chromium to reload by restarting sway (respawns via getty)
+if pgrep -u "$KIOSK_USER" sway >/dev/null 2>&1; then
+    info "Restarting kiosk display"
+    pkill -u "$KIOSK_USER" sway || true
+fi
 
 info "Deploy complete ($NEW_HEAD)"

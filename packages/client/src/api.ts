@@ -39,5 +39,9 @@ export async function postRecord(data: RecordRequest): Promise<RecordResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
   return res.json();
 }

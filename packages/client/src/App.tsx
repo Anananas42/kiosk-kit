@@ -139,16 +139,17 @@ export default function App() {
     setConfirmError(null);
     setIsSending(true);
     try {
-      const result = await postRecord(recordData);
-      if (result.error === 'insufficient_balance') {
+      await postRecord(recordData);
+      setLastSuccess(`Odebráno: ${state.item!.name}`);
+      reset();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg === 'insufficient_balance') {
         setConfirmError(`Kupující #${state.buyer} nemá žádný „${state.item!.name}" k odebrání.`);
       } else {
-        setLastSuccess(`Odebráno: ${state.item!.name}`);
-        reset();
+        console.error('Record error:', err);
+        setConfirmError('Připojení selhalo. Zkuste to znovu.');
       }
-    } catch (err) {
-      console.error('Record error:', err);
-      setConfirmError('Připojení selhalo. Zkuste to znovu.');
     } finally {
       setIsSending(false);
     }

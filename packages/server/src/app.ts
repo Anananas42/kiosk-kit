@@ -32,6 +32,16 @@ export function createApp(
   app.route('/api/overview', overviewRoute(queue));
   app.route('/api/item-count', itemCountRoute(queue));
 
+  // Prevent caching of HTML (index.html) so deploys take effect immediately.
+  // Hashed JS/CSS assets are fine to cache — they have unique filenames.
+  app.use('/*', async (c, next) => {
+    await next();
+    const ct = c.res.headers.get('Content-Type') ?? '';
+    if (ct.includes('text/html')) {
+      c.res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  });
+
   // Serve static client files in production
   app.use('/*', serveStatic({ root: './packages/client/dist' }));
   // SPA fallback
