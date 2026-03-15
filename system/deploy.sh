@@ -53,6 +53,11 @@ rsync -a --delete \
     --exclude 'credentials/' \
     "$REPO_DIR/" "$INSTALL_DIR/"
 
+# Display sleep script (lives under system/ which is excluded from main rsync)
+mkdir -p "$INSTALL_DIR/system/config"
+install -o "$KIOSK_USER" -g "$KIOSK_USER" -m 755 \
+    "$REPO_DIR/system/config/display-sleep.py" "$INSTALL_DIR/system/config/display-sleep.py"
+
 chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR"
 
 info "Installing dependencies and building"
