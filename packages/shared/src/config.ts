@@ -48,3 +48,11 @@ export const SHEETS_API_TIMEOUT_MS = 10_000;
 
 // Server-side evidence records cache TTL
 export const RECORDS_CACHE_TTL_MS = 5_000;
+
+// --- Backups ---
+
+// How often to back up all sheet data to local filesystem
+export const BACKUP_INTERVAL_MS = 60 * 60_000; // 1 hour
+
+// Maximum total size of backup files on disk
+export const BACKUP_MAX_BYTES = 8 * 1024 ** 3; // 8 GB

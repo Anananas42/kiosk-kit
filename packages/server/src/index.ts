@@ -36,6 +36,8 @@ const app = createApp(
 
 if (env.sheetsConfigured) {
   startSyncInterval(queue, (online) => { sheetsOnline = online; });
+  const { startBackupInterval } = await import('./backup.js');
+  startBackupInterval(DATA_DIR);
 }
 
 serve({ fetch: app.fetch, port: env.port }, (info) => {
