@@ -66,22 +66,24 @@ describe('validateRecordRequest', () => {
 describe('validateCatalog', () => {
   it('groups items by category', () => {
     const rows = [
-      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč'],
-      ['Alko', '', '', 'Wine', '0,2 l', '60 Kč'],
-      ['Nealko', '', '', 'Juice', '0,3 l', '30 Kč'],
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Alko', '', '', 'Wine', '0,2 l', '60 Kč', '21%'],
+      ['Nealko', '', '', 'Juice', '0,3 l', '30 Kč', '15%'],
     ];
     const result = validateCatalog(rows, 'pečivo');
     expect(result).toHaveLength(2);
     expect(result[0].name).toBe('Alko');
     expect(result[0].pastry).toBe(false);
     expect(result[0].items).toHaveLength(2);
+    expect(result[0].items[0].dphRate).toBe('21%');
     expect(result[1].name).toBe('Nealko');
+    expect(result[1].items[0].dphRate).toBe('15%');
   });
 
   it('sets pastry flag from type column', () => {
     const rows = [
-      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč'],
-      ['Pečivo slané', 'pečivo', 'R01', 'Rohlík', '1 ks', '5 Kč'],
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Pečivo slané', 'pečivo', 'R01', 'Rohlík', '1 ks', '5 Kč', '15%'],
     ];
     const result = validateCatalog(rows, 'pečivo');
     expect(result[0].pastry).toBe(false);
@@ -91,19 +93,19 @@ describe('validateCatalog', () => {
 
   it('skips rows with missing category or item name', () => {
     const rows = [
-      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč'],
-      ['', '', '', 'Orphan', '', ''],
-      ['Alko', '', '', '', '', ''],
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['', '', '', 'Orphan', '', '', ''],
+      ['Alko', '', '', '', '', '', ''],
     ];
     const result = validateCatalog(rows, 'pečivo');
     expect(result).toHaveLength(1);
     expect(result[0].items).toHaveLength(1);
   });
 
-  it('handles sparse rows (missing quantity/price)', () => {
+  it('handles sparse rows (missing quantity/price/dphRate)', () => {
     const rows = [['Alko', '', '', 'Beer']];
     const result = validateCatalog(rows, 'pečivo');
-    expect(result[0].items[0]).toEqual({ id: '', name: 'Beer', quantity: '', price: '' });
+    expect(result[0].items[0]).toEqual({ id: '', name: 'Beer', quantity: '', price: '', dphRate: '' });
   });
 
   it('returns empty for empty input', () => {

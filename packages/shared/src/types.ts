@@ -8,6 +8,7 @@ export interface CatalogItem {
   name: string;
   quantity: string;
   price: string;
+  dphRate: string;
 }
 
 export interface CatalogCategory {

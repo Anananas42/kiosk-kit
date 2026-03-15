@@ -3,6 +3,7 @@ import type { QueueStore } from './store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { getPastryCategories } from '../sheets/catalog.js';
 import { updatePastrySheet, updatePastryDaySheets } from '../sheets/pastry.js';
+import { updateConsumptionSheet } from '../sheets/consumption.js';
 
 export function startSyncInterval(queue: QueueStore, onStatusChange: (online: boolean) => void): void {
   setInterval(async () => {
@@ -54,6 +55,12 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
         } catch (err) {
           console.error('[sync] Pastry day sheets update failed:', (err as Error).message);
         }
+      }
+
+      try {
+        await updateConsumptionSheet();
+      } catch (err) {
+        console.error('[sync] Consumption summary update failed:', (err as Error).message);
       }
     }
   }, SYNC_INTERVAL_MS);

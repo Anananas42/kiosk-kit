@@ -5,6 +5,7 @@ import type { QueueStore } from '../queue/store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { getPastryCategories } from '../sheets/catalog.js';
 import { updatePastrySheet, updatePastryDaySheets } from '../sheets/pastry.js';
+import { updateConsumptionSheet } from '../sheets/consumption.js';
 import { env } from '../env.js';
 import { withLock } from '../lock.js';
 
@@ -56,6 +57,10 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
               console.error('[sheets] Pastry day sheets update failed:', (err as Error).message),
             );
           }
+
+          updateConsumptionSheet().catch((err) =>
+            console.error('[sheets] Consumption summary update failed:', (err as Error).message),
+          );
 
           return c.json({ ok: true, queued: false });
         } catch (err) {

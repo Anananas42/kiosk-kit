@@ -20,7 +20,10 @@ export const CATALOG_COLUMNS = {
   name: 'Název',
   quantity: 'množství',
   price: 'cena',
+  dphRate: 'Sazba DPH',
 } as const;
+
+export const CONSUMPTION_SHEET = '[📊 Souhrn konzumace]';
 
 export const CATALOG_TYPE_PASTRY = 'pečivo';
 

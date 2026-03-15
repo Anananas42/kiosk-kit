@@ -21,6 +21,7 @@ export async function readCatalog(): Promise<CatalogCategory[]> {
     getCol(row, colMap, CATALOG_COLUMNS.name),
     getCol(row, colMap, CATALOG_COLUMNS.quantity),
     getCol(row, colMap, CATALOG_COLUMNS.price),
+    getCol(row, colMap, CATALOG_COLUMNS.dphRate),
   ]);
 
   return validateCatalog(dataRows, CATALOG_TYPE_PASTRY);
