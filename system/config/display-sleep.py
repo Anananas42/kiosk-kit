@@ -11,11 +11,25 @@ register as a tap in the app), then releases and exits.  swayidle will
 re-arm automatically.
 """
 
+import glob
+import os
 import subprocess
 import time
 
 import evdev
 import evdev.ecodes as e
+
+XDG_RUNTIME_DIR = "/tmp/kiosk-xdg"
+
+
+def ensure_sway_env():
+    """Set SWAYSOCK and WAYLAND_DISPLAY so swaymsg can reach the compositor."""
+    os.environ.setdefault("XDG_RUNTIME_DIR", XDG_RUNTIME_DIR)
+    os.environ.setdefault("WAYLAND_DISPLAY", "wayland-1")
+    if "SWAYSOCK" not in os.environ:
+        socks = glob.glob(os.path.join(XDG_RUNTIME_DIR, "sway-ipc.*.sock"))
+        if socks:
+            os.environ["SWAYSOCK"] = socks[0]
 
 
 def find_touchscreen():
@@ -30,6 +44,7 @@ def find_touchscreen():
 
 
 def main():
+    ensure_sway_env()
     dev = find_touchscreen()
     if dev is None:
         return
