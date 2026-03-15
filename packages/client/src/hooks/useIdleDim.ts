@@ -1,43 +1,25 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
-const DIM_MS = 15_000;
-const DPMS_MS = 900_000; // 15 minutes — must match swayidle timeout
-const DPMS_WAKE_COOLDOWN_MS = 5_000;
+const IDLE_MS = 15_000;
 
 export function useIdleDim() {
   const [dimmed, setDimmed] = useState(false);
-  const [waking, setWaking] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const idleSinceRef = useRef(Date.now());
-
-  const resetTimer = useCallback(() => {
-    idleSinceRef.current = Date.now();
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setDimmed(true), DIM_MS);
-  }, []);
 
   useEffect(() => {
-    resetTimer();
+    let timer = setTimeout(() => setDimmed(true), IDLE_MS);
 
-    const onTouch = () => {
-      const idleDuration = Date.now() - idleSinceRef.current;
-
-      // If display was likely off (DPMS), block touches while it powers on
-      if (idleDuration >= DPMS_MS) {
-        setWaking(true);
-        setTimeout(() => setWaking(false), DPMS_WAKE_COOLDOWN_MS);
-      }
-
+    const wake = () => {
       setDimmed(false);
-      resetTimer();
+      clearTimeout(timer);
+      timer = setTimeout(() => setDimmed(true), IDLE_MS);
     };
 
-    window.addEventListener('pointerdown', onTouch);
+    window.addEventListener('pointerdown', wake);
     return () => {
-      clearTimeout(timerRef.current);
-      window.removeEventListener('pointerdown', onTouch);
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', wake);
     };
-  }, [resetTimer]);
+  }, []);
 
-  return { dimmed, waking };
+  return dimmed;
 }

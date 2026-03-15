@@ -139,7 +139,6 @@ seat * hide_cursor 1
 default_border none
 default_floating_border none
 
-exec swayidle -w timeout 900 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"'
 exec chromium \
     --kiosk \
     --noerrdialogs \

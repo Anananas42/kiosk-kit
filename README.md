@@ -82,7 +82,7 @@ sudo reboot
 5. **Installs systemd service** (`zahumny-kiosk.service`) for the Node.js app
 6. **Configures autologin** on tty1 via getty drop-in
 7. **Writes kiosk `.bash_profile`**: waits for server → launches sway → chromium fullscreen
-8. **Writes sway config**: hidden cursor, no decorations, DPMS off after 15min idle
+8. **Writes sway config**: hidden cursor, no window decorations
 9. **Installs Chromium policies**: URL whitelist (localhost:3001 only), no devtools/downloads
 10. **Applies security hardening**: USB storage block, SysRq disable, nftables firewall, SSH key-only auth
 11. **Configures hardware watchdog**: `bcm2835_wdt` with 15s timeout for auto-reboot on hang
@@ -97,7 +97,6 @@ power on → systemd starts
   ├── zahumny-kiosk.service → node (port 3001)
   ├── getty@tty1 → autologin kiosk
   │     └── .bash_profile → polls localhost:3001 → exec sway
-  │           ├── swayidle → DPMS off after 15min
   │           └── chromium --kiosk http://localhost:3001
   └── hardware watchdog (bcm2835_wdt, 15s timeout)
 ```
@@ -124,8 +123,7 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 ### Display Behavior
 
 - **15s idle**: app dims (70% dark overlay, fades in over 1s)
-- **15min idle**: display turns off via DPMS
-- **Touch**: instantly wakes display and dismisses dim overlay
+- **Touch**: dismisses dim overlay
 - **Cursor**: hidden (sway `hide_cursor 1` — invisible on touchscreen)
 
 ### Security Layers
