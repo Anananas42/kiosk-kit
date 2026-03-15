@@ -12,6 +12,8 @@ const HEADER_BG = { red: 0.267, green: 0.447, blue: 0.769 };  // #4472C4
 const HEADER_FG = { red: 1, green: 1, blue: 1 };               // white
 const WINDOW_BG = { red: 0.851, green: 0.886, blue: 0.953 };   // #D9E2F3
 const TOTALS_BG = { red: 0.886, green: 0.937, blue: 0.855 };   // #E2EFDA
+const NAME_BG = WINDOW_BG;                                      // #D9E2F3
+const ID_BG = { red: 0.93, green: 0.93, blue: 0.93 };          // #EDEDED
 
 export interface FormatSpec {
   sheetId: number;
@@ -97,6 +99,33 @@ export function buildFormatRequests(spec: FormatSpec): sheets_v4.Schema$Request[
       },
     });
   }
+
+  // Name column (A): bold + light blue background (data rows only)
+  requests.push({
+    repeatCell: {
+      range: { sheetId: spec.sheetId, startRowIndex: spec.frozenRows, endRowIndex: spec.totalRows, startColumnIndex: 0, endColumnIndex: 1 },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: NAME_BG,
+          textFormat: { bold: true },
+        },
+      },
+      fields: 'userEnteredFormat(backgroundColor,textFormat)',
+    },
+  });
+
+  // ID column (B): light gray background (data rows only)
+  requests.push({
+    repeatCell: {
+      range: { sheetId: spec.sheetId, startRowIndex: spec.frozenRows, endRowIndex: spec.totalRows, startColumnIndex: 1, endColumnIndex: 2 },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: ID_BG,
+        },
+      },
+      fields: 'userEnteredFormat(backgroundColor)',
+    },
+  });
 
   // Medium border below frozen rows
   requests.push({
@@ -434,7 +463,7 @@ export async function updatePastryDaySheets(): Promise<void> {
           sheetId,
           frozenRows: 1,
           columnWidths: [
-            { startIndex: 0, endIndex: 1, width: 200 },
+            { startIndex: 0, endIndex: 1, width: 250 },
             { startIndex: 1, endIndex: 2, width: 80 },
             { startIndex: 2, endIndex: totalCols - 1, width: 60 },
             { startIndex: totalCols - 1, endIndex: totalCols, width: 70 },

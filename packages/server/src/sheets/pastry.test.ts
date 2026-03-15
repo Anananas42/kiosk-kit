@@ -107,6 +107,8 @@ describe('buildFormatRequests', () => {
       'updateDimensionProperties',
       'repeatCell', // header
       'repeatCell', // last col highlight
+      'repeatCell', // name column
+      'repeatCell', // ID column
       'updateBorders', // medium border below frozen
       'updateBorders', // thin grid
     ]);
@@ -126,6 +128,21 @@ describe('buildFormatRequests', () => {
     expect(lastCol.range?.startRowIndex).toBe(1);
     expect(lastCol.range?.endRowIndex).toBe(4);
     expect(lastCol.range?.startColumnIndex).toBe(5);
+
+    // Verify name column formatting targets data rows only
+    const nameCol = requests[7].repeatCell!;
+    expect(nameCol.range?.startRowIndex).toBe(1);
+    expect(nameCol.range?.endRowIndex).toBe(4);
+    expect(nameCol.range?.startColumnIndex).toBe(0);
+    expect(nameCol.range?.endColumnIndex).toBe(1);
+    expect(nameCol.cell?.userEnteredFormat?.textFormat?.bold).toBe(true);
+
+    // Verify ID column formatting targets data rows only
+    const idCol = requests[8].repeatCell!;
+    expect(idCol.range?.startRowIndex).toBe(1);
+    expect(idCol.range?.endRowIndex).toBe(4);
+    expect(idCol.range?.startColumnIndex).toBe(1);
+    expect(idCol.range?.endColumnIndex).toBe(2);
   });
 
   it('includes window row for overview spec', () => {
