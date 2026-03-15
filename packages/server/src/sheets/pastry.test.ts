@@ -31,7 +31,7 @@ describe('buildDaySheetValues', () => {
 
     const result = buildDaySheetValues(records, pastryNames, noDelivery, '2026-03-15', labels);
     expect(result).toEqual([
-      ['Položka', 'ID', 'Apt 1', 'Apt 5', 'Apt 12', 'Celkem'],
+      ['Výdej pečiva 15.3.', 'ID', 'Apt 1', 'Apt 5', 'Apt 12', 'Celkem'],
       ['Houska', '', '', '', 1, 1],
       ['Rohlík', '', 2, 1, '', 3],
     ]);
@@ -66,7 +66,7 @@ describe('buildDaySheetValues', () => {
     // Let's just verify the function works with the records present.
     const result = buildDaySheetValues(records, pastryNames, noDelivery, '2026-03-15', labels);
     expect(result).toEqual([
-      ['Položka', 'ID', 'Apt 1', 'Apt 5', 'Celkem'],
+      ['Výdej pečiva 15.3.', 'ID', 'Apt 1', 'Apt 5', 'Celkem'],
       ['Houska', '', '', 1, 1],
       ['Rohlík', '', 2, '', 2],
     ]);
@@ -76,7 +76,7 @@ describe('buildDaySheetValues', () => {
     const records = [rec(99, 'Rohlík', '2026-03-14T08:00:00Z')];
     const result = buildDaySheetValues(records, pastryNames, noDelivery, '2026-03-15', labels);
     expect(result).toEqual([
-      ['Položka', 'ID', '99', 'Celkem'],
+      ['Výdej pečiva 15.3.', 'ID', '99', 'Celkem'],
       ['Rohlík', '', 1, 1],
     ]);
   });

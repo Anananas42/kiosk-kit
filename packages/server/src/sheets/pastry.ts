@@ -331,7 +331,7 @@ export function buildDaySheetValues(
   if (buyers.length === 0) return null;
 
   const headerRow: (string | number)[] = [
-    'Položka',
+    daySheetName(targetDate),
     'ID',
     ...buyers.map((b) => apartmentLabel.get(b) ?? String(b)),
     'Celkem',
@@ -414,7 +414,7 @@ export async function updatePastryDaySheets(): Promise<void> {
 
     const sheetTitle = daySheetName(date);
     const headerRow = [
-      'Položka',
+      sheetTitle,
       'ID',
       ...buyers.map((b) => apartmentLabel.get(b) ?? String(b)),
       'Celkem',
