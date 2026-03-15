@@ -32,7 +32,7 @@ fi
 
 apt-get update -qq
 apt-get install -y -qq \
-    cage \
+    sway \
     chromium \
     fonts-noto-color-emoji \
     nftables \
@@ -127,32 +127,43 @@ install -m 644 "$REPO_DIR/system/config/getty-autologin.conf" \
 
 info "Writing kiosk .bash_profile"
 
+# Sway config (hidden cursor, no window decorations, auto-launch chromium)
+mkdir -p "/home/$KIOSK_USER/.config/sway"
+cat > "/home/$KIOSK_USER/.config/sway/config" << 'SWAYCONF'
+seat * hide_cursor 1
+default_border none
+default_floating_border none
+
+exec swayidle -w timeout 900 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"'
+exec chromium \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-translate \
+    --no-first-run \
+    --disable-features=TranslateUI \
+    --disable-session-crashed-bubble \
+    --disable-component-update \
+    --autoplay-policy=no-user-gesture-required \
+    --password-store=basic \
+    --ozone-platform=wayland \
+    --force-device-scale-factor=1.6 \
+    http://localhost:3001
+SWAYCONF
+
 cat > "/home/$KIOSK_USER/.bash_profile" << 'PROFILE'
-# Only launch kiosk on tty1
 if [ "$(tty)" = "/dev/tty1" ]; then
-    # Wait for the app server to be ready
     until curl -sf http://localhost:3001 >/dev/null 2>&1; do
         sleep 2
     done
 
-    export WLR_NO_HARDWARE_CURSORS=1
-    export XCURSOR_THEME=emptycursor
-    export XCURSOR_SIZE=1
-    exec cage -- chromium \
-        --kiosk \
-        --noerrdialogs \
-        --disable-infobars \
-        --disable-translate \
-        --no-first-run \
-        --disable-features=TranslateUI \
-        --disable-session-crashed-bubble \
-        --disable-component-update \
-        --autoplay-policy=no-user-gesture-required \
-        --password-store=basic \
-        http://localhost:3001
+    export XDG_RUNTIME_DIR=/tmp/kiosk-xdg
+    mkdir -p "$XDG_RUNTIME_DIR"
+    exec sway --unsupported-gpu
 fi
 PROFILE
 
+chown -R "$KIOSK_USER:$KIOSK_USER" "/home/$KIOSK_USER/.config"
 chown "$KIOSK_USER:$KIOSK_USER" "/home/$KIOSK_USER/.bash_profile"
 chmod 644 "/home/$KIOSK_USER/.bash_profile"
 
