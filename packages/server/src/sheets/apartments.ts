@@ -1,4 +1,4 @@
-import { CONFIG_SHEET, CONFIG_COLUMNS, type Apartment } from '@zahumny/shared';
+import { CONFIG_SHEET, sheetRange, CONFIG_COLUMNS, type Apartment } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { env } from '../env.js';
 import { buildColumnMap, getCol } from './column-map.js';
@@ -7,7 +7,7 @@ export async function readApartments(): Promise<Apartment[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: env.spreadsheetId,
-    range: `${CONFIG_SHEET}!A1:ZZ`,
+    range: sheetRange(CONFIG_SHEET, 'A1:ZZ'),
   });
 
   const rows = res.data.values ?? [];

@@ -1,4 +1,4 @@
-import { CATALOG_SHEET, CATALOG_COLUMNS, CATALOG_TYPE_PASTRY, validateCatalog, type CatalogCategory } from '@zahumny/shared';
+import { CATALOG_SHEET, sheetRange, CATALOG_COLUMNS, CATALOG_TYPE_PASTRY, validateCatalog, type CatalogCategory } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { env } from '../env.js';
 import { buildColumnMap, getCol } from './column-map.js';
@@ -7,7 +7,7 @@ export async function readCatalog(): Promise<CatalogCategory[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: env.spreadsheetId,
-    range: `${CATALOG_SHEET}!A1:ZZ`,
+    range: sheetRange(CATALOG_SHEET, 'A1:ZZ'),
   });
 
   const rows = res.data.values ?? [];

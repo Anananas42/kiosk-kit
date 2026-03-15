@@ -1,4 +1,4 @@
-import { PASTRY_SHEET, getDeliveryDate } from '@zahumny/shared';
+import { PASTRY_SHEET, sheetRange, getDeliveryDate } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { readRecords } from './evidence.js';
 import { getPastryCategories } from './catalog.js';
@@ -66,7 +66,7 @@ export async function updatePastrySheet(): Promise<void> {
     try {
       const existing = await sheets.spreadsheets.values.get({
         spreadsheetId: env.spreadsheetId,
-        range: `${PASTRY_SHEET}!A1:ZZ`,
+        range: sheetRange(PASTRY_SHEET, 'A1:ZZ'),
       });
       const existingValues = existing.data.values ?? [];
       const same =
@@ -83,11 +83,11 @@ export async function updatePastrySheet(): Promise<void> {
 
   await sheets.spreadsheets.values.clear({
     spreadsheetId: env.spreadsheetId,
-    range: `${PASTRY_SHEET}!A:ZZ`,
+    range: sheetRange(PASTRY_SHEET, 'A:ZZ'),
   });
   await sheets.spreadsheets.values.update({
     spreadsheetId: env.spreadsheetId,
-    range: `${PASTRY_SHEET}!A1`,
+    range: sheetRange(PASTRY_SHEET, 'A1'),
     valueInputOption: 'RAW',
     requestBody: { values },
   });

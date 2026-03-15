@@ -38,12 +38,12 @@ The app uses **header-based column lookup** — columns are matched by header na
 
 | Sheet | Purpose | Key columns |
 |-------|---------|-------------|
-| **Config** | Apartment list | ID, Label |
-| **Katalog** | Product catalog | Kategorie, Typ, Název, množství, cena, Sazba DPH |
-| **Evidence** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
-| **Přehled pečiva** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
+| **[Apartment config]** | Apartment list | ID, Label |
+| **[Katalog]** | Product catalog | Kategorie, Typ, Název, množství, cena, Sazba DPH |
+| **[Evidence]** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
+| **[Přehled pečiva]** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
 
-Other sheets in the spreadsheet (konzumace položky, konzumace DPH, Kontingenční tabulka 1, Test data) are for manual reporting and not used by the app.
+App-managed sheet tabs are prefixed with `[brackets]` to distinguish them from manual/reporting sheets.
 
 ### Category types (Typ column)
 

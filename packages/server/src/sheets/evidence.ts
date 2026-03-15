@@ -1,4 +1,4 @@
-import { EVIDENCE_SHEET, HEADER_ROW, parsePrice, computeBalance, type RecordEntry, type EvidenceRow } from '@zahumny/shared';
+import { EVIDENCE_SHEET, sheetRange, HEADER_ROW, parsePrice, computeBalance, type RecordEntry, type EvidenceRow } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { env } from '../env.js';
 import { getCachedRecords, setCachedRecords, invalidateRecordsCache } from './records-cache.js';
@@ -11,14 +11,14 @@ async function ensureHeader(): Promise<void> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: env.spreadsheetId,
-    range: `${EVIDENCE_SHEET}!A1:G1`,
+    range: sheetRange(EVIDENCE_SHEET, 'A1:G1'),
   });
   const existing = res.data.values?.[0] ?? [];
   const matches = HEADER_ROW.every((h, i) => existing[i] === h);
   if (!matches) {
     await sheets.spreadsheets.values.update({
       spreadsheetId: env.spreadsheetId,
-      range: `${EVIDENCE_SHEET}!A1`,
+      range: sheetRange(EVIDENCE_SHEET, 'A1'),
       valueInputOption: 'RAW',
       requestBody: { values: [HEADER_ROW] },
     });
@@ -35,7 +35,7 @@ export async function appendRow(entry: RecordEntry): Promise<void> {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.spreadsheetId,
-    range: `${EVIDENCE_SHEET}!A:G`,
+    range: sheetRange(EVIDENCE_SHEET, 'A:G'),
     valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [[
@@ -60,7 +60,7 @@ export async function readRecords(): Promise<EvidenceRow[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: env.spreadsheetId,
-    range: `${EVIDENCE_SHEET}!A1:ZZ`,
+    range: sheetRange(EVIDENCE_SHEET, 'A1:ZZ'),
   });
 
   const rows = res.data.values ?? [];
