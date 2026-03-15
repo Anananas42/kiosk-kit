@@ -4,6 +4,7 @@ import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
 import { useInactivityReset } from './hooks/useInactivityReset.js';
+import { useIdleDim } from './hooks/useIdleDim.js';
 import { enqueueRecord, startFlushTimer } from './utils/submitQueue.js';
 import OfflineBanner from './components/OfflineBanner.js';
 import SuccessFlash from './components/SuccessFlash.js';
@@ -48,6 +49,7 @@ export default function App() {
   const repeatTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const isOffline = useHealth();
+  const dimmed = useIdleDim();
   const { catalog, apartments, reload, error: catalogError } = useCatalog();
 
   const pastryCategories = catalog.filter((cat) => PASTRY_CATEGORIES.has(cat.name));
@@ -161,6 +163,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {dimmed && <div className="idle-dim" />}
       <div className="toast-layer">
         {secondsLeft !== null && (
           <div className="inactivity-warning" onClick={dismissWarning}>

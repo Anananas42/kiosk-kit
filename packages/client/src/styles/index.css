@@ -42,6 +42,20 @@ body {
   user-select: none;
 }
 
+/* ===== Idle dim overlay ===== */
+.idle-dim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  animation: dim-fade-in 1s ease-out;
+}
+
+@keyframes dim-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ===== Layout ===== */
 .app {
   position: relative;
