@@ -96,7 +96,12 @@ export default function App() {
   }, []);
 
   const handleBackToCategory = useCallback(() => {
-    setState((s) => ({ ...s, item: null, category: null, screen: 'category' }));
+    setState((s) => {
+      if (s.category?.pastry) {
+        return { ...s, item: null, category: null, screen: 'pastry-category' };
+      }
+      return { ...s, item: null, category: null, screen: 'category' };
+    });
   }, []);
 
   const handleRepeat = useCallback(() => {
@@ -119,6 +124,7 @@ export default function App() {
       count,
       category: state.category!.name,
       item: state.item!.name,
+      itemId: state.item!.id,
       quantity: state.item!.quantity,
       price: state.item!.price,
     };
@@ -212,6 +218,7 @@ export default function App() {
           category={state.category}
           onSelect={handleItemSelect}
           onBack={handleBackToCategory}
+          backLabel={state.category.pastry ? 'Zpět na objednat pečivo' : undefined}
         />
       )}
 

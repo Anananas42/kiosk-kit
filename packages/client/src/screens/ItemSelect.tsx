@@ -8,6 +8,7 @@ interface ItemSelectProps {
   category: CatalogCategory;
   onSelect: (item: CatalogItem) => void;
   onBack: () => void;
+  backLabel?: string;
 }
 
 function itemSubtitle(item: CatalogItem): string {
@@ -17,13 +18,13 @@ function itemSubtitle(item: CatalogItem): string {
   return parts.join(' \u00b7 ');
 }
 
-export default function ItemSelect({ buyer, category, onSelect, onBack }: ItemSelectProps) {
+export default function ItemSelect({ buyer, category, onSelect, onBack, backLabel = 'Zpět na kategorie' }: ItemSelectProps) {
   return (
     <div className="screen">
       <ScreenHeader
         title="🛒 Vyberte položku"
         onBack={onBack}
-        backLabel="Zpět na kategorie"
+        backLabel={backLabel}
         crumbs={[
           { label: 'Kupující', value: `#${buyer}` },
           { label: 'Kategorie', value: category.name },
@@ -33,7 +34,7 @@ export default function ItemSelect({ buyer, category, onSelect, onBack }: ItemSe
         <div className="tile-grid tile-grid--items">
           {category.items.map((item) => (
             <Tile
-              key={item.name}
+              key={item.id || item.name}
               label={item.name}
               subtitle={itemSubtitle(item)}
               variant="item"
