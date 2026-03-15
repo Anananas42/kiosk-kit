@@ -165,6 +165,7 @@ function todayPrague(): string {
  * Only creates sheets for today and future delivery dates.
  */
 export async function updatePastryDaySheets(): Promise<void> {
+  console.log('[sheets] Day sheets: starting');
   const sheets = await getSheetsClient();
   const pastryNames = await getPastryCategories();
   const records = await readRecords();
