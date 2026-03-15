@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 
 const IDLE_MS = 15_000;
-const WAKE_COOLDOWN_MS = 800;
+const WAKE_COOLDOWN_MS = 5_000;
 
 export function useIdleDim() {
   const [dimmed, setDimmed] = useState(false);
