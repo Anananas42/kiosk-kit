@@ -49,7 +49,7 @@ export default function App() {
   const repeatTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const isOffline = useHealth();
-  const dimmed = useIdleDim();
+  const { blocked: screenBlocked, wake: wakeScreen } = useIdleDim();
   const { catalog, apartments, reload, error: catalogError } = useCatalog();
 
   const pastryCategories = catalog.filter((cat) => PASTRY_CATEGORIES.has(cat.name));
@@ -163,7 +163,9 @@ export default function App() {
 
   return (
     <div className="app">
-      {dimmed && <div className="idle-dim" />}
+      {screenBlocked && (
+        <div className="idle-dim" onPointerDown={(e) => { e.stopPropagation(); wakeScreen(); }} />
+      )}
       <div className="toast-layer">
         {secondsLeft !== null && (
           <div className="inactivity-warning" onClick={dismissWarning}>
