@@ -32,16 +32,24 @@ pnpm --filter @zahumny/server inspect-sheets -- 10 # 10 sample rows
 
 The app uses **header-based column lookup** — columns are matched by header name, not position. Adding, reordering, or removing unused columns won't break the API.
 
+**Row limits**: The default grid size shown in Google Sheets (e.g. 1000 rows) is just a display allocation, not a data cap. The API returns only populated rows regardless of grid size, and `values.append` auto-expands the grid when writing past it.
+
 ### Sheets used by the app
 
 | Sheet | Purpose | Key columns |
 |-------|---------|-------------|
 | **Config** | Apartment list | ID, Label |
-| **Katalog** | Product catalog | Kategorie, Název, množství, cena, Sazba DPH |
+| **Katalog** | Product catalog | Kategorie, Typ, Název, množství, cena, Sazba DPH |
 | **Evidence** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
 | **Přehled pečiva** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
 
 Other sheets in the spreadsheet (konzumace položky, konzumace DPH, Kontingenční tabulka 1, Test data) are for manual reporting and not used by the app.
+
+### Category types (Typ column)
+
+The `Typ` column in the Katalog sheet controls how a category behaves in the UI. Set `Typ` to `pečivo` for pastry categories — these get a quantity picker (1–10), delivery date calculation, and a dedicated orders overview. All other categories (empty `Typ`) use the standard single-item add/remove flow.
+
+To add a new pastry category, just add rows to the Katalog sheet with `Typ` set to `pečivo`. No code changes needed.
 
 ## Development
 
