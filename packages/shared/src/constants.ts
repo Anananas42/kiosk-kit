@@ -16,6 +16,7 @@ export const HEADER_ROW = ['Čas', 'Kupující', 'Operace', 'Kategorie', 'Polož
 export const CATALOG_COLUMNS = {
   category: 'Kategorie',
   type: 'Typ',
+  id: 'ID',
   name: 'Název',
   quantity: 'množství',
   price: 'cena',

@@ -2,7 +2,7 @@ import { PASTRY_SHEET, TZ, sheetRange, getDeliveryDate, noDeliveryDaysSet } from
 import { getSheetsClient } from './client.js';
 import { readRecords } from './evidence.js';
 import { readApartments } from './apartments.js';
-import { getPastryCategories } from './catalog.js';
+import { getPastryCategories, getPastryItemIds } from './catalog.js';
 import { readPastryConfig } from './pastry-config.js';
 import { env } from '../env.js';
 
@@ -20,6 +20,7 @@ function pastryWindowLabel(deliveryDateStr: string): string {
 export async function updatePastrySheet(): Promise<void> {
   const sheets = await getSheetsClient();
   const pastryNames = await getPastryCategories();
+  const itemIds = await getPastryItemIds();
   const records = await readRecords();
   const pastryConfig = await readPastryConfig();
   const noDeliveryDays = noDeliveryDaysSet(pastryConfig.deliveryDays);
@@ -43,13 +44,13 @@ export async function updatePastrySheet(): Promise<void> {
   const sortedDates = [...dateSet].sort().reverse();
   const sortedItems = [...itemSet].sort();
 
-  const headerRow = ['Položka', ...sortedDates.map((d) => {
+  const headerRow = ['Položka', 'ID', ...sortedDates.map((d) => {
     const [y, mo, dy] = d.split('-').map(Number);
     return `${dy}. ${mo}. ${y}`;
   })];
-  const windowRow = ['Okno objednávek', ...sortedDates.map(pastryWindowLabel)];
+  const windowRow = ['Okno objednávek', '', ...sortedDates.map(pastryWindowLabel)];
   const dataRows = sortedItems.map((item) =>
-    [item, ...sortedDates.map((d) => {
+    [item, itemIds.get(item) ?? '', ...sortedDates.map((d) => {
       const qty = pivot[item]?.[d] ?? 0;
       return qty > 0 ? qty : 0;
     })],
