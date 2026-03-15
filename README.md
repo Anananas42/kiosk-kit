@@ -123,7 +123,7 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 ### Display Behavior
 
 - **15s idle**: app dims (70% dark overlay, fades in over 1s)
-- **15min idle**: display turns off via DPMS (`swayidle`)
+- **30min idle**: display turns off via DPMS (`swayidle`)
 - **Touch when off**: first touch wakes the display but is consumed (evdev grab prevents it from reaching the app)
 - **Touch when dimmed**: dismisses dim overlay
 - **Cursor**: hidden (sway `hide_cursor 1` — invisible on touchscreen)
