@@ -2,7 +2,7 @@ import { SYNC_INTERVAL_MS } from '@zahumny/shared';
 import type { QueueStore } from './store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { getPastryCategories } from '../sheets/catalog.js';
-import { updatePastrySheet } from '../sheets/pastry.js';
+import { updatePastrySheet, updatePastryDaySheets } from '../sheets/pastry.js';
 
 export function startSyncInterval(queue: QueueStore, onStatusChange: (online: boolean) => void): void {
   setInterval(async () => {
@@ -48,6 +48,11 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
           await updatePastrySheet();
         } catch (err) {
           console.error('[sync] Pastry sheet update failed:', (err as Error).message);
+        }
+        try {
+          await updatePastryDaySheets();
+        } catch (err) {
+          console.error('[sync] Pastry day sheets update failed:', (err as Error).message);
         }
       }
     }

@@ -43,6 +43,7 @@ The app uses **header-based column lookup** — columns are matched by header na
 | **[Evidence]** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
 | **[Přehled pečiva]** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
 | **[Pečivo config]** | Pastry ordering/delivery schedule | Den, Objednávky, Doručení |
+| **Výdej pečiva D.M.** | Per-day pastry distribution sheet (auto-generated, one per delivery date) | Položka, \<apartments\>, Celkem |
 
 App-managed sheet tabs are prefixed with `[brackets]` to distinguish them from manual/reporting sheets.
 
@@ -72,6 +73,10 @@ Changes take effect within 5 minutes (catalog reload interval). To create the sh
 ```bash
 pnpm --filter @zahumny/server create-pastry-config
 ```
+
+### Per-day pastry distribution sheets
+
+When pastry orders are synced, the app auto-generates one sheet per upcoming delivery date, named e.g. `Výdej pečiva 15.3.`. These are designed for printing — rows are pastry items, columns are apartments that placed orders, and the last column is a total. Only today's and future delivery dates get sheets; past dates are skipped. The owners can delete old sheets manually after distribution.
 
 ### Data model
 
