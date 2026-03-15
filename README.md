@@ -158,6 +158,7 @@ system/
     ├── deploy-key                    # Read-only GitHub deploy key (private)
     ├── deploy-key.pub                # Deploy key (public)
     ├── display-sleep.py              # DPMS off + evdev grab (touch-safe display sleep)
+    ├── sway-config                   # Sway compositor config (cursor, swayidle, chromium)
     ├── getty-autologin.conf          # tty1 autologin drop-in
     ├── make-empty-cursor.py          # Generates transparent cursor theme
     ├── nftables.conf                 # Firewall rules

@@ -1,0 +1,20 @@
+seat * hide_cursor 1
+default_border none
+default_floating_border none
+
+exec swayidle -w timeout 900 '/opt/zahumny-kiosk/system/config/display-sleep.py'
+
+exec chromium \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-translate \
+    --no-first-run \
+    --disable-features=TranslateUI \
+    --disable-session-crashed-bubble \
+    --disable-component-update \
+    --autoplay-policy=no-user-gesture-required \
+    --password-store=basic \
+    --ozone-platform=wayland \
+    --force-device-scale-factor=1.6 \
+    http://localhost:3001

@@ -139,30 +139,10 @@ install -m 644 "$REPO_DIR/system/config/getty-autologin.conf" \
 
 info "Writing kiosk .bash_profile"
 
-# Sway config (hidden cursor, no window decorations, auto-launch chromium)
+# Sway config (hidden cursor, no window decorations, swayidle, chromium)
 mkdir -p "/home/$KIOSK_USER/.config/sway"
-cat > "/home/$KIOSK_USER/.config/sway/config" << 'SWAYCONF'
-seat * hide_cursor 1
-default_border none
-default_floating_border none
-
-exec swayidle -w timeout 900 '/opt/zahumny-kiosk/system/config/display-sleep.py'
-
-exec chromium \
-    --kiosk \
-    --noerrdialogs \
-    --disable-infobars \
-    --disable-translate \
-    --no-first-run \
-    --disable-features=TranslateUI \
-    --disable-session-crashed-bubble \
-    --disable-component-update \
-    --autoplay-policy=no-user-gesture-required \
-    --password-store=basic \
-    --ozone-platform=wayland \
-    --force-device-scale-factor=1.6 \
-    http://localhost:3001
-SWAYCONF
+install -o "$KIOSK_USER" -g "$KIOSK_USER" -m 644 \
+    "$REPO_DIR/system/config/sway-config" "/home/$KIOSK_USER/.config/sway/config"
 
 cat > "/home/$KIOSK_USER/.bash_profile" << 'PROFILE'
 if [ "$(tty)" = "/dev/tty1" ]; then
