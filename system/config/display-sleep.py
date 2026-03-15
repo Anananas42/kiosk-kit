@@ -65,7 +65,7 @@ def main():
         # Keep the grab for a moment so remaining touch-up / move events
         # from the wake gesture don't reach the app, and so the display has
         # time to power on before the user can interact.
-        deadline = time.monotonic() + 1.5
+        deadline = time.monotonic() + 4.0
         while time.monotonic() < deadline:
             try:
                 dev.read()  # drain queued events
