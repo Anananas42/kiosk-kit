@@ -27,3 +27,18 @@ export const CONFIG_COLUMNS = {
   id: 'ID',
   label: 'Label',
 } as const;
+
+export const PASTRY_CONFIG_SHEET = '[Pečivo config]';
+export const PASTRY_CONFIG_COLUMNS = {
+  day: 'Den',
+  ordering: 'Objednávky',
+  delivery: 'Doručení',
+} as const;
+
+/** Czech day names in JS weekday order (0=Sunday, 1=Monday, ..., 6=Saturday). */
+export const WEEKDAY_NAMES_CS = [
+  'Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota',
+] as const;
+
+/** Value in the config sheet meaning "yes". */
+export const CONFIG_YES = 'ano';

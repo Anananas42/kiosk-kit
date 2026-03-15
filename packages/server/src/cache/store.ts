@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import type { CatalogCategory, Apartment } from '@zahumny/shared';
+import type { CatalogCategory, Apartment, PastryConfig } from '@zahumny/shared';
 
 export class CacheStore {
   constructor(private db: Database.Database) {}
@@ -26,5 +26,17 @@ export class CacheStore {
       `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, datetime('now'))
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     ).run('apartments', JSON.stringify(apartments));
+  }
+
+  getPastryConfig(): PastryConfig | null {
+    const row = this.db.prepare('SELECT value FROM cache WHERE key = ?').get('pastryConfig') as { value: string } | undefined;
+    return row ? JSON.parse(row.value) : null;
+  }
+
+  setPastryConfig(config: PastryConfig): void {
+    this.db.prepare(
+      `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    ).run('pastryConfig', JSON.stringify(config));
   }
 }

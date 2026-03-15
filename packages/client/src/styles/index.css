@@ -691,6 +691,18 @@ body {
   text-align: center;
 }
 
+/* ===== Pastry ordering disabled banner ===== */
+.pastry-ordering-disabled {
+  background: #fef2f2;
+  border: 2px solid var(--color-remove);
+  border-radius: var(--radius);
+  padding: 24px 16px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--color-remove);
+  text-align: center;
+}
+
 /* ===== Confirm error ===== */
 .confirm-error {
   display: flex;

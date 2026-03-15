@@ -12,6 +12,7 @@ interface ConfirmProps {
   category: CatalogCategory;
   item: CatalogItem;
   isPastry: boolean;
+  noDeliveryDays?: Set<number>;
   onConfirm: (operation: '+' | '-', quantity: number) => void;
   onBack: () => void;
   isSending: boolean;
@@ -19,7 +20,7 @@ interface ConfirmProps {
   onErrorDismiss: () => void;
 }
 
-export default function Confirm({ buyer, category, item, isPastry, onConfirm, onBack, isSending, error, onErrorDismiss }: ConfirmProps) {
+export default function Confirm({ buyer, category, item, isPastry, noDeliveryDays, onConfirm, onBack, isSending, error, onErrorDismiss }: ConfirmProps) {
   const [qty, setQty] = useState(1);
   const [confirmingStorno, setConfirmingStorno] = useState(false);
   const [existingQty, setExistingQty] = useState<number | null>(null);
@@ -39,7 +40,7 @@ export default function Confirm({ buyer, category, item, isPastry, onConfirm, on
   const totalPrice = isPastry ? unitPrice * qty : unitPrice;
   const priceLabel = totalPrice ? ensureKc(formatPrice(totalPrice)) : '';
   const qtyLabel = isPastry ? `${qty}\u00d7 ` : '';
-  const deliveryDate = isPastry ? getDeliveryDateLabel() : null;
+  const deliveryDate = isPastry ? getDeliveryDateLabel(noDeliveryDays) : null;
 
   const addLabel = priceLabel
     ? `Přidat`

@@ -8,7 +8,8 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "inspect-sheets": "tsx scripts/inspect-sheets.ts"
+    "inspect-sheets": "tsx scripts/inspect-sheets.ts",
+    "create-pastry-config": "tsx scripts/create-pastry-config.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",

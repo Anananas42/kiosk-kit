@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CATALOG_RELOAD_INTERVAL_MS, type CatalogCategory, type Apartment } from '@zahumny/shared';
-import { fetchCatalog, fetchApartments } from '../api.js';
+import { CATALOG_RELOAD_INTERVAL_MS, type CatalogCategory, type Apartment, type PastryConfig } from '@zahumny/shared';
+import { fetchCatalog, fetchApartments, fetchPastryConfig } from '../api.js';
 import { cacheGet, cacheSet } from '../utils/cache.js';
+
+const DEFAULT_PASTRY_CONFIG: PastryConfig = {
+  orderingDays: Array(7).fill(true),
+  deliveryDays: Array(7).fill(true),
+};
 
 export function useCatalog() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>(() => cacheGet<CatalogCategory[]>('catalog') ?? []);
   const [apartments, setApartments] = useState<Apartment[]>(() => cacheGet<Apartment[]>('apartments') ?? []);
+  const [pastryConfig, setPastryConfig] = useState<PastryConfig>(() => cacheGet<PastryConfig>('pastryConfig') ?? DEFAULT_PASTRY_CONFIG);
   const [error, setError] = useState(false);
 
   const load = useCallback(() => {
@@ -29,6 +35,14 @@ export function useCatalog() {
         console.error('Apartments load error:', err);
         if (!cacheGet<Apartment[]>('apartments')) setError(true);
       });
+    fetchPastryConfig()
+      .then((data) => {
+        setPastryConfig(data);
+        cacheSet('pastryConfig', data);
+      })
+      .catch((err) => {
+        console.error('Pastry config load error:', err);
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -38,5 +52,5 @@ export function useCatalog() {
     return () => clearInterval(id);
   }, [load]);
 
-  return { catalog, apartments, reload: load, error };
+  return { catalog, apartments, pastryConfig, reload: load, error };
 }

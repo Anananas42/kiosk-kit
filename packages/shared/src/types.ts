@@ -66,3 +66,11 @@ export interface ApartmentsResponse {
 export interface ItemCountResponse {
   count: number;
 }
+
+/** Pastry ordering/delivery configuration per weekday. */
+export interface PastryConfig {
+  /** Whether ordering is allowed on each weekday (index 0=Sunday, 6=Saturday). */
+  orderingDays: boolean[];
+  /** Whether delivery happens on each weekday (index 0=Sunday, 6=Saturday). */
+  deliveryDays: boolean[];
+}

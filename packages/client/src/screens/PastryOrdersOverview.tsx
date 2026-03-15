@@ -3,13 +3,13 @@ import { getDeliveryDate, formatDateCs, type EvidenceRow } from '@zahumny/shared
 import { fetchOverview } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
-function aggregatePastryOrders(records: EvidenceRow[], buyer: number, pastryNames: Set<string>): Record<string, Record<string, number>> {
+function aggregatePastryOrders(records: EvidenceRow[], buyer: number, pastryNames: Set<string>, noDeliveryDays?: Set<number>): Record<string, Record<string, number>> {
   const dayMap: Record<string, Record<string, number>> = {};
 
   for (const r of records) {
     if (!pastryNames.has(r.category)) continue;
     if (Number(r.buyer) !== buyer) continue;
-    const deliveryDate = getDeliveryDate(r.timestamp);
+    const deliveryDate = getDeliveryDate(r.timestamp, noDeliveryDays);
     if (!deliveryDate) continue;
     if (!dayMap[deliveryDate]) dayMap[deliveryDate] = {};
     if (!dayMap[deliveryDate][r.item]) dayMap[deliveryDate][r.item] = 0;
@@ -22,10 +22,11 @@ function aggregatePastryOrders(records: EvidenceRow[], buyer: number, pastryName
 interface PastryOrdersOverviewProps {
   buyer: number;
   pastryNames: Set<string>;
+  noDeliveryDays?: Set<number>;
   onBack: () => void;
 }
 
-export default function PastryOrdersOverview({ buyer, pastryNames, onBack }: PastryOrdersOverviewProps) {
+export default function PastryOrdersOverview({ buyer, pastryNames, noDeliveryDays, onBack }: PastryOrdersOverviewProps) {
   const [records, setRecords] = useState<EvidenceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,7 @@ export default function PastryOrdersOverview({ buyer, pastryNames, onBack }: Pas
       .catch(() => setError('Nepodařilo se načíst data.'));
   }, []);
 
-  const dayMap = records ? aggregatePastryOrders(records, buyer, pastryNames) : {};
+  const dayMap = records ? aggregatePastryOrders(records, buyer, pastryNames, noDeliveryDays) : {};
   const days = Object.keys(dayMap).sort().reverse();
   const hasAny = days.some((day) => Object.values(dayMap[day]).some((qty) => qty > 0));
 

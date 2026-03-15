@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { REPEAT_ORDER_MS, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
+import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
@@ -49,10 +49,12 @@ export default function App() {
 
   const isOffline = useHealth();
   const dimmed = useIdleDim();
-  const { catalog, apartments, reload, error: catalogError } = useCatalog();
+  const { catalog, apartments, pastryConfig, reload, error: catalogError } = useCatalog();
 
   const pastryCategories = catalog.filter((cat) => cat.pastry);
   const pastryNames = new Set(pastryCategories.map((cat) => cat.name));
+  const pastryOrderingAllowed = isOrderingAllowed(pastryConfig.orderingDays);
+  const noDeliveryDays = noDeliveryDaysSet(pastryConfig.deliveryDays);
 
   useEffect(() => { startFlushTimer(); }, []);
 
@@ -80,13 +82,13 @@ export default function App() {
   }, []);
 
   const handlePastryEntry = useCallback(() => {
-    // If only one pastry category, skip straight to items
-    if (pastryCategories.length === 1) {
-      setState((s) => ({ ...s, category: pastryCategories[0], screen: 'item' }));
-    } else {
+    // If ordering disabled or multiple categories, show the pastry category screen
+    if (!pastryOrderingAllowed || pastryCategories.length !== 1) {
       setState((s) => ({ ...s, screen: 'pastry-category' }));
+    } else {
+      setState((s) => ({ ...s, category: pastryCategories[0], screen: 'item' }));
     }
-  }, [pastryCategories]);
+  }, [pastryCategories, pastryOrderingAllowed]);
 
   const handleItemSelect = useCallback((item: CatalogItem) => {
     setConfirmError(null);
@@ -197,6 +199,7 @@ export default function App() {
         <PastryCategorySelect
           buyer={state.buyer}
           categories={pastryCategories}
+          orderingAllowed={pastryOrderingAllowed}
           onSelect={handleCategorySelect}
           onViewOrders={() => setState((s) => ({ ...s, screen: 'pastry-orders' }))}
           onBack={() => setState((s) => ({ ...s, screen: 'category' }))}
@@ -218,6 +221,7 @@ export default function App() {
           category={state.category}
           item={state.item}
           isPastry={state.category.pastry}
+          noDeliveryDays={noDeliveryDays}
           onConfirm={handleConfirm}
           onBack={() => setState((s) => ({ ...s, item: null, screen: 'item' }))}
           isSending={isSending}
@@ -237,6 +241,7 @@ export default function App() {
         <PastryOrdersOverview
           buyer={state.buyer}
           pastryNames={pastryNames}
+          noDeliveryDays={noDeliveryDays}
           onBack={() => setState((s) => ({ ...s, screen: state.category ? 'pastry-category' as Screen : 'category' }))}
         />
       )}

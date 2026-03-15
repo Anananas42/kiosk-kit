@@ -6,6 +6,7 @@ import type {
   RecordResponse,
   ApartmentsResponse,
   ItemCountResponse,
+  PastryConfig,
 } from '@zahumny/shared';
 
 export async function fetchCatalog(): Promise<CatalogCategory[]> {
@@ -25,6 +26,11 @@ export async function fetchHealth(): Promise<HealthResponse> {
 
 export async function fetchOverview(): Promise<OverviewResponse> {
   const res = await fetch('/api/overview');
+  return res.json();
+}
+
+export async function fetchPastryConfig(): Promise<PastryConfig> {
+  const res = await fetch('/api/pastry-config');
   return res.json();
 }
 
