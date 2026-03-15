@@ -13,9 +13,7 @@ function aggregatePastryOrders(records: EvidenceRow[], buyer: number): Record<st
     if (!deliveryDate) continue;
     if (!dayMap[deliveryDate]) dayMap[deliveryDate] = {};
     if (!dayMap[deliveryDate][r.item]) dayMap[deliveryDate][r.item] = 0;
-    const ksMatch = String(r.quantity).match(/^(\d+) ks$/);
-    const count = ksMatch ? Number(ksMatch[1]) : 1;
-    dayMap[deliveryDate][r.item] += r.delta > 0 ? count : -count;
+    dayMap[deliveryDate][r.item] += r.count;
   }
 
   return dayMap;

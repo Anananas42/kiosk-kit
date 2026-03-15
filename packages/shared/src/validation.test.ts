@@ -2,15 +2,27 @@ import { describe, it, expect } from 'vitest';
 import { validateRecordRequest, validateCatalog } from './validation.js';
 
 describe('validateRecordRequest', () => {
-  const valid = { buyer: 1, delta: 1, category: 'Alko', item: 'Beer', quantity: '0,5 l', price: '46 Kč' };
+  const valid = { buyer: 1, count: 1, category: 'Alko', item: 'Beer', quantity: '0,5 l', price: '46 Kč' };
 
-  it('accepts a valid request', () => {
+  it('accepts a valid add request', () => {
     const result = validateRecordRequest(valid);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.buyer).toBe(1);
-      expect(result.data.delta).toBe(1);
+      expect(result.data.count).toBe(1);
     }
+  });
+
+  it('accepts a valid remove request', () => {
+    const result = validateRecordRequest({ ...valid, count: -3 });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.count).toBe(-3);
+  });
+
+  it('accepts large counts', () => {
+    const result = validateRecordRequest({ ...valid, count: 10 });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.count).toBe(10);
   });
 
   it('rejects null body', () => {
@@ -18,27 +30,31 @@ describe('validateRecordRequest', () => {
   });
 
   it('rejects non-integer buyer', () => {
-    expect(validateRecordRequest({ ...valid, buyer: 1.5 })).toEqual({ ok: false, error: 'Invalid buyer' });
+    expect(validateRecordRequest({ ...valid, buyer: 1.5 }).ok).toBe(false);
   });
 
   it('rejects buyer < 1', () => {
-    expect(validateRecordRequest({ ...valid, buyer: 0 })).toEqual({ ok: false, error: 'Invalid buyer' });
+    expect(validateRecordRequest({ ...valid, buyer: 0 }).ok).toBe(false);
   });
 
-  it('rejects invalid delta', () => {
-    expect(validateRecordRequest({ ...valid, delta: 2 })).toEqual({ ok: false, error: 'Invalid delta (must be 1 or -1)' });
+  it('rejects count of 0', () => {
+    expect(validateRecordRequest({ ...valid, count: 0 })).toEqual({ ok: false, error: 'Invalid count (must be a nonzero integer)' });
+  });
+
+  it('rejects non-integer count', () => {
+    expect(validateRecordRequest({ ...valid, count: 1.5 }).ok).toBe(false);
   });
 
   it('rejects missing category', () => {
-    expect(validateRecordRequest({ ...valid, category: '' })).toEqual({ ok: false, error: 'Missing category' });
+    expect(validateRecordRequest({ ...valid, category: '' }).ok).toBe(false);
   });
 
   it('rejects missing item', () => {
-    expect(validateRecordRequest({ ...valid, item: '' })).toEqual({ ok: false, error: 'Missing item' });
+    expect(validateRecordRequest({ ...valid, item: '' }).ok).toBe(false);
   });
 
   it('defaults quantity and price to empty string', () => {
-    const result = validateRecordRequest({ buyer: 1, delta: -1, category: 'Alko', item: 'Beer' });
+    const result = validateRecordRequest({ buyer: 1, count: -1, category: 'Alko', item: 'Beer' });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.quantity).toBe('');

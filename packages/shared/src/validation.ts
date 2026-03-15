@@ -5,13 +5,13 @@ export function validateRecordRequest(body: unknown): { ok: true; data: RecordRe
     return { ok: false, error: 'Invalid request body' };
   }
 
-  const { buyer, delta, category, item, quantity, price } = body as Record<string, unknown>;
+  const { buyer, count, category, item, quantity, price } = body as Record<string, unknown>;
 
   if (typeof buyer !== 'number' || !Number.isInteger(buyer) || buyer < 1) {
     return { ok: false, error: 'Invalid buyer' };
   }
-  if (delta !== 1 && delta !== -1) {
-    return { ok: false, error: 'Invalid delta (must be 1 or -1)' };
+  if (typeof count !== 'number' || !Number.isInteger(count) || count === 0) {
+    return { ok: false, error: 'Invalid count (must be a nonzero integer)' };
   }
   if (typeof category !== 'string' || !category) {
     return { ok: false, error: 'Missing category' };
@@ -24,7 +24,7 @@ export function validateRecordRequest(body: unknown): { ok: true; data: RecordRe
     ok: true,
     data: {
       buyer,
-      delta,
+      count,
       category,
       item,
       quantity: typeof quantity === 'string' ? quantity : '',

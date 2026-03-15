@@ -16,31 +16,24 @@ function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, A
 
   for (const r of records) {
     if (Number(r.buyer) !== buyer) continue;
-    const ksMatch = String(r.quantity).match(/^(\d+) ks$/);
-    const key = ksMatch ? r.item : (r.quantity ? `${r.item} ${r.quantity}` : r.item);
+    const key = r.quantity ? `${r.item} ${r.quantity}` : r.item;
 
     if (!map[key]) map[key] = { added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
-    const kc = parsePrice(r.price);
 
-    if (ksMatch) {
-      const ks = Number(ksMatch[1]);
-      if (r.delta > 0) { map[key].added += ks; map[key].addedKc += kc; }
-      else { map[key].removed += ks; map[key].removedKc += kc; }
+    const unitPrice = parsePrice(r.price);
+    if (!map[key].unitPrice && unitPrice) map[key].unitPrice = unitPrice;
+
+    if (r.count > 0) {
+      map[key].added += r.count;
     } else {
-      if (!map[key].unitPrice) map[key].unitPrice = kc;
-      if (r.delta > 0) map[key].added += 1;
-      else map[key].removed += 1;
+      map[key].removed += Math.abs(r.count);
     }
   }
 
   for (const v of Object.values(map)) {
     v.removed = Math.min(v.removed, v.added);
-    if (v.unitPrice) {
-      v.addedKc = v.added * v.unitPrice;
-      v.removedKc = v.removed * v.unitPrice;
-    } else {
-      v.removedKc = Math.min(v.removedKc, v.addedKc);
-    }
+    v.addedKc = v.added * v.unitPrice;
+    v.removedKc = v.removed * v.unitPrice;
   }
 
   return map;

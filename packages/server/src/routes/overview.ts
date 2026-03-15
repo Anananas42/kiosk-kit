@@ -23,7 +23,7 @@ export function overviewRoute(queue: QueueStore) {
     const queuedAsRecords = queued.map((e) => ({
       timestamp: e.timestamp,
       buyer: e.buyer,
-      delta: e.delta,
+      count: e.count,
       category: e.category,
       item: e.item,
       quantity: e.quantity,

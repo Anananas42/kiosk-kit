@@ -1,4 +1,4 @@
-import { EVIDENCE_SHEET, HEADER_ROW, parsePrice, computeBalance, deriveCount, type RecordEntry, type EvidenceRow } from '@zahumny/shared';
+import { EVIDENCE_SHEET, HEADER_ROW, parsePrice, computeBalance, type RecordEntry, type EvidenceRow } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { env } from '../env.js';
 import { getCachedRecords, setCachedRecords, invalidateRecordsCache } from './records-cache.js';
@@ -30,8 +30,8 @@ export async function appendRow(entry: RecordEntry): Promise<void> {
   const sheets = await getSheetsClient();
   await ensureHeader();
 
-  const priceNum = parsePrice(entry.price);
-  const signedPrice = priceNum ? (entry.delta > 0 ? priceNum : -priceNum) : '';
+  const unitPrice = parsePrice(entry.price);
+  const signedPrice = unitPrice ? unitPrice * entry.count : '';
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.spreadsheetId,
@@ -41,7 +41,7 @@ export async function appendRow(entry: RecordEntry): Promise<void> {
       values: [[
         entry.timestamp,
         entry.buyer,
-        entry.delta,
+        entry.count,
         entry.category,
         entry.item,
         entry.quantity,
@@ -73,7 +73,7 @@ export async function readRecords(): Promise<EvidenceRow[]> {
   const records: EvidenceRow[] = rows.slice(1).map((row) => ({
     timestamp: getCol(row, colMap, 'Čas'),
     buyer: Number(getCol(row, colMap, 'Kupující')) || 0,
-    delta: Number(getCol(row, colMap, 'Operace')) > 0 ? 1 as const : -1 as const,
+    count: Number(getCol(row, colMap, 'Operace')) || 0,
     category: getCol(row, colMap, 'Kategorie'),
     item: getCol(row, colMap, 'Položka'),
     quantity: getCol(row, colMap, 'Množství'),
@@ -87,21 +87,12 @@ export async function readRecords(): Promise<EvidenceRow[]> {
 export async function getItemBalance(
   buyer: number,
   item: string,
-  _quantity: string,
   queueEntries: RecordEntry[],
 ): Promise<number> {
   const records = await readRecords();
   const counted = [
-    ...records.map((r) => ({
-      buyer: Number(r.buyer),
-      item: r.item,
-      count: deriveCount(r.delta, r.quantity),
-    })),
-    ...queueEntries.map((e) => ({
-      buyer: e.buyer,
-      item: e.item,
-      count: deriveCount(e.delta, e.quantity),
-    })),
+    ...records.map((r) => ({ buyer: r.buyer, item: r.item, count: r.count })),
+    ...queueEntries.map((e) => ({ buyer: e.buyer, item: e.item, count: e.count })),
   ];
   return computeBalance(counted, buyer, item);
 }

@@ -1,24 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeBalance, deriveCount } from './balance.js';
-
-describe('deriveCount', () => {
-  it('parses "N ks" quantity for additions', () => {
-    expect(deriveCount(1, '3 ks')).toBe(3);
-  });
-
-  it('parses "N ks" quantity for removals', () => {
-    expect(deriveCount(-1, '3 ks')).toBe(-3);
-  });
-
-  it('defaults to 1 for non-ks quantities', () => {
-    expect(deriveCount(1, '0,5 l')).toBe(1);
-    expect(deriveCount(-1, '0,5 l')).toBe(-1);
-  });
-
-  it('defaults to 1 for empty quantity', () => {
-    expect(deriveCount(1, '')).toBe(1);
-  });
-});
+import { computeBalance } from './balance.js';
 
 describe('computeBalance', () => {
   it('sums counts for matching buyer + item', () => {

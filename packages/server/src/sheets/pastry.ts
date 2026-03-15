@@ -26,13 +26,10 @@ export async function updatePastrySheet(): Promise<void> {
     if (!PASTRY_CATEGORIES.has(r.category)) continue;
     const dd = getDeliveryDate(r.timestamp);
     if (!dd) continue;
-    const ksMatch = String(r.quantity).match(/^(\d+) ks$/);
-    const count = ksMatch ? Number(ksMatch[1]) : 1;
-    const delta = r.delta > 0 ? count : -count;
     itemSet.add(r.item);
     dateSet.add(dd);
     if (!pivot[r.item]) pivot[r.item] = {};
-    pivot[r.item][dd] = (pivot[r.item][dd] || 0) + delta;
+    pivot[r.item][dd] = (pivot[r.item][dd] || 0) + r.count;
   }
 
   if (dateSet.size === 0) return;

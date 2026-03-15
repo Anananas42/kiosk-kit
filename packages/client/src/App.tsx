@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { PASTRY_CATEGORIES, REPEAT_ORDER_MS, parsePrice, formatPrice, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
+import { PASTRY_CATEGORIES, REPEAT_ORDER_MS, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
@@ -109,22 +109,15 @@ export default function App() {
 
   const handleConfirm = useCallback(async (operation: '+' | '-', quantity: number) => {
     const isPastry = PASTRY_CATEGORIES.has(state.category!.name);
-    const unitPrice = parsePrice(state.item!.price);
-
-    const qtyStr = isPastry ? `${quantity} ks` : state.item!.quantity;
-    let priceStr = state.item!.price;
-    if (isPastry && unitPrice) {
-      const total = Math.round(unitPrice * quantity * 100) / 100;
-      priceStr = formatPrice(total);
-    }
+    const count = operation === '+' ? quantity : -quantity;
 
     const recordData = {
       buyer: state.buyer!,
-      delta: (operation === '+' ? 1 : -1) as 1 | -1,
+      count,
       category: state.category!.name,
       item: state.item!.name,
-      quantity: qtyStr,
-      price: priceStr,
+      quantity: state.item!.quantity,
+      price: state.item!.price,
     };
 
     if (operation === '+') {

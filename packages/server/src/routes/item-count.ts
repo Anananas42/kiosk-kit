@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { computeBalance, deriveCount, type ItemCountResponse } from '@zahumny/shared';
+import { computeBalance, type ItemCountResponse } from '@zahumny/shared';
 import type { QueueStore } from '../queue/store.js';
 import { readRecords } from '../sheets/evidence.js';
 import { env } from '../env.js';
@@ -21,7 +21,7 @@ export function itemCountRoute(queue: QueueStore) {
       try {
         const records = await readRecords();
         for (const r of records) {
-          counted.push({ buyer: Number(r.buyer), item: r.item, count: deriveCount(r.delta, r.quantity) });
+          counted.push({ buyer: r.buyer, item: r.item, count: r.count });
         }
       } catch (err) {
         console.error('[api] Item count read error:', (err as Error).message);
@@ -29,7 +29,7 @@ export function itemCountRoute(queue: QueueStore) {
     }
 
     for (const e of queue.getAll()) {
-      counted.push({ buyer: e.buyer, item: e.item, count: deriveCount(e.delta, e.quantity) });
+      counted.push({ buyer: e.buyer, item: e.item, count: e.count });
     }
 
     const total = computeBalance(counted, buyer, item);

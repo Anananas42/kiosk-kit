@@ -17,7 +17,8 @@ export interface CatalogCategory {
 
 export interface RecordRequest {
   buyer: number;
-  delta: 1 | -1;
+  /** Signed count: positive = add, negative = remove. Always a nonzero integer. */
+  count: number;
   category: string;
   item: string;
   quantity?: string;
@@ -34,7 +35,8 @@ export interface RecordEntry extends RecordRequest {
 export interface EvidenceRow {
   timestamp: string;
   buyer: number;
-  delta: 1 | -1;
+  /** Signed count read from Evidence "Operace" column. */
+  count: number;
   category: string;
   item: string;
   quantity: string;
