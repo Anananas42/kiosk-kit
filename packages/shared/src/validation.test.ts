@@ -66,9 +66,9 @@ describe('validateRecordRequest', () => {
 describe('validateCatalog', () => {
   it('groups items by category', () => {
     const rows = [
-      ['Alko', '', 'Beer', '0,5 l', '46 Kč'],
-      ['Alko', '', 'Wine', '0,2 l', '60 Kč'],
-      ['Nealko', '', 'Juice', '0,3 l', '30 Kč'],
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč'],
+      ['Alko', '', '', 'Wine', '0,2 l', '60 Kč'],
+      ['Nealko', '', '', 'Juice', '0,3 l', '30 Kč'],
     ];
     const result = validateCatalog(rows, 'pečivo');
     expect(result).toHaveLength(2);
@@ -80,19 +80,20 @@ describe('validateCatalog', () => {
 
   it('sets pastry flag from type column', () => {
     const rows = [
-      ['Alko', '', 'Beer', '0,5 l', '46 Kč'],
-      ['Pečivo slané', 'pečivo', 'Rohlík', '1 ks', '5 Kč'],
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč'],
+      ['Pečivo slané', 'pečivo', 'R01', 'Rohlík', '1 ks', '5 Kč'],
     ];
     const result = validateCatalog(rows, 'pečivo');
     expect(result[0].pastry).toBe(false);
     expect(result[1].pastry).toBe(true);
+    expect(result[1].items[0].id).toBe('R01');
   });
 
   it('skips rows with missing category or item name', () => {
     const rows = [
-      ['Alko', '', 'Beer', '0,5 l', '46 Kč'],
-      ['', '', 'Orphan', '', ''],
-      ['Alko', '', '', '', ''],
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč'],
+      ['', '', '', 'Orphan', '', ''],
+      ['Alko', '', '', '', '', ''],
     ];
     const result = validateCatalog(rows, 'pečivo');
     expect(result).toHaveLength(1);
@@ -100,12 +101,30 @@ describe('validateCatalog', () => {
   });
 
   it('handles sparse rows (missing quantity/price)', () => {
-    const rows = [['Alko', '', 'Beer']];
+    const rows = [['Alko', '', '', 'Beer']];
     const result = validateCatalog(rows, 'pečivo');
-    expect(result[0].items[0]).toEqual({ name: 'Beer', quantity: '', price: '' });
+    expect(result[0].items[0]).toEqual({ id: '', name: 'Beer', quantity: '', price: '' });
   });
 
   it('returns empty for empty input', () => {
     expect(validateCatalog([], 'pečivo')).toEqual([]);
+  });
+});
+
+describe('validateRecordRequest with itemId', () => {
+  it('passes through itemId when provided', () => {
+    const result = validateRecordRequest({
+      buyer: 1, count: 1, category: 'Alko', item: 'Beer', itemId: 'beer-1',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.itemId).toBe('beer-1');
+  });
+
+  it('leaves itemId undefined when not provided', () => {
+    const result = validateRecordRequest({
+      buyer: 1, count: 1, category: 'Alko', item: 'Beer',
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.itemId).toBeUndefined();
   });
 });

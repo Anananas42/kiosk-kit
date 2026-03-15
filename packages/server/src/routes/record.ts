@@ -24,7 +24,7 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
       // Balance check for removals
       if (data.count < 0) {
         const queueEntries = queue.getAll();
-        const balance = await getItemBalance(data.buyer, data.item, queueEntries);
+        const balance = await getItemBalance(data.buyer, data.item, queueEntries, data.itemId);
         if (balance + data.count < 0) {
           return c.json({ error: 'insufficient_balance' }, 400);
         }
@@ -37,6 +37,7 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
         count: data.count,
         category: data.category,
         item: data.item,
+        itemId: data.itemId ?? '',
         quantity: data.quantity ?? '',
         price: data.price ?? '',
       };

@@ -11,7 +11,7 @@ async function ensureHeader(): Promise<void> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: env.spreadsheetId,
-    range: sheetRange(EVIDENCE_SHEET, 'A1:G1'),
+    range: sheetRange(EVIDENCE_SHEET, 'A1:H1'),
   });
   const existing = res.data.values?.[0] ?? [];
   const matches = HEADER_ROW.every((h, i) => existing[i] === h);
@@ -35,7 +35,7 @@ export async function appendRow(entry: RecordEntry): Promise<void> {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: env.spreadsheetId,
-    range: sheetRange(EVIDENCE_SHEET, 'A:G'),
+    range: sheetRange(EVIDENCE_SHEET, 'A:H'),
     valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [[
@@ -46,6 +46,7 @@ export async function appendRow(entry: RecordEntry): Promise<void> {
         entry.item,
         entry.quantity,
         signedPrice,
+        entry.itemId,
       ]],
     },
   });
@@ -76,6 +77,7 @@ export async function readRecords(): Promise<EvidenceRow[]> {
     count: Number(getCol(row, colMap, 'Operace')) || 0,
     category: getCol(row, colMap, 'Kategorie'),
     item: getCol(row, colMap, 'Položka'),
+    itemId: getCol(row, colMap, 'ID'),
     quantity: getCol(row, colMap, 'Množství'),
     price: getCol(row, colMap, 'Cena'),
   }));
@@ -88,11 +90,12 @@ export async function getItemBalance(
   buyer: number,
   item: string,
   queueEntries: RecordEntry[],
+  itemId?: string,
 ): Promise<number> {
   const records = await readRecords();
   const counted = [
-    ...records.map((r) => ({ buyer: r.buyer, item: r.item, count: r.count })),
-    ...queueEntries.map((e) => ({ buyer: e.buyer, item: e.item, count: e.count })),
+    ...records.map((r) => ({ buyer: r.buyer, item: r.item, itemId: r.itemId, count: r.count })),
+    ...queueEntries.map((e) => ({ buyer: e.buyer, item: e.item, itemId: e.itemId, count: e.count })),
   ];
-  return computeBalance(counted, buyer, item);
+  return computeBalance(counted, buyer, item, itemId);
 }

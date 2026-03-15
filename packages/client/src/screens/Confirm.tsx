@@ -31,10 +31,10 @@ export default function Confirm({ buyer, category, item, isPastry, noDeliveryDay
 
   useEffect(() => {
     if (!isPastry) return;
-    fetchItemCount(buyer, item.name)
+    fetchItemCount(buyer, item.name, item.id)
       .then((data) => setExistingQty(data.count))
       .catch(() => {});
-  }, [isPastry, buyer, item.name]);
+  }, [isPastry, buyer, item.name, item.id]);
 
   const unitPrice = parsePrice(item.price);
   const totalPrice = isPastry ? unitPrice * qty : unitPrice;

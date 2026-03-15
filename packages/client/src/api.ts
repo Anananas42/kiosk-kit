@@ -34,8 +34,10 @@ export async function fetchPastryConfig(): Promise<PastryConfig> {
   return res.json();
 }
 
-export async function fetchItemCount(buyer: number, item: string): Promise<ItemCountResponse> {
-  const res = await fetch(`/api/item-count?buyer=${buyer}&item=${encodeURIComponent(item)}`);
+export async function fetchItemCount(buyer: number, item: string, itemId?: string): Promise<ItemCountResponse> {
+  let url = `/api/item-count?buyer=${buyer}&item=${encodeURIComponent(item)}`;
+  if (itemId) url += `&itemId=${encodeURIComponent(itemId)}`;
+  const res = await fetch(url);
   return res.json();
 }
 

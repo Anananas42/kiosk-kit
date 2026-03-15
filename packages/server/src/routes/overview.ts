@@ -26,6 +26,7 @@ export function overviewRoute(queue: QueueStore) {
       count: e.count,
       category: e.category,
       item: e.item,
+      itemId: e.itemId,
       quantity: e.quantity,
       price: e.price,
     }));

@@ -17,6 +17,7 @@ export async function readCatalog(): Promise<CatalogCategory[]> {
   const dataRows = rows.slice(1).map((row) => [
     getCol(row, colMap, CATALOG_COLUMNS.category),
     getCol(row, colMap, CATALOG_COLUMNS.type),
+    getCol(row, colMap, CATALOG_COLUMNS.id),
     getCol(row, colMap, CATALOG_COLUMNS.name),
     getCol(row, colMap, CATALOG_COLUMNS.quantity),
     getCol(row, colMap, CATALOG_COLUMNS.price),
@@ -31,27 +32,3 @@ export async function getPastryCategories(): Promise<Set<string>> {
   return new Set(catalog.filter((c) => c.pastry).map((c) => c.name));
 }
 
-/** Returns a map of pastry item name → catalog ID. */
-export async function getPastryItemIds(): Promise<Map<string, string>> {
-  const sheets = await getSheetsClient();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: env.spreadsheetId,
-    range: sheetRange(CATALOG_SHEET, 'A1:ZZ'),
-  });
-
-  const rows = res.data.values ?? [];
-  if (rows.length < 2) return new Map();
-
-  const colMap = buildColumnMap(rows[0].map(String));
-  const map = new Map<string, string>();
-
-  for (const row of rows.slice(1)) {
-    const type = getCol(row, colMap, CATALOG_COLUMNS.type).trim().toLowerCase();
-    if (type !== CATALOG_TYPE_PASTRY) continue;
-    const name = getCol(row, colMap, CATALOG_COLUMNS.name).trim();
-    const id = getCol(row, colMap, CATALOG_COLUMNS.id).trim();
-    if (name && id) map.set(name, id);
-  }
-
-  return map;
-}

@@ -4,6 +4,7 @@ import { fetchOverview } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
 interface AggregatedItem {
+  label: string;
   added: number;
   removed: number;
   addedKc: number;
@@ -16,9 +17,10 @@ function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, A
 
   for (const r of records) {
     if (Number(r.buyer) !== buyer) continue;
-    const key = r.quantity ? `${r.item} ${r.quantity}` : r.item;
+    const key = r.itemId || (r.quantity ? `${r.item} ${r.quantity}` : r.item);
+    const label = r.quantity ? `${r.item} ${r.quantity}` : r.item;
 
-    if (!map[key]) map[key] = { added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
+    if (!map[key]) map[key] = { label, added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
 
     const unitPrice = parsePrice(r.price);
     if (!map[key].unitPrice && unitPrice) map[key].unitPrice = unitPrice;
@@ -85,12 +87,12 @@ export default function ConsumptionOverview({ buyer, onBack }: ConsumptionOvervi
                 <span>Storno</span>
                 <span>Celkem</span>
               </div>
-              {items.map(([name, v]) => {
+              {items.map(([key, v]) => {
                 const net = v.added - v.removed;
                 const lineTotal = v.addedKc - v.removedKc;
                 return (
-                  <div key={name} className="overview-row overview-row--item">
-                    <span className="overview-item-name">{name}</span>
+                  <div key={key} className="overview-row overview-row--item">
+                    <span className="overview-item-name">{v.label}</span>
                     <span className="overview-net overview-net--pos">{net}</span>
                     <span className="overview-net overview-net--pos">
                       {v.addedKc > 0 ? `${v.addedKc.toFixed(0)} Kč` : '—'}

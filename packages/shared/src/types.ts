@@ -4,6 +4,7 @@ export interface Apartment {
 }
 
 export interface CatalogItem {
+  id: string;
   name: string;
   quantity: string;
   price: string;
@@ -22,6 +23,7 @@ export interface RecordRequest {
   count: number;
   category: string;
   item: string;
+  itemId?: string;
   quantity?: string;
   price?: string;
 }
@@ -29,6 +31,7 @@ export interface RecordRequest {
 export interface RecordEntry extends RecordRequest {
   id: string;
   timestamp: string;
+  itemId: string;
   quantity: string;
   price: string;
 }
@@ -40,6 +43,7 @@ export interface EvidenceRow {
   count: number;
   category: string;
   item: string;
+  itemId: string;
   quantity: string;
   price: string;
 }

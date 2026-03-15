@@ -11,7 +11,7 @@ export function sheetRange(sheet: string, range: string): string {
   return `'${sheet}'!${range}`;
 }
 
-export const HEADER_ROW = ['Čas', 'Kupující', 'Operace', 'Kategorie', 'Položka', 'Množství', 'Cena'];
+export const HEADER_ROW = ['Čas', 'Kupující', 'Operace', 'Kategorie', 'Položka', 'Množství', 'Cena', 'ID'];
 
 export const CATALOG_COLUMNS = {
   category: 'Kategorie',

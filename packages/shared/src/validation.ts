@@ -5,7 +5,7 @@ export function validateRecordRequest(body: unknown): { ok: true; data: RecordRe
     return { ok: false, error: 'Invalid request body' };
   }
 
-  const { buyer, count, category, item, quantity, price } = body as Record<string, unknown>;
+  const { buyer, count, category, item, itemId, quantity, price } = body as Record<string, unknown>;
 
   if (typeof buyer !== 'number' || !Number.isInteger(buyer) || buyer < 1) {
     return { ok: false, error: 'Invalid buyer' };
@@ -27,6 +27,7 @@ export function validateRecordRequest(body: unknown): { ok: true; data: RecordRe
       count,
       category,
       item,
+      itemId: typeof itemId === 'string' ? itemId : undefined,
       quantity: typeof quantity === 'string' ? quantity : '',
       price: typeof price === 'string' ? price : '',
     },
@@ -37,14 +38,14 @@ export function validateCatalog(rows: string[][], pastryType: string): CatalogCa
   const order: string[] = [];
   const map: Record<string, CatalogCategory> = {};
 
-  for (const [cat, type = '', itemName, quantity = '', price = ''] of rows) {
+  for (const [cat, type = '', itemId = '', itemName, quantity = '', price = ''] of rows) {
     if (!cat || !itemName) continue;
     if (!map[cat]) {
       const id = cat.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       map[cat] = { id, name: cat, pastry: type.trim().toLowerCase() === pastryType, items: [] };
       order.push(cat);
     }
-    map[cat].items.push({ name: itemName.trim(), quantity: quantity.trim(), price: price.trim() });
+    map[cat].items.push({ id: itemId.trim(), name: itemName.trim(), quantity: quantity.trim(), price: price.trim() });
   }
 
   return order.map((name) => map[name]);
