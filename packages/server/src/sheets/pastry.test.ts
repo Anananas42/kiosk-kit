@@ -100,6 +100,7 @@ describe('buildFormatRequests', () => {
 
     const types = requests.map((r) => Object.keys(r)[0]);
     expect(types).toEqual([
+      'repeatCell', // reset formatting
       'updateSheetProperties',
       'updateDimensionProperties',
       'updateDimensionProperties',
@@ -113,24 +114,29 @@ describe('buildFormatRequests', () => {
       'updateBorders', // thin grid
     ]);
 
+    // Verify reset covers generous range
+    const reset = requests[0].repeatCell!;
+    expect(reset.range?.endRowIndex).toBeGreaterThanOrEqual(4);
+    expect(reset.range?.endColumnIndex).toBeGreaterThanOrEqual(6);
+
     // Verify frozen rows
-    const frozen = requests[0].updateSheetProperties!;
+    const frozen = requests[1].updateSheetProperties!;
     expect(frozen.properties?.gridProperties?.frozenRowCount).toBe(1);
     expect(frozen.properties?.sheetId).toBe(42);
 
     // Verify header targets row 0 only
-    const header = requests[5].repeatCell!;
+    const header = requests[6].repeatCell!;
     expect(header.range?.startRowIndex).toBe(0);
     expect(header.range?.endRowIndex).toBe(1);
 
     // Verify last col highlight targets data rows only
-    const lastCol = requests[6].repeatCell!;
+    const lastCol = requests[7].repeatCell!;
     expect(lastCol.range?.startRowIndex).toBe(1);
     expect(lastCol.range?.endRowIndex).toBe(4);
     expect(lastCol.range?.startColumnIndex).toBe(5);
 
     // Verify name column formatting targets data rows only
-    const nameCol = requests[7].repeatCell!;
+    const nameCol = requests[8].repeatCell!;
     expect(nameCol.range?.startRowIndex).toBe(1);
     expect(nameCol.range?.endRowIndex).toBe(4);
     expect(nameCol.range?.startColumnIndex).toBe(0);
@@ -138,7 +144,7 @@ describe('buildFormatRequests', () => {
     expect(nameCol.cell?.userEnteredFormat?.textFormat?.bold).toBe(true);
 
     // Verify ID column formatting targets data rows only
-    const idCol = requests[8].repeatCell!;
+    const idCol = requests[9].repeatCell!;
     expect(idCol.range?.startRowIndex).toBe(1);
     expect(idCol.range?.endRowIndex).toBe(4);
     expect(idCol.range?.startColumnIndex).toBe(1);

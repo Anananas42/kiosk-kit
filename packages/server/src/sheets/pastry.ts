@@ -28,6 +28,23 @@ export interface FormatSpec {
 export function buildFormatRequests(spec: FormatSpec): sheets_v4.Schema$Request[] {
   const requests: sheets_v4.Schema$Request[] = [];
 
+  // Reset all formatting (generous range to clear stale formatting from previous layouts)
+  const clearCols = Math.max(spec.totalCols, 30);
+  const clearRows = Math.max(spec.totalRows, 50);
+  requests.push({
+    repeatCell: {
+      range: { sheetId: spec.sheetId, startRowIndex: 0, endRowIndex: clearRows, startColumnIndex: 0, endColumnIndex: clearCols },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: { red: 1, green: 1, blue: 1 },
+          textFormat: { foregroundColor: { red: 0, green: 0, blue: 0 }, bold: false, italic: false },
+          horizontalAlignment: 'LEFT',
+        },
+      },
+      fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+    },
+  });
+
   // Frozen rows
   requests.push({
     updateSheetProperties: {
@@ -260,7 +277,7 @@ export async function updatePastrySheet(): Promise<void> {
         sheetId,
         frozenRows: 2,
         columnWidths: [
-          { startIndex: 0, endIndex: 1, width: 200 },
+          { startIndex: 0, endIndex: 1, width: 240 },
           { startIndex: 1, endIndex: 2, width: 80 },
           { startIndex: 2, endIndex: totalCols, width: 120 },
         ],
@@ -463,7 +480,7 @@ export async function updatePastryDaySheets(): Promise<void> {
           sheetId,
           frozenRows: 1,
           columnWidths: [
-            { startIndex: 0, endIndex: 1, width: 250 },
+            { startIndex: 0, endIndex: 1, width: 300 },
             { startIndex: 1, endIndex: 2, width: 80 },
             { startIndex: 2, endIndex: totalCols - 1, width: 60 },
             { startIndex: totalCols - 1, endIndex: totalCols, width: 70 },
