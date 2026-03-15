@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { ItemCountResponse } from '@zahumny/shared';
+import { computeBalance, deriveCount, type ItemCountResponse } from '@zahumny/shared';
 import type { QueueStore } from '../queue/store.js';
 import { readRecords } from '../sheets/evidence.js';
 import { env } from '../env.js';
@@ -15,30 +15,24 @@ export function itemCountRoute(queue: QueueStore) {
       return c.json({ count: 0 } satisfies ItemCountResponse);
     }
 
-    let total = 0;
+    const counted: Array<{ buyer: number; item: string; count: number }> = [];
 
     if (env.sheetsConfigured) {
       try {
         const records = await readRecords();
         for (const r of records) {
-          if (Number(r.buyer) !== buyer || r.item !== item) continue;
-          const m = String(r.quantity).match(/^(\d+) ks$/);
-          const count = m ? Number(m[1]) : 1;
-          total += r.delta > 0 ? count : -count;
+          counted.push({ buyer: Number(r.buyer), item: r.item, count: deriveCount(r.delta, r.quantity) });
         }
       } catch (err) {
         console.error('[api] Item count read error:', (err as Error).message);
       }
     }
 
-    // Include pending queue entries
     for (const e of queue.getAll()) {
-      if (e.buyer !== buyer || e.item !== item) continue;
-      const m = String(e.quantity).match(/^(\d+) ks$/);
-      const count = m ? Number(m[1]) : 1;
-      total += e.delta > 0 ? count : -count;
+      counted.push({ buyer: e.buyer, item: e.item, count: deriveCount(e.delta, e.quantity) });
     }
 
+    const total = computeBalance(counted, buyer, item);
     return c.json({ count: Math.max(0, total) } satisfies ItemCountResponse);
   });
 

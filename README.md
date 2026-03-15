@@ -21,6 +21,28 @@ system/         # Raspberry Pi OS-level kiosk configuration
 
 The server caches catalog data from Google Sheets in SQLite and queues write operations for resilience against network outages. The client works offline using a local submit queue that flushes when connectivity returns.
 
+## Google Spreadsheet
+
+The app reads/writes a Google Spreadsheet configured via `SPREADSHEET_ID` in `.env`. To inspect the current sheet structure (names, headers, sample data):
+
+```bash
+pnpm --filter @zahumny/server inspect-sheets      # 3 sample rows (default)
+pnpm --filter @zahumny/server inspect-sheets -- 10 # 10 sample rows
+```
+
+The app uses **header-based column lookup** — columns are matched by header name, not position. Adding, reordering, or removing unused columns won't break the API.
+
+### Sheets used by the app
+
+| Sheet | Purpose | Key columns |
+|-------|---------|-------------|
+| **Config** | Apartment list | ID, Label |
+| **Katalog** | Product catalog | Kategorie, Název, množství, cena, Sazba DPH |
+| **Evidence** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
+| **Přehled pečiva** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
+
+Other sheets in the spreadsheet (konzumace položky, konzumace DPH, Kontingenční tabulka 1, Test data) are for manual reporting and not used by the app.
+
 ## Development
 
 ```bash

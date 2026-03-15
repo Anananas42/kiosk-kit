@@ -4,3 +4,4 @@ export * from './config.js';
 export * from './price.js';
 export * from './pastry.js';
 export * from './validation.js';
+export * from './balance.js';

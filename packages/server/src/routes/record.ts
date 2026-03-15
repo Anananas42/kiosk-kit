@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { PASTRY_CATEGORIES, validateRecordRequest, type RecordEntry } from '@zahumny/shared';
+import { PASTRY_CATEGORIES, validateRecordRequest, deriveCount, type RecordEntry } from '@zahumny/shared';
 import type { QueueStore } from '../queue/store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { updatePastrySheet } from '../sheets/pastry.js';
@@ -24,8 +24,7 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
       if (data.delta === -1) {
         const queueEntries = queue.getAll();
         const balance = await getItemBalance(data.buyer, data.item, data.quantity ?? '', queueEntries);
-        const m = (data.quantity ?? '').match(/^(\d+) ks$/);
-        const required = m ? Number(m[1]) : 1;
+        const required = Math.abs(deriveCount(-1, data.quantity ?? ''));
         if (balance < required) {
           return c.json({ error: 'insufficient_balance' }, 400);
         }

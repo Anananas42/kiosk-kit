@@ -1,4 +1,4 @@
-import { PASTRY_CATEGORIES, SYNC_INTERVAL_MS } from '@zahumny/shared';
+import { PASTRY_CATEGORIES, SYNC_INTERVAL_MS, deriveCount } from '@zahumny/shared';
 import type { QueueStore } from './store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
 import { updatePastrySheet } from '../sheets/pastry.js';
@@ -17,8 +17,7 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
         if (entry.delta < 0) {
           const remaining = entries.filter(e => !successIds.includes(e.id));
           const balance = await getItemBalance(entry.buyer, entry.item, entry.quantity, remaining);
-          const m = entry.quantity.match(/^(\d+) ks$/);
-          const required = m ? Number(m[1]) : 1;
+          const required = Math.abs(deriveCount(-1, entry.quantity));
           if (balance < required) {
             console.log(`[sync] Skipping ${entry.id}: insufficient balance (${balance} < ${required})`);
             successIds.push(entry.id); // Remove invalid entries from queue
