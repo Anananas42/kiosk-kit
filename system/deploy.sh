@@ -75,6 +75,9 @@ systemctl restart zahumny-kiosk.service
 if pgrep -u "$KIOSK_USER" sway >/dev/null 2>&1; then
     info "Restarting kiosk display"
     pkill -u "$KIOSK_USER" sway || true
+    sleep 2
+    # Clean up stale wayland sockets so the next sway gets a fresh wayland-0
+    rm -f /tmp/kiosk-xdg/wayland-* /tmp/kiosk-xdg/sway-ipc.*.sock
 fi
 
 info "Deploy complete ($NEW_HEAD)"

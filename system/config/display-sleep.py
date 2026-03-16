@@ -7,8 +7,9 @@ reach sway/chromium while the screen is off.
 
 When a touch is detected on the grabbed device the script turns the display
 back on, keeps the grab for a short period (so the "wake" touch doesn't
-register as a tap in the app), then releases and exits.  swayidle will
-re-arm automatically.
+register as a tap in the app), then releases and exits.  A synthetic
+cursor move pokes the compositor so it registers activity — without this,
+sway never sees input (we grabbed it all) and swayidle cannot re-arm.
 """
 
 import glob
@@ -25,9 +26,18 @@ XDG_RUNTIME_DIR = "/tmp/kiosk-xdg"
 def ensure_sway_env():
     """Set SWAYSOCK and WAYLAND_DISPLAY so swaymsg can reach the compositor."""
     os.environ.setdefault("XDG_RUNTIME_DIR", XDG_RUNTIME_DIR)
-    os.environ.setdefault("WAYLAND_DISPLAY", "wayland-1")
+    if "WAYLAND_DISPLAY" not in os.environ:
+        # Find the most recent wayland socket (wayland-0 after boot, may
+        # increment after deploy-triggered sway restarts).
+        candidates = sorted(glob.glob(os.path.join(XDG_RUNTIME_DIR, "wayland-*")),
+                            key=os.path.getmtime, reverse=True)
+        for c in candidates:
+            if not c.endswith(".lock"):
+                os.environ["WAYLAND_DISPLAY"] = os.path.basename(c)
+                break
     if "SWAYSOCK" not in os.environ:
-        socks = glob.glob(os.path.join(XDG_RUNTIME_DIR, "sway-ipc.*.sock"))
+        socks = sorted(glob.glob(os.path.join(XDG_RUNTIME_DIR, "sway-ipc.*.sock")),
+                        key=os.path.getmtime, reverse=True)
         if socks:
             os.environ["SWAYSOCK"] = socks[0]
 
@@ -75,6 +85,14 @@ def main():
     finally:
         dev.ungrab()
         dev.close()
+
+    # Poke the compositor so it registers activity and sends "resumed" to
+    # swayidle.  Without this, sway never sees input (we grabbed it all)
+    # and swayidle cannot re-arm — display sleep would work only once.
+    subprocess.run(
+        ["swaymsg", "seat", "-", "cursor", "move", "1", "0"],
+        check=False,
+    )
 
 
 if __name__ == "__main__":
