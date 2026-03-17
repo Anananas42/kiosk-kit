@@ -71,7 +71,7 @@ export default function App() {
     reload();
   }, [reload]);
 
-  const { secondsLeft, dismiss: dismissWarning } = useInactivityReset(state.screen !== 'buyer', reset);
+  const { secondsLeft, dismiss: dismissWarning } = useInactivityReset(state.screen !== 'buyer', reset, settings.inactivityTimeoutMs);
 
   const handleBuyerSelect = useCallback((buyer: number) => {
     setState((s) => ({ ...s, buyer, screen: 'category' }));

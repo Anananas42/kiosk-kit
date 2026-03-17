@@ -54,6 +54,7 @@ async function main() {
   const values = [
     ['Klíč', 'Hodnota'],
     ['idleDimMs', '15000'],
+    ['inactivityTimeoutMs', '60000'],
     ['maintenance', 'ne'],
   ];
 

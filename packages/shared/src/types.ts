@@ -76,6 +76,8 @@ export interface ItemCountResponse {
 export interface KioskSettings {
   /** Display dim overlay timeout in milliseconds. */
   idleDimMs: number;
+  /** Inactivity timeout before resetting to home screen, in milliseconds. */
+  inactivityTimeoutMs: number;
   /** When true, show maintenance screen and block all interaction. */
   maintenance: boolean;
 }

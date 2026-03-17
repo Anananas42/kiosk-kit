@@ -11,13 +11,6 @@
 // Dark overlay appears after this much inactivity (CSS fade-in: 1s)
 export const IDLE_DIM_MS = 15_000;
 
-// Default settings — used when [⚙️ Nastavení] sheet is missing or unreadable
-import type { KioskSettings } from './types.js';
-export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
-  idleDimMs: IDLE_DIM_MS,
-  maintenance: false,
-};
-
 // --- Session reset ---
 
 // Total inactivity before the app resets to the home screen
@@ -63,3 +56,13 @@ export const BACKUP_INTERVAL_MS = 60 * 60_000; // 1 hour
 
 // Maximum total size of backup files on disk
 export const BACKUP_MAX_BYTES = 8 * 1024 ** 3; // 8 GB
+
+// --- Default kiosk settings ---
+
+// Used when [⚙️ Nastavení] sheet is missing or unreadable
+import type { KioskSettings } from './types.js';
+export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
+  idleDimMs: IDLE_DIM_MS,
+  inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
+  maintenance: false,
+};

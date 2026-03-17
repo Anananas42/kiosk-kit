@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS } from '@zahumny/shared';
 
 
-export function useInactivityReset(active: boolean, onReset: () => void) {
+export function useInactivityReset(active: boolean, onReset: () => void, timeoutMs: number = INACTIVITY_TIMEOUT_MS) {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   const dismiss = useCallback(() => setSecondsLeft(null), []);
@@ -33,7 +33,7 @@ export function useInactivityReset(active: boolean, onReset: () => void) {
             setSecondsLeft(remaining);
           }
         }, 1000);
-      }, INACTIVITY_TIMEOUT_MS - INACTIVITY_WARNING_MS);
+      }, timeoutMs - INACTIVITY_WARNING_MS);
     };
 
     startTimers();
@@ -45,7 +45,7 @@ export function useInactivityReset(active: boolean, onReset: () => void) {
       clearInterval(countdownInterval);
       window.removeEventListener('pointerdown', restart);
     };
-  }, [active, onReset]);
+  }, [active, onReset, timeoutMs]);
 
   return { secondsLeft, dismiss };
 }
