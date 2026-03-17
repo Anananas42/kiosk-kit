@@ -64,5 +64,6 @@ import type { KioskSettings } from './types.js';
 export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   idleDimMs: IDLE_DIM_MS,
   inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
+  reportUpdateIntervalMs: 5 * 60_000, // 5 minutes
   maintenance: false,
 };

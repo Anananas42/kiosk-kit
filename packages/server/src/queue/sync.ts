@@ -1,9 +1,7 @@
 import { SYNC_INTERVAL_MS } from '@zahumny/shared';
 import type { QueueStore } from './store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
-import { getPastryCategories } from '../sheets/catalog.js';
-import { updatePastrySheet, updatePastryDaySheets } from '../sheets/pastry.js';
-import { updateConsumptionSheet } from '../sheets/consumption.js';
+import { markReportsDirty } from '../reports.js';
 
 export function startSyncInterval(queue: QueueStore, onStatusChange: (online: boolean) => void): void {
   setInterval(async () => {
@@ -11,8 +9,6 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
     if (entries.length === 0) return;
 
     const successIds: string[] = [];
-    let hasPastry = false;
-    let pastryNames: Set<string> | null = null;
 
     for (const entry of entries) {
       try {
@@ -29,9 +25,6 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
 
         await appendRow(entry);
         successIds.push(entry.id);
-
-        if (!pastryNames) pastryNames = await getPastryCategories();
-        if (pastryNames.has(entry.category)) hasPastry = true;
       } catch (err) {
         console.error(`[sync] Failed for ${entry.id}:`, (err as Error).message);
         onStatusChange(false);
@@ -42,26 +35,8 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
     if (successIds.length > 0) {
       queue.remove(successIds);
       onStatusChange(true);
+      markReportsDirty();
       console.log(`[sync] Flushed ${successIds.length}/${entries.length} entries`);
-
-      if (hasPastry) {
-        try {
-          await updatePastrySheet();
-        } catch (err) {
-          console.error('[sync] Pastry sheet update failed:', (err as Error).message);
-        }
-        try {
-          await updatePastryDaySheets();
-        } catch (err) {
-          console.error('[sync] Pastry day sheets update failed:', (err as Error).message);
-        }
-      }
-
-      try {
-        await updateConsumptionSheet();
-      } catch (err) {
-        console.error('[sync] Consumption summary update failed:', (err as Error).message);
-      }
     }
   }, SYNC_INTERVAL_MS);
 }

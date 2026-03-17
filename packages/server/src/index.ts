@@ -36,6 +36,8 @@ const app = createApp(
 
 if (env.sheetsConfigured) {
   startSyncInterval(queue, (online) => { sheetsOnline = online; });
+  const { startReportInterval } = await import('./reports.js');
+  startReportInterval(cache);
   const { startBackupInterval } = await import('./backup.js');
   startBackupInterval(DATA_DIR);
 }

@@ -55,6 +55,7 @@ async function main() {
     ['Klíč', 'Hodnota'],
     ['idleDimMs', '15000'],
     ['inactivityTimeoutMs', '60000'],
+    ['reportUpdateIntervalMs', '60000'],
     ['maintenance', 'ne'],
   ];
 

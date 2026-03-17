@@ -78,6 +78,8 @@ export interface KioskSettings {
   idleDimMs: number;
   /** Inactivity timeout before resetting to home screen, in milliseconds. */
   inactivityTimeoutMs: number;
+  /** How often report sheets (consumption, pastry overview) are regenerated, in milliseconds. */
+  reportUpdateIntervalMs: number;
   /** When true, show maintenance screen and block all interaction. */
   maintenance: boolean;
 }

@@ -3,11 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { validateRecordRequest, type RecordEntry } from '@zahumny/shared';
 import type { QueueStore } from '../queue/store.js';
 import { appendRow, getItemBalance } from '../sheets/evidence.js';
-import { getPastryCategories } from '../sheets/catalog.js';
-import { updatePastrySheet, updatePastryDaySheets } from '../sheets/pastry.js';
-import { updateConsumptionSheet } from '../sheets/consumption.js';
 import { env } from '../env.js';
 import { withLock } from '../lock.js';
+import { markReportsDirty } from '../reports.js';
 
 export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => void) {
   const app = new Hono();
@@ -47,20 +45,7 @@ export function recordRoute(queue: QueueStore, setOnline: (online: boolean) => v
         try {
           await appendRow(entry);
           setOnline(true);
-
-          const pastryNames = await getPastryCategories();
-          if (pastryNames.has(entry.category)) {
-            updatePastrySheet().catch((err) =>
-              console.error('[sheets] Pastry update failed:', (err as Error).message),
-            );
-            updatePastryDaySheets().catch((err) =>
-              console.error('[sheets] Pastry day sheets update failed:', (err as Error).message),
-            );
-          }
-
-          updateConsumptionSheet().catch((err) =>
-            console.error('[sheets] Consumption summary update failed:', (err as Error).message),
-          );
+          markReportsDirty();
 
           return c.json({ ok: true, queued: false });
         } catch (err) {
