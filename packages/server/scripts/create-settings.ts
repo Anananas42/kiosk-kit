@@ -27,6 +27,11 @@ const auth = new google.auth.GoogleAuth({
 
 const sheets = google.sheets({ version: 'v4', auth });
 
+// Formatting colors (same palette as other app-managed sheets)
+const HEADER_BG = { red: 0.267, green: 0.447, blue: 0.769 };  // #4472C4
+const HEADER_FG = { red: 1, green: 1, blue: 1 };               // white
+const KEY_BG = { red: 0.851, green: 0.886, blue: 0.953 };      // #D9E2F3
+
 async function main() {
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
   const exists = meta.data.sheets?.some((s) => s.properties?.title === SHEET_NAME);
@@ -36,13 +41,16 @@ async function main() {
     return;
   }
 
-  await sheets.spreadsheets.batchUpdate({
+  // Create the sheet
+  const addRes = await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SPREADSHEET_ID,
     requestBody: {
       requests: [{ addSheet: { properties: { title: SHEET_NAME } } }],
     },
   });
+  const sheetId = addRes.data.replies?.[0]?.addSheet?.properties?.sheetId ?? 0;
 
+  // Write data
   const values = [
     ['Klíč', 'Hodnota'],
     ['idleDimMs', '15000'],
@@ -53,6 +61,64 @@ async function main() {
     range: `'${SHEET_NAME}'!A1`,
     valueInputOption: 'RAW',
     requestBody: { values },
+  });
+
+  // Format
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SPREADSHEET_ID,
+    requestBody: {
+      requests: [
+        // Freeze header row
+        {
+          updateSheetProperties: {
+            properties: { sheetId, gridProperties: { frozenRowCount: 1 } },
+            fields: 'gridProperties.frozenRowCount',
+          },
+        },
+        // Column widths
+        {
+          updateDimensionProperties: {
+            range: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 1 },
+            properties: { pixelSize: 200 },
+            fields: 'pixelSize',
+          },
+        },
+        {
+          updateDimensionProperties: {
+            range: { sheetId, dimension: 'COLUMNS', startIndex: 1, endIndex: 2 },
+            properties: { pixelSize: 200 },
+            fields: 'pixelSize',
+          },
+        },
+        // Header: blue bg, white bold, centered
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 2 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: HEADER_BG,
+                textFormat: { foregroundColor: HEADER_FG, bold: true },
+                horizontalAlignment: 'CENTER',
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
+          },
+        },
+        // Key column: light blue bg, bold
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: 1, endRowIndex: values.length, startColumnIndex: 0, endColumnIndex: 1 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: KEY_BG,
+                textFormat: { bold: true },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat)',
+          },
+        },
+      ],
+    },
   });
 
   console.log(`Created sheet "${SHEET_NAME}" with default settings.`);
