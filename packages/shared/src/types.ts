@@ -72,7 +72,7 @@ export interface ItemCountResponse {
   count: number;
 }
 
-/** Kiosk settings (configurable via [Nastavení] sheet). */
+/** Kiosk settings (configurable via [⚙️ Nastavení] sheet). */
 export interface KioskSettings {
   /** Display dim overlay timeout in milliseconds. */
   idleDimMs: number;

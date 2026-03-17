@@ -29,8 +29,9 @@ export default function BuyerSelect({ apartments, onSelect, error, lastOrder, on
       />
       <div className="screen-body">
         {error ? (
-          <div className="empty-state empty-state--error">
-            <pre style={{ whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '0.9rem' }}>{error}</pre>
+          <div className="catalog-error">
+            <div className="catalog-error__icon">⚠️</div>
+            <div className="catalog-error__message">{error}</div>
           </div>
         ) : apartments.length === 0 ? (
           <div className="empty-state">

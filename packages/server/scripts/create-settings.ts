@@ -1,5 +1,5 @@
 /**
- * Create the [Nastavení] sheet with default settings.
+ * Create the [⚙️ Nastavení] sheet with default settings.
  * Usage: pnpm --filter @zahumny/server create-settings
  */
 
@@ -14,7 +14,7 @@ for (const line of readFileSync(resolve(ROOT, '.env'), 'utf-8').split('\n')) {
 }
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID!;
-const SHEET_NAME = '[Nastavení]';
+const SHEET_NAME = '[⚙️ Nastavení]';
 
 const rawCredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? './credentials/service-account.json';
 const credPath = resolve(ROOT, rawCredPath);
