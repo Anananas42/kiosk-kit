@@ -54,6 +54,7 @@ async function main() {
   const values = [
     ['Klíč', 'Hodnota'],
     ['idleDimMs', '15000'],
+    ['maintenance', 'ne'],
   ];
 
   await sheets.spreadsheets.values.update({

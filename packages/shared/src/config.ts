@@ -15,6 +15,7 @@ export const IDLE_DIM_MS = 15_000;
 import type { KioskSettings } from './types.js';
 export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   idleDimMs: IDLE_DIM_MS,
+  maintenance: false,
 };
 
 // --- Session reset ---

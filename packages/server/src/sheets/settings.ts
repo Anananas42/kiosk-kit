@@ -30,5 +30,6 @@ export async function readSettings(): Promise<KioskSettings> {
 
   return {
     idleDimMs: parsePositiveInt('idleDimMs', DEFAULT_KIOSK_SETTINGS.idleDimMs),
+    maintenance: kvMap.get('maintenance')?.toLowerCase() === 'ano',
   };
 }

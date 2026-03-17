@@ -163,6 +163,18 @@ export default function App() {
     }
   }, [state, reset]);
 
+  if (settings.maintenance) {
+    return (
+      <div className="app">
+        <div className="maintenance-screen">
+          <div className="maintenance-screen__icon">🔧</div>
+          <div className="maintenance-screen__title">Údržba</div>
+          <div className="maintenance-screen__message">Kiosek je dočasně mimo provoz.</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       {dimmed && <div className="idle-dim" />}

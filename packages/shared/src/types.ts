@@ -76,6 +76,8 @@ export interface ItemCountResponse {
 export interface KioskSettings {
   /** Display dim overlay timeout in milliseconds. */
   idleDimMs: number;
+  /** When true, show maintenance screen and block all interaction. */
+  maintenance: boolean;
 }
 
 /** Pastry ordering/delivery configuration per weekday. */
