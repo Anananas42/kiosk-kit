@@ -234,6 +234,12 @@ if grep -q ' / .*defaults' /etc/fstab && ! grep -q 'noatime' /etc/fstab; then
     sed -i '/ \/ /s/defaults/defaults,noatime/' /etc/fstab
 fi
 
+# Keep CPU at max frequency — the Pi is a dedicated kiosk, not a laptop
+echo 'GOVERNOR="performance"' > /etc/default/cpufrequtils 2>/dev/null || true
+for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+    echo performance > "$cpu" 2>/dev/null || true
+done
+
 # ---------------------------------------------------------------------------
 # 12. Disable unnecessary services
 # ---------------------------------------------------------------------------
@@ -245,6 +251,10 @@ for svc in bluetooth cups lightdm; do
         systemctl disable --now "$svc" 2>/dev/null || true
     fi
 done
+
+# rpi-connect: not needed (Tailscale handles remote access) and its wayvnc
+# service crash-loops in the locked-down kiosk session
+apt-get purge -y -qq rpi-connect 2>/dev/null || true
 
 # Ensure console target (no desktop environment)
 systemctl set-default multi-user.target
