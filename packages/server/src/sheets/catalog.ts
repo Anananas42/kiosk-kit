@@ -3,6 +3,13 @@ import { getSheetsClient } from './client.js';
 import { env } from '../env.js';
 import { buildColumnMap, getCol } from './column-map.js';
 
+export class CatalogValidationError extends Error {
+  constructor(public readonly errors: string[]) {
+    super(`Catalog validation failed:\n${errors.map((e) => `  • ${e}`).join('\n')}`);
+    this.name = 'CatalogValidationError';
+  }
+}
+
 export async function readCatalog(): Promise<CatalogCategory[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
@@ -24,7 +31,11 @@ export async function readCatalog(): Promise<CatalogCategory[]> {
     getCol(row, colMap, CATALOG_COLUMNS.dphRate),
   ]);
 
-  return validateCatalog(dataRows, CATALOG_TYPE_PASTRY);
+  const result = validateCatalog(dataRows, CATALOG_TYPE_PASTRY);
+  if (!result.ok) {
+    throw new CatalogValidationError(result.errors);
+  }
+  return result.data;
 }
 
 /** Returns the set of category names marked as pastry in the catalog. */

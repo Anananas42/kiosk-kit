@@ -34,9 +34,11 @@ export function validateRecordRequest(body: unknown): { ok: true; data: RecordRe
   };
 }
 
-export function validateCatalog(rows: string[][], pastryType: string): CatalogCategory[] {
+export function validateCatalog(rows: string[][], pastryType: string): { ok: true; data: CatalogCategory[] } | { ok: false; errors: string[] } {
   const order: string[] = [];
   const map: Record<string, CatalogCategory> = {};
+  const errors: string[] = [];
+  const seenIds = new Map<string, string>(); // id → "category / item name" for duplicate reporting
 
   for (const [cat, type = '', itemId = '', itemName, quantity = '', price = '', dphRate = ''] of rows) {
     if (!cat || !itemName) continue;
@@ -45,8 +47,25 @@ export function validateCatalog(rows: string[][], pastryType: string): CatalogCa
       map[cat] = { id, name: cat, pastry: type.trim().toLowerCase() === pastryType, items: [] };
       order.push(cat);
     }
-    map[cat].items.push({ id: itemId.trim(), name: itemName.trim(), quantity: quantity.trim(), price: price.trim(), dphRate: dphRate.trim() });
+
+    const trimmedId = itemId.trim();
+    const trimmedName = itemName.trim();
+    const location = `${cat} / ${trimmedName}`;
+
+    if (!trimmedId) {
+      errors.push(`Missing ID for item "${location}" — every item in [Katalog] must have a unique value in the ID column`);
+    } else if (seenIds.has(trimmedId)) {
+      errors.push(`Duplicate ID "${trimmedId}" — used by both "${seenIds.get(trimmedId)}" and "${location}"`);
+    } else {
+      seenIds.set(trimmedId, location);
+    }
+
+    map[cat].items.push({ id: trimmedId, name: trimmedName, quantity: quantity.trim(), price: price.trim(), dphRate: dphRate.trim() });
   }
 
-  return order.map((name) => map[name]);
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+
+  return { ok: true, data: order.map((name) => map[name]) };
 }

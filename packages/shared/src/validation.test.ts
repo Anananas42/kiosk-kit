@@ -66,50 +66,88 @@ describe('validateRecordRequest', () => {
 describe('validateCatalog', () => {
   it('groups items by category', () => {
     const rows = [
-      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
-      ['Alko', '', '', 'Wine', '0,2 l', '60 Kč', '21%'],
-      ['Nealko', '', '', 'Juice', '0,3 l', '30 Kč', '15%'],
+      ['Alko', '', 'B01', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Alko', '', 'W01', 'Wine', '0,2 l', '60 Kč', '21%'],
+      ['Nealko', '', 'J01', 'Juice', '0,3 l', '30 Kč', '15%'],
     ];
     const result = validateCatalog(rows, 'pečivo');
-    expect(result).toHaveLength(2);
-    expect(result[0].name).toBe('Alko');
-    expect(result[0].pastry).toBe(false);
-    expect(result[0].items).toHaveLength(2);
-    expect(result[0].items[0].dphRate).toBe('21%');
-    expect(result[1].name).toBe('Nealko');
-    expect(result[1].items[0].dphRate).toBe('15%');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0].name).toBe('Alko');
+    expect(result.data[0].pastry).toBe(false);
+    expect(result.data[0].items).toHaveLength(2);
+    expect(result.data[0].items[0].dphRate).toBe('21%');
+    expect(result.data[1].name).toBe('Nealko');
+    expect(result.data[1].items[0].dphRate).toBe('15%');
   });
 
   it('sets pastry flag from type column', () => {
     const rows = [
-      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Alko', '', 'B01', 'Beer', '0,5 l', '46 Kč', '21%'],
       ['Pečivo slané', 'pečivo', 'R01', 'Rohlík', '1 ks', '5 Kč', '15%'],
     ];
     const result = validateCatalog(rows, 'pečivo');
-    expect(result[0].pastry).toBe(false);
-    expect(result[1].pastry).toBe(true);
-    expect(result[1].items[0].id).toBe('R01');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data[0].pastry).toBe(false);
+    expect(result.data[1].pastry).toBe(true);
+    expect(result.data[1].items[0].id).toBe('R01');
   });
 
   it('skips rows with missing category or item name', () => {
     const rows = [
-      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Alko', '', 'B01', 'Beer', '0,5 l', '46 Kč', '21%'],
       ['', '', '', 'Orphan', '', '', ''],
       ['Alko', '', '', '', '', '', ''],
     ];
     const result = validateCatalog(rows, 'pečivo');
-    expect(result).toHaveLength(1);
-    expect(result[0].items).toHaveLength(1);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].items).toHaveLength(1);
   });
 
-  it('handles sparse rows (missing quantity/price/dphRate)', () => {
-    const rows = [['Alko', '', '', 'Beer']];
+  it('rejects items with missing ID', () => {
+    const rows = [['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%']];
     const result = validateCatalog(rows, 'pečivo');
-    expect(result[0].items[0]).toEqual({ id: '', name: 'Beer', quantity: '', price: '', dphRate: '' });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toContain('Missing ID');
+    expect(result.errors[0]).toContain('Alko / Beer');
+  });
+
+  it('rejects duplicate IDs', () => {
+    const rows = [
+      ['Alko', '', 'B01', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Nealko', '', 'B01', 'Juice', '0,3 l', '30 Kč', '15%'],
+    ];
+    const result = validateCatalog(rows, 'pečivo');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toContain('Duplicate ID');
+    expect(result.errors[0]).toContain('B01');
+  });
+
+  it('reports all errors at once', () => {
+    const rows = [
+      ['Alko', '', '', 'Beer', '0,5 l', '46 Kč', '21%'],
+      ['Alko', '', 'W01', 'Wine', '0,2 l', '60 Kč', '21%'],
+      ['Nealko', '', 'W01', 'Juice', '0,3 l', '30 Kč', '15%'],
+    ];
+    const result = validateCatalog(rows, 'pečivo');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toHaveLength(2); // one missing, one duplicate
   });
 
   it('returns empty for empty input', () => {
-    expect(validateCatalog([], 'pečivo')).toEqual([]);
+    const result = validateCatalog([], 'pečivo');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([]);
   });
 });
 

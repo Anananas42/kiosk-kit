@@ -11,7 +11,7 @@ interface LastOrder {
 interface BuyerSelectProps {
   apartments: Apartment[];
   onSelect: (buyer: number) => void;
-  error: boolean;
+  error: string | null;
   lastOrder: LastOrder | null;
   onRepeat: () => void;
 }
@@ -28,9 +28,13 @@ export default function BuyerSelect({ apartments, onSelect, error, lastOrder, on
         ) : undefined}
       />
       <div className="screen-body">
-        {apartments.length === 0 ? (
+        {error ? (
+          <div className="empty-state empty-state--error">
+            <pre style={{ whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '0.9rem' }}>{error}</pre>
+          </div>
+        ) : apartments.length === 0 ? (
           <div className="empty-state">
-            {error ? 'Nelze načíst data' : 'Načítám\u2026'}
+            Načítám&hellip;
           </div>
         ) : (
           <div className="tile-grid tile-grid--buyers">

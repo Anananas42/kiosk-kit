@@ -11,6 +11,14 @@ import type {
 
 export async function fetchCatalog(): Promise<CatalogCategory[]> {
   const res = await fetch('/api/catalog');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (body.error === 'catalog_invalid') {
+      const details = (body.details as string[])?.join('\n• ') ?? '';
+      throw new Error(`${body.message}\n\n• ${details}`);
+    }
+    throw new Error(`Catalog fetch failed: HTTP ${res.status}`);
+  }
   return res.json();
 }
 

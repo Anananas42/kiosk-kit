@@ -12,28 +12,29 @@ export function useCatalog() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>(() => cacheGet<CatalogCategory[]>('catalog') ?? []);
   const [apartments, setApartments] = useState<Apartment[]>(() => cacheGet<Apartment[]>('apartments') ?? []);
   const [pastryConfig, setPastryConfig] = useState<PastryConfig>(() => cacheGet<PastryConfig>('pastryConfig') ?? DEFAULT_PASTRY_CONFIG);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetchCatalog()
       .then((data) => {
         setCatalog(data);
         cacheSet('catalog', data);
-        setError(false);
+        setError(null);
       })
       .catch((err) => {
         console.error('Catalog load error:', err);
-        if (!cacheGet<CatalogCategory[]>('catalog')) setError(true);
+        setError(err instanceof Error ? err.message : 'Nelze načíst katalog.');
       });
     fetchApartments()
       .then((data) => {
         setApartments(data.apartments);
         cacheSet('apartments', data.apartments);
-        setError(false);
       })
       .catch((err) => {
         console.error('Apartments load error:', err);
-        if (!cacheGet<Apartment[]>('apartments')) setError(true);
+        if (!cacheGet<Apartment[]>('apartments')) {
+          setError((prev) => prev ?? 'Nelze načíst data.');
+        }
       });
     fetchPastryConfig()
       .then((data) => {
