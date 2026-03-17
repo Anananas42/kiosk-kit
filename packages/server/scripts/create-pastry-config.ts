@@ -14,7 +14,7 @@ for (const line of readFileSync(resolve(ROOT, '.env'), 'utf-8').split('\n')) {
 }
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID!;
-const SHEET_NAME = '[Pečivo config]';
+const SHEET_NAME = '[🥐🔧 Pečivo config]';
 
 // Resolve credentials path relative to ROOT (env may have a relative path)
 const rawCredPath = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? './credentials/service-account.json';
