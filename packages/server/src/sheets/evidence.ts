@@ -82,6 +82,11 @@ export async function readRecords(): Promise<EvidenceRow[]> {
     price: getCol(row, colMap, 'Cena'),
   }));
 
+  const missingId = records.filter((r) => !r.itemId);
+  if (missingId.length > 0) {
+    console.warn(`[sheets] ${missingId.length} evidence record(s) missing itemId — balance checks will fall back to name matching`);
+  }
+
   setCachedRecords(records);
   return records;
 }

@@ -12,11 +12,15 @@ export function computeBalance(
   itemId?: string,
 ): number {
   let total = 0;
+  let nameFallbackCount = 0;
   for (const r of records) {
     if (r.buyer !== buyer) continue;
     if (itemId) {
-      // Match by ID, or fall back to name for legacy records without an ID
-      if (r.itemId === itemId || (!r.itemId && r.item === item)) {
+      if (r.itemId === itemId) {
+        total += r.count;
+      } else if (!r.itemId && r.item === item) {
+        // Legacy record without ID — matched by name only
+        nameFallbackCount++;
         total += r.count;
       }
     } else {
@@ -24,6 +28,11 @@ export function computeBalance(
         total += r.count;
       }
     }
+  }
+  if (nameFallbackCount > 0) {
+    console.warn(
+      `[balance] ${nameFallbackCount} record(s) for buyer=${buyer} item="${item}" matched by name fallback (missing itemId) — balance may be inaccurate`,
+    );
   }
   return total;
 }
