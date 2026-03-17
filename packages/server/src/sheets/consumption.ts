@@ -239,7 +239,6 @@ export async function updateConsumptionSheet(): Promise<void> {
   const totalRows = values.length;
   const itemRowCount = totalRows - 1; // minus header; celkem + dph rows are at the end
   // Summary rows start after item rows (header + items)
-  const summaryStartRow = totalRows - (totalRows - 1 - (totalRows - values.findIndex((r) => r[0] === 'Celkem')));
   const summaryStartIdx = values.findIndex((r) => r[0] === 'Celkem');
 
   const formatRequests = buildFormatRequests({

@@ -22,7 +22,11 @@ function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, A
 
     if (!map[key]) map[key] = { label, added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
 
-    const unitPrice = parsePrice(r.price);
+    // r.price is the signed total (unitPrice * count) from the evidence sheet,
+    // so derive the unit price by dividing by absolute count
+    const absCount = Math.abs(r.count);
+    const signedTotal = parsePrice(r.price);
+    const unitPrice = absCount > 0 ? signedTotal / absCount : 0;
     if (!map[key].unitPrice && unitPrice) map[key].unitPrice = unitPrice;
 
     if (r.count > 0) {

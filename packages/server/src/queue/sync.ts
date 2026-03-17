@@ -18,8 +18,8 @@ export function startSyncInterval(queue: QueueStore, onStatusChange: (online: bo
       try {
         // Validate balance on flush for removals
         if (entry.count < 0) {
-          const remaining = entries.filter(e => !successIds.includes(e.id));
-          const balance = await getItemBalance(entry.buyer, entry.item, remaining);
+          const remaining = entries.filter(e => !successIds.includes(e.id) && e.id !== entry.id);
+          const balance = await getItemBalance(entry.buyer, entry.item, remaining, entry.itemId);
           if (balance + entry.count < 0) {
             console.log(`[sync] Skipping ${entry.id}: insufficient balance (${balance} + ${entry.count} < 0)`);
             successIds.push(entry.id); // Remove invalid entries from queue
