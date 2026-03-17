@@ -48,8 +48,8 @@ export default function App() {
   const repeatTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const isOffline = useHealth();
-  const dimmed = useIdleDim();
-  const { catalog, apartments, pastryConfig, reload, error: catalogError } = useCatalog();
+  const { catalog, apartments, pastryConfig, settings, reload, error: catalogError } = useCatalog();
+  const dimmed = useIdleDim(settings.idleDimMs);
 
   const pastryCategories = catalog.filter((cat) => cat.pastry);
   const pastryNames = new Set(pastryCategories.map((cat) => cat.name));

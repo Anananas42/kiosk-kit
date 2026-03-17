@@ -72,6 +72,12 @@ export interface ItemCountResponse {
   count: number;
 }
 
+/** Kiosk settings (configurable via [Nastavení] sheet). */
+export interface KioskSettings {
+  /** Display dim overlay timeout in milliseconds. */
+  idleDimMs: number;
+}
+
 /** Pastry ordering/delivery configuration per weekday. */
 export interface PastryConfig {
   /** Whether ordering is allowed on each weekday (index 0=Sunday, 6=Saturday). */

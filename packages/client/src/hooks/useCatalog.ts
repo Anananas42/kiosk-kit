@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CATALOG_RELOAD_INTERVAL_MS, type CatalogCategory, type Apartment, type PastryConfig } from '@zahumny/shared';
-import { fetchCatalog, fetchApartments, fetchPastryConfig } from '../api.js';
+import { CATALOG_RELOAD_INTERVAL_MS, DEFAULT_KIOSK_SETTINGS, type CatalogCategory, type Apartment, type PastryConfig, type KioskSettings } from '@zahumny/shared';
+import { fetchCatalog, fetchApartments, fetchPastryConfig, fetchSettings } from '../api.js';
 import { cacheGet, cacheSet } from '../utils/cache.js';
 
 const DEFAULT_PASTRY_CONFIG: PastryConfig = {
@@ -12,6 +12,7 @@ export function useCatalog() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>(() => cacheGet<CatalogCategory[]>('catalog') ?? []);
   const [apartments, setApartments] = useState<Apartment[]>(() => cacheGet<Apartment[]>('apartments') ?? []);
   const [pastryConfig, setPastryConfig] = useState<PastryConfig>(() => cacheGet<PastryConfig>('pastryConfig') ?? DEFAULT_PASTRY_CONFIG);
+  const [settings, setSettings] = useState<KioskSettings>(() => cacheGet<KioskSettings>('settings') ?? DEFAULT_KIOSK_SETTINGS);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -44,16 +45,24 @@ export function useCatalog() {
       .catch((err) => {
         console.error('Pastry config load error:', err);
       });
+    fetchSettings()
+      .then((data) => {
+        setSettings(data);
+        cacheSet('settings', data);
+      })
+      .catch((err) => {
+        console.error('Settings load error:', err);
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  // Poll every 10s while in error state, normal interval otherwise
   useEffect(() => {
+    // Poll every 10s while in error state, normal interval otherwise
     const interval = error ? 10_000 : CATALOG_RELOAD_INTERVAL_MS;
     const id = setInterval(load, interval);
     return () => clearInterval(id);
   }, [load, error]);
 
-  return { catalog, apartments, pastryConfig, reload: load, error };
+  return { catalog, apartments, pastryConfig, settings, reload: load, error };
 }

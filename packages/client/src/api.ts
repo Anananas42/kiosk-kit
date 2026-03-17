@@ -7,6 +7,7 @@ import type {
   ApartmentsResponse,
   ItemCountResponse,
   PastryConfig,
+  KioskSettings,
 } from '@zahumny/shared';
 
 export async function fetchCatalog(): Promise<CatalogCategory[]> {
@@ -39,6 +40,11 @@ export async function fetchOverview(): Promise<OverviewResponse> {
 
 export async function fetchPastryConfig(): Promise<PastryConfig> {
   const res = await fetch('/api/pastry-config');
+  return res.json();
+}
+
+export async function fetchSettings(): Promise<KioskSettings> {
+  const res = await fetch('/api/settings');
   return res.json();
 }
 

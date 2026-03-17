@@ -27,6 +27,12 @@ export const CONSUMPTION_SHEET = '[📊 Souhrn konzumace]';
 
 export const CATALOG_TYPE_PASTRY = 'pečivo';
 
+export const SETTINGS_SHEET = '[Nastavení]';
+export const SETTINGS_COLUMNS = {
+  key: 'Klíč',
+  value: 'Hodnota',
+} as const;
+
 export const CONFIG_COLUMNS = {
   id: 'ID',
   label: 'Label',

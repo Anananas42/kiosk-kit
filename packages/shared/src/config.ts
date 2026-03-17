@@ -11,6 +11,12 @@
 // Dark overlay appears after this much inactivity (CSS fade-in: 1s)
 export const IDLE_DIM_MS = 15_000;
 
+// Default settings — used when [Nastavení] sheet is missing or unreadable
+import type { KioskSettings } from './types.js';
+export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
+  idleDimMs: IDLE_DIM_MS,
+};
+
 // --- Session reset ---
 
 // Total inactivity before the app resets to the home screen

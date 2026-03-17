@@ -10,6 +10,7 @@ import { recordRoute } from './routes/record.js';
 import { overviewRoute } from './routes/overview.js';
 import { itemCountRoute } from './routes/item-count.js';
 import { pastryConfigRoute } from './routes/pastry-config.js';
+import { settingsRoute } from './routes/settings.js';
 
 export function createApp(
   cache: CacheStore,
@@ -33,6 +34,7 @@ export function createApp(
   app.route('/api/overview', overviewRoute(queue));
   app.route('/api/item-count', itemCountRoute(queue));
   app.route('/api/pastry-config', pastryConfigRoute(cache));
+  app.route('/api/settings', settingsRoute(cache));
 
   // Prevent caching of HTML (index.html) so deploys take effect immediately.
   // Hashed JS/CSS assets are fine to cache — they have unique filenames.

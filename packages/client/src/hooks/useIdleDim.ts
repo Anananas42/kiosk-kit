@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react';
 import { IDLE_DIM_MS } from '@zahumny/shared';
 
-
-export function useIdleDim() {
+export function useIdleDim(idleDimMs: number = IDLE_DIM_MS) {
   const [dimmed, setDimmed] = useState(false);
 
   useEffect(() => {
-    let timer = setTimeout(() => setDimmed(true), IDLE_DIM_MS);
+    let timer = setTimeout(() => setDimmed(true), idleDimMs);
 
     const wake = () => {
       setDimmed(false);
       clearTimeout(timer);
-      timer = setTimeout(() => setDimmed(true), IDLE_DIM_MS);
+      timer = setTimeout(() => setDimmed(true), idleDimMs);
     };
 
     window.addEventListener('pointerdown', wake);
@@ -19,7 +18,7 @@ export function useIdleDim() {
       clearTimeout(timer);
       window.removeEventListener('pointerdown', wake);
     };
-  }, []);
+  }, [idleDimMs]);
 
   return dimmed;
 }
