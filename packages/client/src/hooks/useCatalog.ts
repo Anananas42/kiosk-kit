@@ -48,10 +48,12 @@ export function useCatalog() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Poll every 10s while in error state, normal interval otherwise
   useEffect(() => {
-    const id = setInterval(load, CATALOG_RELOAD_INTERVAL_MS);
+    const interval = error ? 10_000 : CATALOG_RELOAD_INTERVAL_MS;
+    const id = setInterval(load, interval);
     return () => clearInterval(id);
-  }, [load]);
+  }, [load, error]);
 
   return { catalog, apartments, pastryConfig, reload: load, error };
 }
