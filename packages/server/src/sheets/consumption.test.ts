@@ -72,11 +72,11 @@ describe('buildConsumptionValues', () => {
     expect(result[2][5]).toBe('25 (5)');    // Apt 5
     expect(result[2][6]).toBe('75 (15)');   // Celkově
 
-    // Celkem row
+    // Celkem row (numbers for Kč formatting)
     expect(result[3][0]).toBe('Celkem');
-    expect(result[3][4]).toBe('510');
-    expect(result[3][5]).toBe('117');
-    expect(result[3][6]).toBe('627');
+    expect(result[3][4]).toBe(510);
+    expect(result[3][5]).toBe(117);
+    expect(result[3][6]).toBe(627);
   });
 
   it('produces DPH breakdown rows sorted by rate', () => {
@@ -98,9 +98,9 @@ describe('buildConsumptionValues', () => {
     expect(idx15).toBeLessThan(idx21);
 
     // Apt 1 DPH 15%: 50 (Rohlík: 10 × 5)
-    expect(dph15![4]).toBe('50');
+    expect(dph15![4]).toBe(50);
     // Apt 1 DPH 21%: 460 (Pivo: 10 × 46)
-    expect(dph21![4]).toBe('460');
+    expect(dph21![4]).toBe(460);
   });
 
   it('shows items not in catalog with empty metadata and zero cost', () => {

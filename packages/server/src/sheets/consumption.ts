@@ -17,11 +17,16 @@ interface CatalogInfo {
  * Build grid values for the consumption summary sheet.
  * Pure function — no I/O, fully testable.
  */
+/** Format a number with thousand separators (e.g. 1200 → "1 200"). Uses Czech thin space. */
+function fmtNum(n: number): string {
+  return n.toLocaleString('cs-CZ');
+}
+
 export function buildConsumptionValues(
   records: EvidenceRow[],
   catalog: CatalogCategory[],
   apartments: Apartment[],
-): string[][] | null {
+): (string | number)[][] | null {
   // Build catalog lookup keyed by itemId, with name fallback
   const catalogById = new Map<string, CatalogInfo>();
   const catalogByName = new Map<string, CatalogInfo>();
@@ -122,7 +127,7 @@ export function buildConsumptionValues(
 
   // Item rows
   const dphRates = new Set<string>();
-  const itemRows: string[][] = [];
+  const itemRows: (string | number)[][] = [];
   const colTotals = new Array(activeApts.length + 1).fill(0); // per apt + celkově
 
   for (const key of activeKeys) {
@@ -139,7 +144,7 @@ export function buildConsumptionValues(
       const count = data?.count ?? 0;
       const cost = data?.cost ?? 0;
       if (count > 0) {
-        aptCells.push(`${cost} (${count})`);
+        aptCells.push(`${fmtNum(cost)} (${count})`);
         totalCost += cost;
         totalCount += count;
         colTotals[i] += cost;
@@ -149,15 +154,15 @@ export function buildConsumptionValues(
     }
     colTotals[activeApts.length] += totalCost;
 
-    itemRows.push([info.name, info.quantity, info.price ? `${parsePrice(info.price)} Kč` : '', info.dphRate, ...aptCells, `${totalCost} (${totalCount})`]);
+    itemRows.push([info.name, info.quantity, info.price ? `${parsePrice(info.price)} Kč` : '', info.dphRate, ...aptCells, `${fmtNum(totalCost)} (${totalCount})`]);
   }
 
-  // Celkem row
-  const celkemRow = ['Celkem', '', '', '', ...colTotals.map(String)];
+  // Celkem row (numbers for currency formatting)
+  const celkemRow: (string | number)[] = ['Celkem', '', '', '', ...colTotals as number[]];
 
-  // DPH breakdown rows
+  // DPH breakdown rows (numbers for currency formatting)
   const sortedRates = [...dphRates].sort((a, b) => parseFloat(a) - parseFloat(b));
-  const dphRows: string[][] = [];
+  const dphRows: (string | number)[][] = [];
   for (const rate of sortedRates) {
     const rateKeys = activeKeys.filter((k) => keyInfo.get(k)!.dphRate === rate);
     const rateTotals = new Array(activeApts.length + 1).fill(0);
@@ -174,7 +179,7 @@ export function buildConsumptionValues(
       }
     }
 
-    dphRows.push([`  z toho DPH ${rate}`, '', '', '', ...rateTotals.map(String)]);
+    dphRows.push([`  z toho DPH ${rate}`, '', '', '', ...rateTotals as number[]]);
   }
 
   return [header, ...itemRows, celkemRow, ...dphRows];
@@ -272,6 +277,25 @@ export async function updateConsumptionSheet(): Promise<void> {
           },
         },
         fields: 'userEnteredFormat(backgroundColor,textFormat)',
+      },
+    });
+
+    // Kč currency format on summary number cells (apartment columns + celkově)
+    formatRequests.push({
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: summaryStartIdx,
+          endRowIndex: totalRows,
+          startColumnIndex: 4,
+          endColumnIndex: totalCols,
+        },
+        cell: {
+          userEnteredFormat: {
+            numberFormat: { type: 'NUMBER', pattern: '#,##0 "Kč"' },
+          },
+        },
+        fields: 'userEnteredFormat.numberFormat',
       },
     });
   }
