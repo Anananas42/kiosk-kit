@@ -1,0 +1,22 @@
+---
+- name: Download Tailscale install script
+  ansible.builtin.get_url:
+    url: https://tailscale.com/install.sh
+    dest: /tmp/tailscale-install.sh
+    mode: "0755"
+  when: not ansible_check_mode
+
+- name: Install Tailscale
+  ansible.builtin.command:
+    cmd: /tmp/tailscale-install.sh
+    creates: /usr/bin/tailscale
+
+- name: Authenticate Tailscale
+  ansible.builtin.command:
+    cmd: >-
+      tailscale up
+      --authkey={{ kioskkit_tailscale_auth_key }}
+      --hostname=kioskkit-{{ kioskkit_device_id }}
+      --advertise-tags=tag:{{ kioskkit_customer_tag }}
+  when: kioskkit_tailscale_auth_key | length > 0
+  changed_when: true

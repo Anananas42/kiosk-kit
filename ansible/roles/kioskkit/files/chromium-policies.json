@@ -1,0 +1,16 @@
+{
+  "URLAllowlist": ["localhost:3001"],
+  "URLBlocklist": ["*"],
+  "DeveloperToolsAvailability": 2,
+  "DownloadRestrictions": 3,
+  "PrintingEnabled": false,
+  "BookmarkBarEnabled": false,
+  "EditBookmarksEnabled": false,
+  "PasswordManagerEnabled": false,
+  "AutofillAddressEnabled": false,
+  "AutofillCreditCardEnabled": false,
+  "TranslateEnabled": false,
+  "BrowserSignin": 0,
+  "ExtensionInstallBlocklist": ["*"],
+  "AllowFileSelectionDialogs": false
+}

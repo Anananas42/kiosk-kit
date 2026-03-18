@@ -1,0 +1,26 @@
+---
+- name: Deploy kioskkit systemd service
+  ansible.builtin.template:
+    src: kioskkit.service.j2
+    dest: /etc/systemd/system/kioskkit.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart kioskkit
+
+- name: Enable kioskkit service
+  ansible.builtin.systemd:
+    name: kioskkit.service
+    enabled: true
+
+- name: Remove old deploy service
+  ansible.builtin.file:
+    path: /etc/systemd/system/kioskkit-deploy.service
+    state: absent
+  notify: Reload systemd
+
+- name: Remove old deploy timer
+  ansible.builtin.file:
+    path: /etc/systemd/system/kioskkit-deploy.timer
+    state: absent
+  notify: Reload systemd

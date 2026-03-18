@@ -1,0 +1,10 @@
+---
+all:
+  children:
+    kiosks:
+      hosts:
+        dev-pi:
+          ansible_host: 192.168.1.100
+          kioskkit_tailscale_auth_key: "tskey-auth-XXXX"
+          kioskkit_device_id: "dev-001"
+          kioskkit_customer_tag: "dev"

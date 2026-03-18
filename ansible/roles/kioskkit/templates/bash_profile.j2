@@ -1,0 +1,10 @@
+# Managed by Ansible — do not edit manually.
+if [ "$(tty)" = "/dev/tty1" ]; then
+    until curl -sf http://localhost:{{ kioskkit_app_port }} >/dev/null 2>&1; do
+        sleep 2
+    done
+
+    export XDG_RUNTIME_DIR=/tmp/kiosk-xdg
+    mkdir -p "$XDG_RUNTIME_DIR"
+    exec sway --unsupported-gpu
+fi

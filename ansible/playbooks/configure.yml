@@ -1,0 +1,16 @@
+---
+# Config-only changes — no rebuild. Deploys config files and restarts services.
+# Run: ansible-playbook playbooks/configure.yml -l <host>
+- name: Update KioskKit configuration
+  hosts: kiosks
+  become: true
+  tasks:
+    - name: Apply display configuration
+      ansible.builtin.include_role:
+        name: kioskkit
+        tasks_from: display
+
+    - name: Apply security configuration
+      ansible.builtin.include_role:
+        name: kioskkit
+        tasks_from: security

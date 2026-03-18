@@ -1,0 +1,46 @@
+---
+- name: Deploy USB storage block udev rule
+  ansible.builtin.copy:
+    src: udev-usb-storage.rules
+    dest: /etc/udev/rules.d/99-usb-storage-block.rules
+    mode: "0644"
+  notify: Reload udev
+
+- name: Blacklist usb-storage kernel module
+  ansible.builtin.copy:
+    content: "blacklist usb-storage\n"
+    dest: /etc/modprobe.d/blacklist-usb-storage.conf
+    mode: "0644"
+
+- name: Deploy sysctl hardening
+  ansible.builtin.copy:
+    src: sysctl-kiosk.conf
+    dest: /etc/sysctl.d/99-kiosk.conf
+    mode: "0644"
+  notify: Reload sysctl
+
+- name: Deploy nftables firewall
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    mode: "0644"
+  notify: Reload nftables
+
+- name: Enable nftables
+  ansible.builtin.systemd:
+    name: nftables.service
+    enabled: true
+
+- name: Disable SSH password authentication
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+  notify: Restart sshd
+
+- name: Disable SSH root login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin no"
+  notify: Restart sshd

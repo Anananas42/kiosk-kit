@@ -1,0 +1,46 @@
+---
+- name: Create sway config directory
+  ansible.builtin.file:
+    path: "/home/{{ kioskkit_user }}/.config/sway"
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Deploy sway config
+  ansible.builtin.template:
+    src: sway-config.j2
+    dest: "/home/{{ kioskkit_user }}/.config/sway/config"
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0644"
+
+- name: Create getty override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/getty@tty1.service.d
+    state: directory
+    mode: "0755"
+
+- name: Configure getty autologin on tty1
+  ansible.builtin.copy:
+    src: getty-autologin.conf
+    dest: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install Chromium managed policies directory
+  ansible.builtin.file:
+    path: /etc/chromium/policies/managed
+    state: directory
+    mode: "0755"
+
+- name: Deploy Chromium policies
+  ansible.builtin.copy:
+    src: chromium-policies.json
+    dest: /etc/chromium/policies/managed/kioskkit.json
+    mode: "0644"
+
+- name: Generate empty cursor theme
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/../../system/config/make-empty-cursor.py"
+    creates: /usr/share/icons/emptycursor/cursors/default

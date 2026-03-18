@@ -38,7 +38,8 @@ packages/
 ├── web-server/      # Cloud backend — Hono + Postgres (port 3002)
 └── landing/         # Marketing site + interactive demo — Astro (port 4321)
 
-system/              # Raspberry Pi OS-level kiosk config
+system/              # Raspberry Pi OS-level kiosk config (configs, services)
+ansible/             # Ansible playbooks for Pi provisioning and deploys
 ```
 
 **Tooling**: pnpm workspaces, Turborepo, TypeScript strict mode, Vitest.
@@ -122,18 +123,26 @@ pnpm --filter @kioskkit/landing dev
 
 ## Pi Deployment
 
-The `system/` directory turns a Raspberry Pi into a locked-down kiosk. Run `setup.sh` on a fresh Raspberry Pi OS install and reboot.
+Pi provisioning and deploys are managed with **Ansible** from a control machine over Tailscale SSH. There is no git clone, deploy key, or auto-pull on the Pi itself.
 
 ```bash
-git clone git@github.com:Anananas42/kiosk-kit.git /tmp/kiosk-kit
-cp /path/to/.env /tmp/kiosk-kit/.env
-sudo bash /tmp/kiosk-kit/system/setup.sh
-sudo reboot
+cd ansible/
+
+# Full initial provisioning (fresh Raspberry Pi OS → locked-down kiosk)
+ansible-playbook playbooks/provision.yml -l <host>
+
+# Push code update + rebuild
+ansible-playbook playbooks/deploy.yml -l <host>
+
+# Config-only update (no rebuild)
+ansible-playbook playbooks/configure.yml -l <host>
 ```
+
+Per-device variables (`kioskkit_tailscale_auth_key`, `kioskkit_device_id`, `kioskkit_customer_tag`) are set in the inventory. See `ansible/README.md` for details.
 
 ### Network model
 
-The Pi's nftables firewall drops all outbound traffic except Tailscale (UDP 41641). No DNS, no HTTP, no outbound anything. The device is reachable by the web-server via Tailscale but cannot initiate connections to the internet. Even with code execution on the Pi, an attacker couldn't exfiltrate data or download payloads — the only reachable destination is the web-server.
+The Pi's nftables firewall drops all outbound traffic except Tailscale (UDP 41641) and DHCP. No DNS, no HTTP, no outbound anything. The device is reachable by the web-server via Tailscale but cannot initiate connections to the internet. Even with code execution on the Pi, an attacker couldn't exfiltrate data or download payloads — the only reachable destination is the web-server.
 
 ### Boot sequence
 
@@ -150,15 +159,6 @@ Chromium/sway crash → getty respawns. Node crash → systemd restarts. System 
 ### Security layers
 
 sway (no VT switch) · `exec` in .bash_profile (no shell escape) · viewport meta + CSS touch-action (no pinch zoom) · chromium --kiosk (no address bar) · chromium policies (no devtools/downloads/external URLs) · nftables (Tailscale-only outbound) · udev USB block · SysRq disable · locked kiosk user (no sudo) · systemd sandboxing (writes to `data/` only) · SSH key-only + no root login
-
-### Auto-deploy
-
-Daily at 04:00 via `kioskkit-deploy.timer`. Pulls `origin/main`, rebuilds, restarts. Preserves `data/` and `.env`.
-
-```bash
-sudo systemctl start kioskkit-deploy.service   # trigger manually
-sudo journalctl -u kioskkit-deploy -f           # watch logs
-```
 
 ### Useful commands
 

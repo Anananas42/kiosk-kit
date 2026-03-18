@@ -1,0 +1,22 @@
+---
+- name: Mount tmpfs on /tmp
+  ansible.posix.mount:
+    path: /tmp
+    src: tmpfs
+    fstype: tmpfs
+    opts: "defaults,nosuid,nodev,size={{ kioskkit_tmpfs_size }}"
+    state: present
+
+- name: Add noatime to root filesystem
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '(\S+\s+/\s+\S+\s+)defaults(?!.*noatime)'
+    line: '\1defaults,noatime 0 1'
+    backrefs: true
+
+- name: Set CPU governor to performance
+  ansible.builtin.copy:
+    content: 'GOVERNOR="{{ kioskkit_cpu_governor }}"'
+    dest: /etc/default/cpufrequtils
+    mode: "0644"
+  failed_when: false

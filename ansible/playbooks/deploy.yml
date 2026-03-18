@@ -1,0 +1,72 @@
+---
+# Push code update + rebuild — replaces deploy.sh + deploy timer.
+# Run: ansible-playbook playbooks/deploy.yml -l <host>
+- name: Deploy KioskKit update
+  hosts: kiosks
+  become: true
+  tasks:
+    - name: Sync application files
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../../"
+        dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.git"
+          - "--exclude=data/"
+          - "--exclude=system/"
+          - "--exclude=ansible/"
+          - "--exclude=plans/"
+          - "--exclude=.env"
+
+    - name: Set application ownership
+      ansible.builtin.file:
+        path: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}"
+        state: directory
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        recurse: true
+
+    - name: Install dependencies and build
+      ansible.builtin.command:
+        cmd: "bash -lc 'cd {{ kioskkit_install_dir | default('/opt/kioskkit') }} && pnpm install --frozen-lockfile && pnpm build'"
+      become: true
+      become_user: "{{ kioskkit_user | default('kiosk') }}"
+      changed_when: true
+
+    - name: Deploy display-sleep.py
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../system/config/display-sleep.py"
+        dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/config/display-sleep.py"
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        mode: "0755"
+
+    - name: Deploy sway config
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/kioskkit/templates/sway-config.j2"
+        dest: "/home/{{ kioskkit_user | default('kiosk') }}/.config/sway/config"
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        mode: "0644"
+
+    - name: Clear Chromium cache
+      ansible.builtin.file:
+        path: "/home/{{ kioskkit_user | default('kiosk') }}/.cache/chromium"
+        state: absent
+
+    - name: Restart kioskkit service
+      ansible.builtin.systemd:
+        name: kioskkit.service
+        state: restarted
+
+    - name: Restart sway (force Chromium reload)
+      ansible.builtin.command:
+        cmd: "pkill -u {{ kioskkit_user | default('kiosk') }} sway"
+      failed_when: false
+      changed_when: true
+
+    - name: Clean stale wayland sockets
+      ansible.builtin.shell:
+        cmd: "rm -f /tmp/kiosk-xdg/wayland-* /tmp/kiosk-xdg/sway-ipc.*.sock"
+      changed_when: false

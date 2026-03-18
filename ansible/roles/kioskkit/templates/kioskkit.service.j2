@@ -1,0 +1,28 @@
+# Managed by Ansible — do not edit manually.
+[Unit]
+Description=KioskKit App
+After=network.target
+
+[Service]
+Type=simple
+User={{ kioskkit_user }}
+Group={{ kioskkit_user }}
+WorkingDirectory={{ kioskkit_install_dir }}
+ExecStart=/usr/bin/node packages/kiosk-server/dist/index.js
+EnvironmentFile={{ kioskkit_install_dir }}/.env
+Restart=always
+RestartSec=5
+
+# Sandboxing
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ kioskkit_install_dir }}/data
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

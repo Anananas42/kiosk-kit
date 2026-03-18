@@ -1,0 +1,12 @@
+---
+- name: Load bcm2835_wdt on boot
+  ansible.builtin.copy:
+    content: "bcm2835_wdt\n"
+    dest: /etc/modules-load.d/watchdog.conf
+    mode: "0644"
+
+- name: Configure systemd watchdog timeout
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system.conf
+    regexp: "^#?RuntimeWatchdogSec="
+    line: "RuntimeWatchdogSec={{ kioskkit_watchdog_timeout_secs }}"

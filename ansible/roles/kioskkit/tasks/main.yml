@@ -1,0 +1,36 @@
+---
+- name: Install system packages
+  ansible.builtin.import_tasks: packages.yml
+  tags: [packages]
+
+- name: Configure kiosk user
+  ansible.builtin.import_tasks: user.yml
+  tags: [user]
+
+- name: Deploy application
+  ansible.builtin.import_tasks: app.yml
+  tags: [app, deploy]
+
+- name: Configure systemd services
+  ansible.builtin.import_tasks: systemd.yml
+  tags: [systemd]
+
+- name: Configure display
+  ansible.builtin.import_tasks: display.yml
+  tags: [display]
+
+- name: Apply security hardening
+  ansible.builtin.import_tasks: security.yml
+  tags: [security]
+
+- name: Configure hardware watchdog
+  ansible.builtin.import_tasks: watchdog.yml
+  tags: [watchdog]
+
+- name: Tune filesystem
+  ansible.builtin.import_tasks: filesystem.yml
+  tags: [filesystem]
+
+- name: Configure Tailscale
+  ansible.builtin.import_tasks: tailscale.yml
+  tags: [tailscale]

@@ -1,8 +1,0 @@
-[Unit]
-Description=KioskKit Deploy
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/opt/kioskkit-repo/system/deploy.sh

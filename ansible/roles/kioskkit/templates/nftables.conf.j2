@@ -1,0 +1,43 @@
+#!/usr/sbin/nft -f
+# Managed by Ansible — do not edit manually.
+# Pi-passive model: no outbound except Tailscale + DHCP.
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Loopback
+        iif lo accept
+
+        # Established/related connections
+        ct state established,related accept
+
+        # SSH from any IP (Tailscale or local provisioning)
+        tcp dport 22 accept
+
+        # Tailscale tunnel interface — all traffic trusted
+        iif "tailscale0" accept
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy drop;
+
+        # Loopback
+        oif lo accept
+
+        # Established/related
+        ct state established,related accept
+
+        # DHCP (needed for initial network config)
+        udp dport { 67, 68 } accept
+
+        # Tailscale (WireGuard UDP)
+        udp dport 41641 accept
+    }
+}

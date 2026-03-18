@@ -1,0 +1,60 @@
+---
+- name: Add NodeSource signing key
+  ansible.builtin.get_url:
+    url: "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"
+    dest: /usr/share/keyrings/nodesource.asc
+    mode: "0644"
+
+- name: Add NodeSource repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nodesource.asc] https://deb.nodesource.com/node_{{ kioskkit_node_major }}.x nodistro main"
+    filename: nodesource
+    state: present
+
+- name: Install system packages
+  ansible.builtin.apt:
+    name:
+      - sway
+      - swayidle
+      - chromium
+      - fonts-noto-color-emoji
+      - nftables
+      - nodejs
+      - python3-evdev
+      - rsync
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable corepack for pnpm
+  ansible.builtin.command:
+    cmd: corepack enable
+  changed_when: false
+
+- name: Install pnpm via corepack
+  ansible.builtin.command:
+    cmd: corepack prepare pnpm@latest --activate
+  changed_when: false
+
+- name: Disable unnecessary services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop:
+    - bluetooth
+    - cups
+    - lightdm
+  failed_when: false
+
+- name: Purge rpi-connect
+  ansible.builtin.apt:
+    name: rpi-connect
+    state: absent
+    purge: true
+  failed_when: false
+
+- name: Set default target to multi-user
+  ansible.builtin.command:
+    cmd: systemctl set-default multi-user.target
+  changed_when: false

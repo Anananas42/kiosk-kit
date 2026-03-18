@@ -1,0 +1,13 @@
+---
+# Full initial provisioning — replaces setup.sh.
+# Run: ansible-playbook playbooks/provision.yml -l <host>
+- name: Provision KioskKit device
+  hosts: kiosks
+  become: true
+  roles:
+    - kioskkit
+  post_tasks:
+    - name: Reboot to apply all changes
+      ansible.builtin.reboot:
+        reboot_timeout: 120
+        msg: "KioskKit provisioning complete — rebooting"

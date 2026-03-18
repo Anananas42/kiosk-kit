@@ -1,0 +1,65 @@
+---
+- name: Create install directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}"
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Sync application files
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/../../"
+    dest: "{{ kioskkit_install_dir }}/"
+    delete: true
+    rsync_opts:
+      - "--exclude=node_modules"
+      - "--exclude=.git"
+      - "--exclude=data/"
+      - "--exclude=system/"
+      - "--exclude=ansible/"
+      - "--exclude=plans/"
+      - "--exclude=.env"
+  notify: Restart kioskkit
+
+- name: Set application ownership
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}"
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    recurse: true
+
+- name: Create data directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}/data"
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Deploy .env file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../.env"
+    dest: "{{ kioskkit_install_dir }}/.env"
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0600"
+  failed_when: false
+
+- name: Install dependencies and build
+  ansible.builtin.command:
+    cmd: bash -lc "cd {{ kioskkit_install_dir }} && pnpm install --frozen-lockfile && pnpm build"
+  become: true
+  become_user: "{{ kioskkit_user }}"
+  changed_when: true
+  notify: Restart kioskkit
+
+- name: Deploy display-sleep.py
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../system/config/display-sleep.py"
+    dest: "{{ kioskkit_install_dir }}/system/config/display-sleep.py"
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+  notify: Restart kioskkit
