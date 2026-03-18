@@ -1,8 +1,8 @@
 [Unit]
-Description=Zahumny Kiosk Deploy
+Description=KioskKit Deploy
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/opt/zahumny-kiosk-repo/system/deploy.sh
+ExecStart=/opt/kioskkit-repo/system/deploy.sh

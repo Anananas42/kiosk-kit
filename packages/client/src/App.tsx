@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type Apartment, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
+import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type Apartment, type CatalogCategory, type CatalogItem } from '@kioskkit/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';

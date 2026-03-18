@@ -1,5 +1,5 @@
-import type { CatalogCategory, CatalogItem } from '@zahumny/shared';
-import { ensureKc } from '@zahumny/shared';
+import type { CatalogCategory, CatalogItem } from '@kioskkit/shared';
+import { ensureKc } from '@kioskkit/shared';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 

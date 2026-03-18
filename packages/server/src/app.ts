@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
-import type { CacheStore } from './cache/store.js';
-import type { QueueStore } from './queue/store.js';
+import type { Store } from './db/store.js';
 import { healthRoute } from './routes/health.js';
 import { catalogRoute } from './routes/catalog.js';
 import { apartmentsRoute } from './routes/apartments.js';
@@ -11,13 +10,13 @@ import { overviewRoute } from './routes/overview.js';
 import { itemCountRoute } from './routes/item-count.js';
 import { pastryConfigRoute } from './routes/pastry-config.js';
 import { settingsRoute } from './routes/settings.js';
+import { adminApartmentsRoute } from './routes/admin/apartments.js';
+import { adminCatalogRoute } from './routes/admin/catalog.js';
+import { adminSettingsRoute } from './routes/admin/settings.js';
+import { adminPastryConfigRoute } from './routes/admin/pastry-config.js';
+import { reportsRoute } from './routes/reports.js';
 
-export function createApp(
-  cache: CacheStore,
-  queue: QueueStore,
-  getOnline: () => boolean,
-  setOnline: (online: boolean) => void,
-) {
+export function createApp(store: Store) {
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -27,14 +26,21 @@ export function createApp(
 
   app.use('/api/*', cors());
 
-  app.route('/api/health', healthRoute(queue, getOnline));
-  app.route('/api/catalog', catalogRoute(cache));
-  app.route('/api/apartments', apartmentsRoute(cache));
-  app.route('/api/record', recordRoute(queue, setOnline));
-  app.route('/api/overview', overviewRoute(queue));
-  app.route('/api/item-count', itemCountRoute(queue));
-  app.route('/api/pastry-config', pastryConfigRoute(cache));
-  app.route('/api/settings', settingsRoute(cache));
+  app.route('/api/health', healthRoute());
+  app.route('/api/catalog', catalogRoute(store));
+  app.route('/api/apartments', apartmentsRoute(store));
+  app.route('/api/record', recordRoute(store));
+  app.route('/api/overview', overviewRoute(store));
+  app.route('/api/item-count', itemCountRoute(store));
+  app.route('/api/pastry-config', pastryConfigRoute(store));
+  app.route('/api/settings', settingsRoute(store));
+
+  app.route('/api/admin/apartments', adminApartmentsRoute(store));
+  app.route('/api/admin/catalog', adminCatalogRoute(store));
+  app.route('/api/admin/settings', adminSettingsRoute(store));
+  app.route('/api/admin/pastry-config', adminPastryConfigRoute(store));
+
+  app.route('/api/reports', reportsRoute(store));
 
   // Prevent caching of HTML (index.html) so deploys take effect immediately.
   // Hashed JS/CSS assets are fine to cache — they have unique filenames.

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HEALTH_CHECK_INTERVAL_MS } from '@zahumny/shared';
+import { HEALTH_CHECK_INTERVAL_MS } from '@kioskkit/shared';
 import { fetchHealth } from '../api.js';
 
 export function useHealth() {

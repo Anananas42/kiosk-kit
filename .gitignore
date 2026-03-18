@@ -1,6 +1,5 @@
 node_modules/
 dist/
 .env
-credentials/service-account.json
 data/
 *.tsbuildinfo

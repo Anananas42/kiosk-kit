@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CATALOG_RELOAD_INTERVAL_MS, DEFAULT_KIOSK_SETTINGS, type CatalogCategory, type Apartment, type PastryConfig, type KioskSettings } from '@zahumny/shared';
+import { CATALOG_RELOAD_INTERVAL_MS, DEFAULT_KIOSK_SETTINGS, type CatalogCategory, type Apartment, type PastryConfig, type KioskSettings } from '@kioskkit/shared';
 import { fetchCatalog, fetchApartments, fetchPastryConfig, fetchSettings } from '../api.js';
 import { cacheGet, cacheSet } from '../utils/cache.js';
 

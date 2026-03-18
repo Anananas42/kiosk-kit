@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS } from '@zahumny/shared';
+import { INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS } from '@kioskkit/shared';
 
 
 export function useInactivityReset(active: boolean, onReset: () => void, timeoutMs: number = INACTIVITY_TIMEOUT_MS) {

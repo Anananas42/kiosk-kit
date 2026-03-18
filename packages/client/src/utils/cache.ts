@@ -1,4 +1,4 @@
-const PREFIX = 'zahumny:';
+const PREFIX = 'kioskkit:';
 
 export function cacheGet<T>(key: string): T | null {
   try {

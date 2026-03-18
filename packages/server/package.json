@@ -1,5 +1,5 @@
 {
-  "name": "@zahumny/server",
+  "name": "@kioskkit/server",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -7,18 +7,13 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "inspect-sheets": "tsx scripts/inspect-sheets.ts",
-    "create-pastry-config": "tsx scripts/create-pastry-config.ts",
-    "create-settings": "tsx scripts/create-settings.ts",
-    "create-sheet": "tsx scripts/create-sheet.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
-    "@zahumny/shared": "workspace:*",
+    "@kioskkit/shared": "workspace:*",
     "better-sqlite3": "^11.8.1",
     "dotenv": "^16.4.7",
-    "googleapis": "^148.0.0",
     "hono": "^4.7.4"
   },
   "devDependencies": {

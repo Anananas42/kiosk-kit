@@ -1,4 +1,4 @@
-import { SUBMIT_FLUSH_INTERVAL_MS, type RecordRequest } from '@zahumny/shared';
+import { SUBMIT_FLUSH_INTERVAL_MS, type RecordRequest } from '@kioskkit/shared';
 import { postRecord } from '../api.js';
 import { cacheGet, cacheSet } from './cache.js';
 

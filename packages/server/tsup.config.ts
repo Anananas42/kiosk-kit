@@ -5,5 +5,5 @@ export default defineConfig({
   format: ['esm'],
   clean: true,
   // Don't bundle node_modules — they're available at runtime
-  noExternal: ['@zahumny/shared'],
+  noExternal: ['@kioskkit/shared'],
 });

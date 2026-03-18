@@ -1,5 +1,5 @@
 {
-  "name": "@zahumny/client",
+  "name": "@kioskkit/client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zahumny/shared": "workspace:*",
+    "@kioskkit/shared": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

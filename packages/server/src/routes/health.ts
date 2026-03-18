@@ -1,15 +1,11 @@
 import { Hono } from 'hono';
-import type { HealthResponse } from '@zahumny/shared';
-import type { QueueStore } from '../queue/store.js';
+import type { HealthResponse } from '@kioskkit/shared';
 
-export function healthRoute(queue: QueueStore, getOnline: () => boolean) {
+export function healthRoute() {
   const app = new Hono();
 
   app.get('/', (c) => {
-    const response: HealthResponse = {
-      online: getOnline(),
-      queued: queue.count(),
-    };
+    const response: HealthResponse = { online: true, queued: 0 };
     return c.json(response);
   });
 

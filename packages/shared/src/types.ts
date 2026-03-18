@@ -72,14 +72,12 @@ export interface ItemCountResponse {
   count: number;
 }
 
-/** Kiosk settings (configurable via [⚙️ Nastavení] sheet). */
+/** Kiosk settings (configurable via admin API). */
 export interface KioskSettings {
   /** Display dim overlay timeout in milliseconds. */
   idleDimMs: number;
   /** Inactivity timeout before resetting to home screen, in milliseconds. */
   inactivityTimeoutMs: number;
-  /** How often report sheets (consumption, pastry overview) are regenerated, in milliseconds. */
-  reportUpdateIntervalMs: number;
   /** When true, show maintenance screen and block all interaction. */
   maintenance: boolean;
 }

@@ -1,21 +1,21 @@
 [Unit]
-Description=Zahumny Kiosk App
+Description=KioskKit App
 After=network.target
 
 [Service]
 Type=simple
 User=kiosk
 Group=kiosk
-WorkingDirectory=/opt/zahumny-kiosk
+WorkingDirectory=/opt/kioskkit
 ExecStart=/usr/bin/node packages/server/dist/index.js
-EnvironmentFile=/opt/zahumny-kiosk/.env
+EnvironmentFile=/opt/kioskkit/.env
 Restart=always
 RestartSec=5
 
 # Sandboxing
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/zahumny-kiosk/data
+ReadWritePaths=/opt/kioskkit/data
 PrivateTmp=true
 NoNewPrivileges=true
 ProtectKernelTunables=true

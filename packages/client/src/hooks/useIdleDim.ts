@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IDLE_DIM_MS } from '@zahumny/shared';
+import { IDLE_DIM_MS } from '@kioskkit/shared';
 
 export function useIdleDim(idleDimMs: number = IDLE_DIM_MS) {
   const [dimmed, setDimmed] = useState(false);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { parsePrice, type EvidenceRow } from '@zahumny/shared';
+import { parsePrice, type EvidenceRow } from '@kioskkit/shared';
 import { fetchOverview } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 

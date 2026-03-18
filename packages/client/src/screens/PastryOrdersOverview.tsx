@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getDeliveryDate, formatDateCs, type EvidenceRow } from '@zahumny/shared';
+import { getDeliveryDate, formatDateCs, type EvidenceRow } from '@kioskkit/shared';
 import { fetchOverview } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 

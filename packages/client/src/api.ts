@@ -8,7 +8,7 @@ import type {
   ItemCountResponse,
   PastryConfig,
   KioskSettings,
-} from '@zahumny/shared';
+} from '@kioskkit/shared';
 
 export async function fetchCatalog(): Promise<CatalogCategory[]> {
   const res = await fetch('/api/catalog');

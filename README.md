@@ -1,8 +1,8 @@
-# Zahumny Kiosk
+# KioskKit
 
-Touchscreen kiosk app for recording shared-resource consumption in an apartment building. Residents tap their apartment number, select an item, and the record is logged to a Google Sheet.
+Touchscreen kiosk app for recording shared-resource consumption in an apartment building. Residents tap their apartment number, select an item, and the record is stored locally in SQLite.
 
-Built with React (client), Hono (server), and SQLite (local cache/queue). Designed to run locked-down on a Raspberry Pi with a touchscreen.
+Built with React (client), Hono (server), and SQLite (data store). Designed to run locked-down on a Raspberry Pi with a touchscreen.
 
 ## Architecture
 
@@ -19,66 +19,7 @@ system/         # Raspberry Pi OS-level kiosk configuration
 └── config/     # nftables, chromium policies, udev rules, etc.
 ```
 
-The server caches catalog data from Google Sheets in SQLite and queues write operations for resilience against network outages. The client works offline using a local submit queue that flushes when connectivity returns.
-
-## Google Spreadsheet
-
-The app reads/writes a Google Spreadsheet configured via `SPREADSHEET_ID` in `.env`. To inspect the current sheet structure (names, headers, sample data):
-
-```bash
-pnpm --filter @zahumny/server inspect-sheets      # 3 sample rows (default)
-pnpm --filter @zahumny/server inspect-sheets -- 10 # 10 sample rows
-```
-
-The app uses **header-based column lookup** — columns are matched by header name, not position. Adding, reordering, or removing unused columns won't break the API.
-
-**Row limits**: The default grid size shown in Google Sheets (e.g. 1000 rows) is just a display allocation, not a data cap. The API returns only populated rows regardless of grid size, and `values.append` auto-expands the grid when writing past it.
-
-### Sheets used by the app
-
-| Sheet | Purpose | Key columns |
-|-------|---------|-------------|
-| **[Apartment config]** | Apartment list | ID, Label |
-| **[Katalog]** | Product catalog | Kategorie, Typ, Název, množství, cena, Sazba DPH |
-| **[Evidence]** | Transaction ledger (append-only) | Čas, Kupující, Operace, Kategorie, Položka, Množství, Cena, Sazba DPH |
-| **[Přehled pečiva]** | Pastry order overview (auto-generated) | Dynamic: items × delivery dates |
-| **[Pečivo config]** | Pastry ordering/delivery schedule | Den, Objednávky, Doručení |
-| **Výdej pečiva D.M.** | Per-day pastry distribution sheet (auto-generated, one per delivery date) | Položka, \<apartments\>, Celkem |
-
-App-managed sheet tabs are prefixed with `[brackets]` to distinguish them from manual/reporting sheets.
-
-Both the **[Katalog]** and **[Apartment config]** sheets are validated on load. If any row has a missing, malformed (non-integer or ≤ 0), or duplicate ID, the app returns a 503 error with details and blocks usage until the sheet is fixed.
-
-### Category types (Typ column)
-
-The `Typ` column in the Katalog sheet controls how a category behaves in the UI. Set `Typ` to `pečivo` for pastry categories — these get a quantity picker (1–10), delivery date calculation, and a dedicated orders overview. All other categories (empty `Typ`) use the standard single-item add/remove flow.
-
-To add a new pastry category, just add rows to the Katalog sheet with `Typ` set to `pečivo`. No code changes needed.
-
-### Pastry ordering schedule ([Pečivo config])
-
-The `[Pečivo config]` sheet controls when pastry ordering and delivery are available, per weekday:
-
-| Den | Objednávky | Doručení |
-|-----|-----------|----------|
-| Pondělí | ano | ano |
-| Úterý | ano | ano |
-| ... | ... | ... |
-| Sobota | ne | ne |
-| Neděle | ne | ne |
-
-- **Objednávky** (`ano`/`ne`): Whether residents can place pastry orders on that day. When set to `ne`, the app shows an info banner instead of the category tiles.
-- **Doručení** (`ano`/`ne`): Whether pastries are delivered on that day. When set to `ne`, the delivery date calculation skips that day. For example, if Saturday and Sunday are `ne`, an order placed Friday evening will show Monday as the delivery date.
-
-Changes take effect within 5 minutes (catalog reload interval). To create the sheet on a fresh spreadsheet:
-
-```bash
-pnpm --filter @zahumny/server create-pastry-config
-```
-
-### Per-day pastry distribution sheets
-
-When pastry orders are synced, the app auto-generates one sheet per upcoming delivery date, named e.g. `Výdej pečiva 15.3.`. These are designed for printing — rows are pastry items, columns are apartments that placed orders, and the last column is a total. Only today's and future delivery dates get sheets; past dates are skipped. The owners can delete old sheets manually after distribution.
+All data lives in SQLite. The client works offline using a local submit queue that flushes when connectivity returns.
 
 ### Data model
 
@@ -90,18 +31,24 @@ Each transaction record carries a signed `count` field — positive for addition
 |----------|--------|---------|
 | `/api/catalog` | GET | Product catalog (categories + items) |
 | `/api/apartments` | GET | Apartment list |
-| `/api/health` | GET | Server health + queue depth |
+| `/api/health` | GET | Server health |
 | `/api/record` | POST | Submit a consumption record |
 | `/api/overview` | GET | All evidence records |
 | `/api/item-count` | GET | Balance for a specific buyer+item |
 | `/api/pastry-config` | GET | Pastry ordering/delivery day schedule |
+| `/api/settings` | GET | Kiosk settings |
+| `/api/admin/apartments` | POST/PUT/DELETE | CRUD apartments |
+| `/api/admin/catalog` | POST/PUT/DELETE | CRUD categories and items |
+| `/api/admin/settings` | PUT | Update settings |
+| `/api/admin/pastry-config` | PUT | Update pastry config |
+| `/api/reports/consumption` | GET | Consumption report (aggregated) |
+| `/api/reports/pastry` | GET | Pastry orders by delivery date |
 
 ## Development
 
 ```bash
 pnpm install
-cp .env.example .env   # fill in SPREADSHEET_ID
-# place service-account.json in credentials/
+cp .env.example .env
 pnpm dev               # starts server + client with hot reload
 ```
 
@@ -110,8 +57,6 @@ pnpm dev               # starts server + client with hot reload
 ```bash
 pnpm test     # runs all tests (vitest)
 ```
-
-Tests are co-located with source files (`*.test.ts`). Coverage includes price parsing, catalog validation, apartment validation, delivery date calculation (with skip-day logic), balance computation, and header-based column mapping.
 
 ## Building
 
@@ -124,9 +69,7 @@ pnpm start    # runs production server on port 3001
 
 | Variable | Description |
 |----------|------------|
-| `SPREADSHEET_ID` | Google Sheets spreadsheet ID |
 | `PORT` | Server port (default: 3001) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Path to service account JSON key (default: `./credentials/service-account.json`) |
 
 ---
 
@@ -139,20 +82,18 @@ The `system/` directory contains everything needed to turn a Raspberry Pi into a
 - Raspberry Pi (tested on Pi 4/5) with Raspberry Pi OS (Debian trixie)
 - HDMI touchscreen display
 - SSH access with key-based auth already configured
-- `.env` and `credentials/service-account.json` in the repo root
 
 ### Initial Setup
 
 ```bash
 # On the Pi (or via SSH):
-git clone git@github.com:Anananas42/zahumny-kiosk.git /tmp/zahumny-kiosk
+git clone git@github.com:Anananas42/kiosk-kit.git /tmp/kiosk-kit
 
 # Copy secrets (not in git)
-cp /path/to/.env /tmp/zahumny-kiosk/.env
-cp /path/to/service-account.json /tmp/zahumny-kiosk/credentials/
+cp /path/to/.env /tmp/kiosk-kit/.env
 
 # Run setup
-sudo bash /tmp/zahumny-kiosk/system/setup.sh
+sudo bash /tmp/kiosk-kit/system/setup.sh
 sudo reboot
 ```
 
@@ -160,9 +101,9 @@ sudo reboot
 
 1. **Installs packages**: Node.js 20, pnpm, sway, chromium, nftables, emoji fonts
 2. **Creates `kiosk` user**: locked password, groups `video,input,render`, no sudo
-3. **Deploys app** to `/opt/zahumny-kiosk` with `pnpm install && pnpm build`
-4. **Copies secrets** (`.env`, `credentials/`) with 600 permissions
-5. **Installs systemd service** (`zahumny-kiosk.service`) for the Node.js app
+3. **Deploys app** to `/opt/kioskkit` with `pnpm install && pnpm build`
+4. **Copies secrets** (`.env`) with 600 permissions
+5. **Installs systemd service** (`kioskkit.service`) for the Node.js app
 6. **Configures autologin** on tty1 via getty drop-in
 7. **Writes kiosk `.bash_profile`**: waits for server → launches sway → chromium fullscreen
 8. **Writes sway config**: hidden cursor, no window decorations
@@ -171,13 +112,13 @@ sudo reboot
 11. **Configures hardware watchdog**: `bcm2835_wdt` with 15s timeout for auto-reboot on hang
 12. **Filesystem tuning**: tmpfs on `/tmp`, noatime on root
 13. **Disables unnecessary services**: bluetooth, cups, lightdm; sets `multi-user.target`
-14. **Sets up auto-deploy**: clones repo to `/opt/zahumny-kiosk-repo`, installs deploy key, enables daily timer
+14. **Sets up auto-deploy**: clones repo to `/opt/kioskkit-repo`, installs deploy key, enables daily timer
 
 ### Boot Sequence
 
 ```
 power on → systemd starts
-  ├── zahumny-kiosk.service → node (port 3001)
+  ├── kioskkit.service → node (port 3001)
   ├── getty@tty1 → autologin kiosk
   │     └── .bash_profile → polls localhost:3001 → exec sway
   │           └── chromium --kiosk http://localhost:3001
@@ -188,20 +129,20 @@ If chromium or sway crash, getty respawns and the cycle repeats. If the Node.js 
 
 ### Auto-Deploy
 
-A systemd timer (`zahumny-kiosk-deploy.timer`) runs daily at 04:00. It pulls from `origin/main` using a read-only deploy key committed to the repo (`system/config/deploy-key`). If there are changes, it rebuilds and restarts the app.
+A systemd timer (`kioskkit-deploy.timer`) runs daily at 04:00. It pulls from `origin/main` using a read-only deploy key committed to the repo (`system/config/deploy-key`). If there are changes, it rebuilds and restarts the app.
 
 ```bash
 # Check timer status
-systemctl list-timers zahumny-kiosk-deploy.timer --all
+systemctl list-timers kioskkit-deploy.timer --all
 
 # Trigger manual deploy
-sudo systemctl start zahumny-kiosk-deploy.service
+sudo systemctl start kioskkit-deploy.service
 
 # Or run the script directly
-sudo bash /opt/zahumny-kiosk-repo/system/deploy.sh
+sudo bash /opt/kioskkit-repo/system/deploy.sh
 ```
 
-The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentials/` — only app code is updated. After rebuilding, it clears the Chromium cache and restarts sway to ensure the browser loads fresh frontend assets.
+The deploy script (`system/deploy.sh`) preserves `data/` and `.env` — only app code is updated. After rebuilding, it clears the Chromium cache and restarts sway to ensure the browser loads fresh frontend assets.
 
 ### Display Behavior
 
@@ -231,32 +172,32 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 
 ```
 system/
-├── setup.sh                          # Idempotent setup (run as root)
-├── deploy.sh                         # Git pull + rebuild + restart
+├── setup.sh                       # Idempotent setup (run as root)
+├── deploy.sh                      # Git pull + rebuild + restart
 ├── services/
-│   ├── zahumny-kiosk.service         # Node.js app systemd unit
-│   ├── zahumny-kiosk-deploy.service  # Deploy oneshot service
-│   └── zahumny-kiosk-deploy.timer    # Daily deploy timer (04:00)
+│   ├── kioskkit.service           # Node.js app systemd unit
+│   ├── kioskkit-deploy.service    # Deploy oneshot service
+│   └── kioskkit-deploy.timer      # Daily deploy timer (04:00)
 └── config/
-    ├── chromium-policies.json        # Browser lockdown policies
-    ├── deploy-key                    # Read-only GitHub deploy key (private)
-    ├── deploy-key.pub                # Deploy key (public)
-    ├── display-sleep.py              # DPMS off + evdev grab (touch-safe display sleep)
-    ├── sway-config                   # Sway compositor config (cursor, swayidle, chromium)
-    ├── getty-autologin.conf          # tty1 autologin drop-in
-    ├── make-empty-cursor.py          # Generates transparent cursor theme
-    ├── nftables.conf                 # Firewall rules
-    ├── sysctl-kiosk.conf             # SysRq disable
-    └── udev-usb-storage.rules        # Block USB mass storage
+    ├── chromium-policies.json     # Browser lockdown policies
+    ├── deploy-key                 # Read-only GitHub deploy key (private)
+    ├── deploy-key.pub             # Deploy key (public)
+    ├── display-sleep.py           # DPMS off + evdev grab (touch-safe display sleep)
+    ├── sway-config                # Sway compositor config (cursor, swayidle, chromium)
+    ├── getty-autologin.conf       # tty1 autologin drop-in
+    ├── make-empty-cursor.py       # Generates transparent cursor theme
+    ├── nftables.conf              # Firewall rules
+    ├── sysctl-kiosk.conf          # SysRq disable
+    └── udev-usb-storage.rules     # Block USB mass storage
 ```
 
 ### Key Paths on the Pi
 
 | Path | Contents |
 |------|----------|
-| `/opt/zahumny-kiosk/` | Deployed app (node_modules, dist, .env, credentials, data) |
-| `/opt/zahumny-kiosk/data/` | SQLite database (only writable path) |
-| `/opt/zahumny-kiosk-repo/` | Git clone for deploy pulls |
+| `/opt/kioskkit/` | Deployed app (node_modules, dist, .env, data) |
+| `/opt/kioskkit/data/` | SQLite database (only writable path) |
+| `/opt/kioskkit-repo/` | Git clone for deploy pulls |
 | `/home/kiosk/.bash_profile` | Kiosk launch script |
 | `/home/kiosk/.config/sway/config` | Sway compositor config |
 | `/etc/chromium/policies/managed/` | Chromium policy JSON |
@@ -264,61 +205,25 @@ system/
 
 ### Remote Access (Tailscale)
 
-The Pi runs [Tailscale](https://tailscale.com/) for remote access from anywhere, without port forwarding or knowing the Pi's local IP. This is critical since the Pi is deployed ~200km away.
+The Pi runs [Tailscale](https://tailscale.com/) for remote access from anywhere, without port forwarding or knowing the Pi's local IP.
 
 Tailscale is installed by `setup.sh`. After installation, authenticate once:
 
 ```bash
 sudo tailscale up --ssh
-# opens a URL to authenticate in your Tailscale account
 ```
-
-Once authenticated, you can SSH from any device on your tailnet:
-
-```bash
-ssh zahumny@raspberrypi    # Tailscale hostname
-ssh zahumny@100.x.y.z      # Tailscale IP
-```
-
-The `--ssh` flag enables Tailscale SSH, which works independently of OpenSSH.
-
-**ACL policy**: Tailscale ACLs are configured at https://login.tailscale.com/admin/acls to be one-directional — admin devices can reach the Pi, but the Pi cannot initiate connections to anything on the tailnet. The current policy:
-
-```jsonc
-{
-  // Only admin devices (your desktop) can reach the Pi.
-  "grants": [
-    {"src": ["autogroup:admin"], "dst": ["100.97.224.3"], "ip": ["*"]}
-  ],
-  "ssh": [
-    {"action": "check", "src": ["autogroup:member"], "dst": ["autogroup:self"], "users": ["autogroup:nonroot", "root"]}
-  ]
-}
-```
-
-**Firewall**: nftables allows outbound UDP 41641 (WireGuard) and accepts all traffic on the `tailscale0` interface.
-
-### Connecting to Remote WiFi
-
-Before shipping the Pi to its destination, configure the target WiFi:
-
-```bash
-sudo nmcli dev wifi connect "SSID" password "password"
-```
-
-The Pi will auto-connect when it sees the configured network.
 
 ### Useful Commands
 
 ```bash
 # App service
-sudo systemctl status zahumny-kiosk
-sudo systemctl restart zahumny-kiosk
-sudo journalctl -u zahumny-kiosk -f
+sudo systemctl status kioskkit
+sudo systemctl restart kioskkit
+sudo journalctl -u kioskkit -f
 
 # Trigger deploy
-sudo systemctl start zahumny-kiosk-deploy.service
-sudo journalctl -u zahumny-kiosk-deploy -f
+sudo systemctl start kioskkit-deploy.service
+sudo journalctl -u kioskkit-deploy -f
 
 # Firewall
 sudo nft list ruleset

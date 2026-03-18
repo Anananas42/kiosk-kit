@@ -1,5 +1,5 @@
-import type { CatalogCategory, CatalogItem } from '@zahumny/shared';
-import { ensureKc, formatPrice, getDeliveryDateLabel, parsePrice } from '@zahumny/shared';
+import type { CatalogCategory, CatalogItem } from '@kioskkit/shared';
+import { ensureKc, formatPrice, getDeliveryDateLabel, parsePrice } from '@kioskkit/shared';
 import { useState, useEffect } from 'react';
 import { fetchItemCount } from '../api.js';
 import ScreenHeader from '../components/ScreenHeader.js';

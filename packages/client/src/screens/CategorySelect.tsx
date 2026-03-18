@@ -1,4 +1,4 @@
-import type { CatalogCategory } from '@zahumny/shared';
+import type { CatalogCategory } from '@kioskkit/shared';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 

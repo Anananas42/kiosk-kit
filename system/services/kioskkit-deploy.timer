@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily deploy check for Zahumny Kiosk
+Description=Daily deploy check for KioskKit
 
 [Timer]
 OnCalendar=*-*-* 04:00:00

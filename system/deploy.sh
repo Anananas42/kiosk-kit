@@ -3,11 +3,11 @@
 # Run as root (via systemd timer or manually).
 set -euo pipefail
 
-REPO_DIR="/opt/zahumny-kiosk-repo"
-INSTALL_DIR="/opt/zahumny-kiosk"
+REPO_DIR="/opt/kioskkit-repo"
+INSTALL_DIR="/opt/kioskkit"
 KIOSK_USER="kiosk"
-GIT_SSH_KEY="/opt/zahumny-kiosk-repo/.deploy-key"
-REMOTE_URL="git@github.com:Anananas42/zahumny-kiosk.git"
+GIT_SSH_KEY="/opt/kioskkit-repo/.deploy-key"
+REMOTE_URL="git@github.com:Anananas42/kiosk-kit.git"
 
 export GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o StrictHostKeyChecking=accept-new"
 
@@ -50,7 +50,6 @@ rsync -a --delete \
     --exclude 'data/' \
     --exclude 'system/' \
     --exclude '.env' \
-    --exclude 'credentials/' \
     "$REPO_DIR/" "$INSTALL_DIR/"
 
 # System config files (live under system/ which is excluded from main rsync)
@@ -69,7 +68,7 @@ info "Clearing Chromium cache"
 rm -rf "/home/$KIOSK_USER/.cache/chromium"
 
 info "Restarting service"
-systemctl restart zahumny-kiosk.service
+systemctl restart kioskkit.service
 
 # Force Chromium to reload by restarting sway (respawns via getty)
 if pgrep -u "$KIOSK_USER" sway >/dev/null 2>&1; then

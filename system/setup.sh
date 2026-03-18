@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Idempotent setup script for zahumny-kiosk on Raspberry Pi OS Lite.
+# Idempotent setup script for kioskkit on Raspberry Pi OS Lite.
 # Run as root: sudo bash system/setup.sh
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-INSTALL_DIR="/opt/zahumny-kiosk"
-DEPLOY_REPO="/opt/zahumny-kiosk-repo"
+INSTALL_DIR="/opt/kioskkit"
+DEPLOY_REPO="/opt/kioskkit-repo"
 KIOSK_USER="kiosk"
 NODE_MAJOR=20
-REMOTE_URL="git@github.com:Anananas42/zahumny-kiosk.git"
+REMOTE_URL="git@github.com:Anananas42/kiosk-kit.git"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -95,15 +95,6 @@ if [[ -f "$REPO_DIR/.env" ]]; then
     install -o "$KIOSK_USER" -g "$KIOSK_USER" -m 600 "$REPO_DIR/.env" "$INSTALL_DIR/.env"
 fi
 
-# credentials/
-if [[ -d "$REPO_DIR/credentials" ]]; then
-    mkdir -p "$INSTALL_DIR/credentials"
-    rsync -a "$REPO_DIR/credentials/" "$INSTALL_DIR/credentials/"
-    chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR/credentials"
-    chmod -R 600 "$INSTALL_DIR/credentials"
-    chmod 700 "$INSTALL_DIR/credentials"
-fi
-
 # Display sleep script (touch-blocking DPMS handler)
 mkdir -p "$INSTALL_DIR/system/config"
 install -o "$KIOSK_USER" -g "$KIOSK_USER" -m 755 \
@@ -119,9 +110,9 @@ chown "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR/data"
 
 info "Installing systemd service"
 
-install -m 644 "$REPO_DIR/system/services/zahumny-kiosk.service" /etc/systemd/system/
+install -m 644 "$REPO_DIR/system/services/kioskkit.service" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable zahumny-kiosk.service
+systemctl enable kioskkit.service
 
 # ---------------------------------------------------------------------------
 # 6. Getty autologin on tty1
@@ -171,7 +162,7 @@ python3 "$REPO_DIR/system/config/make-empty-cursor.py"
 
 mkdir -p /etc/chromium/policies/managed
 install -m 644 "$REPO_DIR/system/config/chromium-policies.json" \
-    /etc/chromium/policies/managed/zahumny-kiosk.json
+    /etc/chromium/policies/managed/kioskkit.json
 
 # ---------------------------------------------------------------------------
 # 9. Security hardening
@@ -284,10 +275,10 @@ fi
 export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY_DST -o StrictHostKeyChecking=accept-new"
 
 # Install deploy timer + service
-install -m 644 "$REPO_DIR/system/services/zahumny-kiosk-deploy.service" /etc/systemd/system/
-install -m 644 "$REPO_DIR/system/services/zahumny-kiosk-deploy.timer" /etc/systemd/system/
+install -m 644 "$REPO_DIR/system/services/kioskkit-deploy.service" /etc/systemd/system/
+install -m 644 "$REPO_DIR/system/services/kioskkit-deploy.timer" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable zahumny-kiosk-deploy.timer
+systemctl enable kioskkit-deploy.timer
 
 # ---------------------------------------------------------------------------
 # Done

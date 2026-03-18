@@ -1,9 +1,9 @@
 {
-  "name": "zahumny-kiosk",
+  "name": "kioskkit",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n server,client \"pnpm --filter @zahumny/server dev\" \"pnpm --filter @zahumny/client dev\"",
-    "build": "pnpm --filter @zahumny/shared build && pnpm --filter @zahumny/server build && pnpm --filter @zahumny/client build",
+    "dev": "concurrently -n server,client \"pnpm --filter @kioskkit/server dev\" \"pnpm --filter @kioskkit/client dev\"",
+    "build": "pnpm --filter @kioskkit/shared build && pnpm --filter @kioskkit/server build && pnpm --filter @kioskkit/client build",
     "start": "node packages/server/dist/index.js",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run"

@@ -1,4 +1,4 @@
-import type { Apartment, CatalogCategory, CatalogItem } from '@zahumny/shared';
+import type { Apartment, CatalogCategory, CatalogItem } from '@kioskkit/shared';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 

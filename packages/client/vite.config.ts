@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@zahumny/shared': path.resolve(__dirname, '../shared/src/index.ts'),
+      '@kioskkit/shared': path.resolve(__dirname, '../shared/src/index.ts'),
     },
   },
   server: {

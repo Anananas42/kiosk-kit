@@ -38,32 +38,11 @@ export const CATALOG_RELOAD_INTERVAL_MS = 5 * 60_000;
 // Client-side submit queue flush interval (offline-first record submission)
 export const SUBMIT_FLUSH_INTERVAL_MS = 30_000;
 
-// Server-side queue sync interval (pending records → Google Sheets)
-export const SYNC_INTERVAL_MS = 30_000;
-
-// --- Server ---
-
-// Google Sheets API request timeout
-export const SHEETS_API_TIMEOUT_MS = 10_000;
-
-// Server-side evidence records cache TTL
-export const RECORDS_CACHE_TTL_MS = 5_000;
-
-// --- Backups ---
-
-// How often to back up all sheet data to local filesystem
-export const BACKUP_INTERVAL_MS = 60 * 60_000; // 1 hour
-
-// Maximum total size of backup files on disk
-export const BACKUP_MAX_BYTES = 8 * 1024 ** 3; // 8 GB
-
 // --- Default kiosk settings ---
 
-// Used when [⚙️ Nastavení] sheet is missing or unreadable
 import type { KioskSettings } from './types.js';
 export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   idleDimMs: IDLE_DIM_MS,
   inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
-  reportUpdateIntervalMs: 5 * 60_000, // 5 minutes
   maintenance: false,
 };
