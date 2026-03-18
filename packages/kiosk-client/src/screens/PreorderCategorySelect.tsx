@@ -1,7 +1,7 @@
-import type { CatalogCategory } from '@kioskkit/shared';
-import { useT } from '../i18n/index.js';
-import Tile from '../components/Tile.js';
-import ScreenHeader from '../components/ScreenHeader.js';
+import type { CatalogCategory } from "@kioskkit/shared";
+import ScreenHeader from "../components/ScreenHeader.js";
+import Tile from "../components/Tile.js";
+import { useT } from "../i18n/useT.js";
 
 interface PreorderCategorySelectProps {
   buyerLabel: string;
@@ -12,21 +12,26 @@ interface PreorderCategorySelectProps {
   onBack: () => void;
 }
 
-export default function PreorderCategorySelect({ buyerLabel, categories, orderingAllowed, onSelect, onViewOrders, onBack }: PreorderCategorySelectProps) {
+export default function PreorderCategorySelect({
+  buyerLabel,
+  categories,
+  orderingAllowed,
+  onSelect,
+  onViewOrders,
+  onBack,
+}: PreorderCategorySelectProps) {
   const t = useT();
   return (
     <div className="screen">
       <ScreenHeader
-        title={t('preorder.title')}
+        title={t("preorder.title")}
         onBack={onBack}
-        backLabel={t('preorder.backToCategories')}
-        crumbs={[{ label: t('preorder.buyer'), value: buyerLabel }]}
+        backLabel={t("preorder.backToCategories")}
+        crumbs={[{ label: t("preorder.buyer"), value: buyerLabel }]}
       />
       <div className="screen-body">
         {!orderingAllowed && (
-          <div className="preorder-ordering-disabled">
-            {t('preorder.orderingDisabled')}
-          </div>
+          <div className="preorder-ordering-disabled">{t("preorder.orderingDisabled")}</div>
         )}
         {orderingAllowed && (
           <div className="tile-grid tile-grid--categories">
@@ -41,7 +46,12 @@ export default function PreorderCategorySelect({ buyerLabel, categories, orderin
           </div>
         )}
         <div className="category-footer">
-          <Tile label={t('preorder.viewOrders')} icon="📋" variant="overview" onClick={onViewOrders} />
+          <Tile
+            label={t("preorder.viewOrders")}
+            icon="📋"
+            variant="overview"
+            onClick={onViewOrders}
+          />
         </div>
       </div>
     </div>

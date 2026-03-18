@@ -1,9 +1,9 @@
-import { config } from 'dotenv';
-import { resolve } from 'node:path';
+import { resolve } from "node:path";
+import { config } from "dotenv";
 
-const root = resolve(import.meta.dirname, '../../..');
+const root = resolve(import.meta.dirname, "../../..");
 
-config({ path: resolve(root, '.env') });
+config({ path: resolve(root, ".env") });
 
 export const env = {
   port: Number(process.env.PORT) || 3001,

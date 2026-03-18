@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { IDLE_DIM_MS } from '@kioskkit/shared';
+import { IDLE_DIM_MS } from "@kioskkit/shared";
+import { useEffect, useState } from "react";
 
 export function useIdleDim(idleDimMs: number = IDLE_DIM_MS) {
   const [dimmed, setDimmed] = useState(false);
@@ -13,10 +13,10 @@ export function useIdleDim(idleDimMs: number = IDLE_DIM_MS) {
       timer = setTimeout(() => setDimmed(true), idleDimMs);
     };
 
-    window.addEventListener('pointerdown', wake);
+    window.addEventListener("pointerdown", wake);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('pointerdown', wake);
+      window.removeEventListener("pointerdown", wake);
     };
   }, [idleDimMs]);
 

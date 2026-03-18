@@ -1,7 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { CATALOG_RELOAD_INTERVAL_MS, DEFAULT_KIOSK_SETTINGS, type CatalogCategory, type Buyer, type PreorderConfig, type KioskSettings } from '@kioskkit/shared';
-import { fetchCatalog, fetchBuyers, fetchPreorderConfig, fetchSettings } from '../api.js';
-import { cacheGet, cacheSet } from '../utils/cache.js';
+import {
+  type Buyer,
+  CATALOG_RELOAD_INTERVAL_MS,
+  type CatalogCategory,
+  DEFAULT_KIOSK_SETTINGS,
+  type KioskSettings,
+  type PreorderConfig,
+} from "@kioskkit/shared";
+import { useCallback, useEffect, useState } from "react";
+import { fetchBuyers, fetchCatalog, fetchPreorderConfig, fetchSettings } from "../api.js";
+import { cacheGet, cacheSet } from "../utils/cache.js";
 
 const DEFAULT_PREORDER_CONFIG: PreorderConfig = {
   orderingDays: Array(7).fill(true),
@@ -9,10 +16,16 @@ const DEFAULT_PREORDER_CONFIG: PreorderConfig = {
 };
 
 export function useCatalog() {
-  const [catalog, setCatalog] = useState<CatalogCategory[]>(() => cacheGet<CatalogCategory[]>('catalog') ?? []);
-  const [buyers, setBuyers] = useState<Buyer[]>(() => cacheGet<Buyer[]>('buyers') ?? []);
-  const [preorderConfig, setPreorderConfig] = useState<PreorderConfig>(() => cacheGet<PreorderConfig>('preorderConfig') ?? DEFAULT_PREORDER_CONFIG);
-  const [settings, setSettings] = useState<KioskSettings>(() => cacheGet<KioskSettings>('settings') ?? DEFAULT_KIOSK_SETTINGS);
+  const [catalog, setCatalog] = useState<CatalogCategory[]>(
+    () => cacheGet<CatalogCategory[]>("catalog") ?? [],
+  );
+  const [buyers, setBuyers] = useState<Buyer[]>(() => cacheGet<Buyer[]>("buyers") ?? []);
+  const [preorderConfig, setPreorderConfig] = useState<PreorderConfig>(
+    () => cacheGet<PreorderConfig>("preorderConfig") ?? DEFAULT_PREORDER_CONFIG,
+  );
+  const [settings, setSettings] = useState<KioskSettings>(
+    () => cacheGet<KioskSettings>("settings") ?? DEFAULT_KIOSK_SETTINGS,
+  );
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [buyerError, setBuyerError] = useState<string | null>(null);
 
@@ -20,42 +33,44 @@ export function useCatalog() {
     fetchCatalog()
       .then((data) => {
         setCatalog(data);
-        cacheSet('catalog', data);
+        cacheSet("catalog", data);
         setCatalogError(null);
       })
       .catch((err) => {
-        console.error('Catalog load error:', err);
-        setCatalogError(err instanceof Error ? err.message : 'Failed to load catalog.');
+        console.error("Catalog load error:", err);
+        setCatalogError(err instanceof Error ? err.message : "Failed to load catalog.");
       });
     fetchBuyers()
       .then((data) => {
         setBuyers(data.buyers);
-        cacheSet('buyers', data.buyers);
+        cacheSet("buyers", data.buyers);
         setBuyerError(null);
       })
       .catch((err) => {
-        console.error('Buyers load error:', err);
-        setBuyerError(err instanceof Error ? err.message : 'Failed to load buyers.');
+        console.error("Buyers load error:", err);
+        setBuyerError(err instanceof Error ? err.message : "Failed to load buyers.");
       });
     fetchPreorderConfig()
       .then((data) => {
         setPreorderConfig(data);
-        cacheSet('preorderConfig', data);
+        cacheSet("preorderConfig", data);
       })
       .catch((err) => {
-        console.error('Preorder config load error:', err);
+        console.error("Preorder config load error:", err);
       });
     fetchSettings()
       .then((data) => {
         setSettings(data);
-        cacheSet('settings', data);
+        cacheSet("settings", data);
       })
       .catch((err) => {
-        console.error('Settings load error:', err);
+        console.error("Settings load error:", err);
       });
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const error = catalogError ?? buyerError;
 

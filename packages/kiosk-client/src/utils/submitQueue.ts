@@ -1,8 +1,8 @@
-import { SUBMIT_FLUSH_INTERVAL_MS, type RecordRequest } from '@kioskkit/shared';
-import { postRecord } from '../api.js';
-import { cacheGet, cacheSet } from './cache.js';
+import { type RecordRequest, SUBMIT_FLUSH_INTERVAL_MS } from "@kioskkit/shared";
+import { postRecord } from "../api.js";
+import { cacheGet, cacheSet } from "./cache.js";
 
-const QUEUE_KEY = 'pendingRecords';
+const QUEUE_KEY = "pendingRecords";
 
 interface PendingRecord {
   id: string;
@@ -18,7 +18,7 @@ function getQueue(): PendingRecord[] {
 
 function setQueue(queue: PendingRecord[]): void {
   cacheSet(QUEUE_KEY, queue);
-  listeners.forEach((fn) => fn());
+  for (const fn of listeners) fn();
 }
 
 export function enqueueRecord(data: RecordRequest): void {
@@ -57,5 +57,5 @@ async function flush(): Promise<void> {
 export function startFlushTimer(): void {
   if (flushTimer) return;
   flushTimer = setInterval(flush, SUBMIT_FLUSH_INTERVAL_MS);
-  window.addEventListener('online', () => void flush());
+  window.addEventListener("online", () => void flush());
 }

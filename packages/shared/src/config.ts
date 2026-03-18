@@ -40,12 +40,12 @@ export const SUBMIT_FLUSH_INTERVAL_MS = 30_000;
 
 // --- Default kiosk settings ---
 
-import type { KioskSettings } from './types.js';
+import type { KioskSettings } from "./types.js";
 export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   idleDimMs: IDLE_DIM_MS,
   inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
   maintenance: false,
-  locale: 'cs',
-  currency: 'CZK',
-  buyerNoun: 'apartmán',
+  locale: "cs",
+  currency: "CZK",
+  buyerNoun: "apartmán",
 };

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { HEALTH_CHECK_INTERVAL_MS } from '@kioskkit/shared';
-import { fetchHealth } from '../api.js';
+import { HEALTH_CHECK_INTERVAL_MS } from "@kioskkit/shared";
+import { useEffect, useState } from "react";
+import { fetchHealth } from "../api.js";
 
 export function useHealth() {
   const [isOffline, setIsOffline] = useState(false);

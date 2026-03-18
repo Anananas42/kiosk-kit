@@ -1,20 +1,37 @@
-import { Hono } from 'hono';
-import { getDeliveryDate, noDeliveryDaysSet } from '@kioskkit/shared';
-import type { Store } from '../db/store.js';
+import { getDeliveryDate, noDeliveryDaysSet } from "@kioskkit/shared";
+import { Hono } from "hono";
+import type { Store } from "../db/store.js";
 
 export function reportsRoute(store: Store) {
   const app = new Hono();
 
-  app.get('/consumption', (c) => {
+  app.get("/consumption", (c) => {
     const records = store.getRecords();
 
-    const agg = new Map<string, { item: string; itemId: string; category: string; quantity: string; price: string; byBuyer: Map<number, number> }>();
+    const agg = new Map<
+      string,
+      {
+        item: string;
+        itemId: string;
+        category: string;
+        quantity: string;
+        price: string;
+        byBuyer: Map<number, number>;
+      }
+    >();
 
     for (const r of records) {
       const key = r.itemId || r.item;
       let entry = agg.get(key);
       if (!entry) {
-        entry = { item: r.item, itemId: r.itemId, category: r.category, quantity: r.quantity, price: r.price, byBuyer: new Map() };
+        entry = {
+          item: r.item,
+          itemId: r.itemId,
+          category: r.category,
+          quantity: r.quantity,
+          price: r.price,
+          byBuyer: new Map(),
+        };
         agg.set(key, entry);
       }
       entry.byBuyer.set(r.buyer, (entry.byBuyer.get(r.buyer) ?? 0) + r.count);
@@ -32,13 +49,15 @@ export function reportsRoute(store: Store) {
     return c.json({ rows });
   });
 
-  app.get('/preorders', (c) => {
+  app.get("/preorders", (c) => {
     const config = store.getPreorderConfig();
     const noDelivery = config ? noDeliveryDaysSet(config.deliveryDays) : new Set<number>();
 
     const records = store.getRecords();
     const catalog = store.getCatalog();
-    const preorderCategories = new Set(catalog.filter((cat) => cat.preorder).map((cat) => cat.name));
+    const preorderCategories = new Set(
+      catalog.filter((cat) => cat.preorder).map((cat) => cat.name),
+    );
 
     const preorderRecords = records.filter((r) => preorderCategories.has(r.category));
 

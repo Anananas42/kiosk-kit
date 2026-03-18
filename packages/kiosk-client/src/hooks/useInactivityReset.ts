@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import { INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS } from '@kioskkit/shared';
+import { INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS } from "@kioskkit/shared";
+import { useCallback, useEffect, useState } from "react";
 
-
-export function useInactivityReset(active: boolean, onReset: () => void, timeoutMs: number = INACTIVITY_TIMEOUT_MS) {
+export function useInactivityReset(
+  active: boolean,
+  onReset: () => void,
+  timeoutMs: number = INACTIVITY_TIMEOUT_MS,
+) {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   const dismiss = useCallback(() => setSecondsLeft(null), []);
@@ -39,11 +42,11 @@ export function useInactivityReset(active: boolean, onReset: () => void, timeout
     startTimers();
 
     const restart = () => startTimers();
-    window.addEventListener('pointerdown', restart);
+    window.addEventListener("pointerdown", restart);
     return () => {
       clearTimeout(warningTimer);
       clearInterval(countdownInterval);
-      window.removeEventListener('pointerdown', restart);
+      window.removeEventListener("pointerdown", restart);
     };
   }, [active, onReset, timeoutMs]);
 

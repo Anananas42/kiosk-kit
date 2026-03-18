@@ -1,4 +1,3 @@
-import type Database from 'better-sqlite3';
 import type {
   Buyer,
   CatalogCategory,
@@ -7,7 +6,8 @@ import type {
   KioskSettings,
   PreorderConfig,
   RecordEntry,
-} from '@kioskkit/shared';
+} from "@kioskkit/shared";
+import type Database from "better-sqlite3";
 
 // ── Buyers ──────────────────────────────────────────────────────────────────
 
@@ -17,89 +17,110 @@ export class Store {
   // ── Buyers ────────────────────────────────────────────────────────────
 
   getBuyers(): Buyer[] {
-    return this.db
-      .prepare('SELECT id, label FROM buyers ORDER BY id')
-      .all() as Buyer[];
+    return this.db.prepare("SELECT id, label FROM buyers ORDER BY id").all() as Buyer[];
   }
 
   createBuyer(id: number, label: string): void {
-    this.db
-      .prepare('INSERT INTO buyers (id, label) VALUES (?, ?)')
-      .run(id, label);
+    this.db.prepare("INSERT INTO buyers (id, label) VALUES (?, ?)").run(id, label);
   }
 
   updateBuyer(id: number, label: string): void {
-    this.db
-      .prepare('UPDATE buyers SET label = ? WHERE id = ?')
-      .run(label, id);
+    this.db.prepare("UPDATE buyers SET label = ? WHERE id = ?").run(label, id);
   }
 
   deleteBuyer(id: number): void {
-    this.db.prepare('DELETE FROM buyers WHERE id = ?').run(id);
+    this.db.prepare("DELETE FROM buyers WHERE id = ?").run(id);
   }
 
   // ── Catalog ─────────────────────────────────────────────────────────────
 
   getCatalog(): CatalogCategory[] {
     const cats = this.db
-      .prepare('SELECT id, name, preorder, sort_order FROM catalog_categories ORDER BY sort_order, id')
+      .prepare(
+        "SELECT id, name, preorder, sort_order FROM catalog_categories ORDER BY sort_order, id",
+      )
       .all() as Array<{ id: number; name: string; preorder: number; sort_order: number }>;
 
     const itemStmt = this.db.prepare(
-      'SELECT id, name, quantity, price, dph_rate, sort_order FROM catalog_items WHERE category_id = ? ORDER BY sort_order, id',
+      "SELECT id, name, quantity, price, dph_rate, sort_order FROM catalog_items WHERE category_id = ? ORDER BY sort_order, id",
     );
 
     return cats.map((cat) => {
       const items = itemStmt.all(cat.id) as Array<{
-        id: number; name: string; quantity: string; price: string; dph_rate: string; sort_order: number;
+        id: number;
+        name: string;
+        quantity: string;
+        price: string;
+        dph_rate: string;
+        sort_order: number;
       }>;
       return {
         id: String(cat.id),
         name: cat.name,
         preorder: cat.preorder === 1,
-        items: items.map((it): CatalogItem => ({
-          id: String(it.id),
-          name: it.name,
-          quantity: it.quantity,
-          price: it.price,
-          dphRate: it.dph_rate,
-        })),
+        items: items.map(
+          (it): CatalogItem => ({
+            id: String(it.id),
+            name: it.name,
+            quantity: it.quantity,
+            price: it.price,
+            dphRate: it.dph_rate,
+          }),
+        ),
       };
     });
   }
 
   createCategory(name: string, preorder: boolean, sortOrder: number): number {
     const result = this.db
-      .prepare('INSERT INTO catalog_categories (name, preorder, sort_order) VALUES (?, ?, ?)')
+      .prepare("INSERT INTO catalog_categories (name, preorder, sort_order) VALUES (?, ?, ?)")
       .run(name, preorder ? 1 : 0, sortOrder);
     return Number(result.lastInsertRowid);
   }
 
   updateCategory(id: number, name: string, preorder: boolean, sortOrder: number): void {
     this.db
-      .prepare('UPDATE catalog_categories SET name = ?, preorder = ?, sort_order = ? WHERE id = ?')
+      .prepare("UPDATE catalog_categories SET name = ?, preorder = ?, sort_order = ? WHERE id = ?")
       .run(name, preorder ? 1 : 0, sortOrder, id);
   }
 
   deleteCategory(id: number): void {
-    this.db.prepare('DELETE FROM catalog_categories WHERE id = ?').run(id);
+    this.db.prepare("DELETE FROM catalog_categories WHERE id = ?").run(id);
   }
 
-  createItem(categoryId: number, name: string, quantity: string, price: string, dphRate: string, sortOrder: number): number {
+  createItem(
+    categoryId: number,
+    name: string,
+    quantity: string,
+    price: string,
+    dphRate: string,
+    sortOrder: number,
+  ): number {
     const result = this.db
-      .prepare('INSERT INTO catalog_items (category_id, name, quantity, price, dph_rate, sort_order) VALUES (?, ?, ?, ?, ?, ?)')
+      .prepare(
+        "INSERT INTO catalog_items (category_id, name, quantity, price, dph_rate, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
+      )
       .run(categoryId, name, quantity, price, dphRate, sortOrder);
     return Number(result.lastInsertRowid);
   }
 
-  updateItem(id: number, name: string, quantity: string, price: string, dphRate: string, sortOrder: number): void {
+  updateItem(
+    id: number,
+    name: string,
+    quantity: string,
+    price: string,
+    dphRate: string,
+    sortOrder: number,
+  ): void {
     this.db
-      .prepare('UPDATE catalog_items SET name = ?, quantity = ?, price = ?, dph_rate = ?, sort_order = ? WHERE id = ?')
+      .prepare(
+        "UPDATE catalog_items SET name = ?, quantity = ?, price = ?, dph_rate = ?, sort_order = ? WHERE id = ?",
+      )
       .run(name, quantity, price, dphRate, sortOrder, id);
   }
 
   deleteItem(id: number): void {
-    this.db.prepare('DELETE FROM catalog_items WHERE id = ?').run(id);
+    this.db.prepare("DELETE FROM catalog_items WHERE id = ?").run(id);
   }
 
   // ── Records ─────────────────────────────────────────────────────────────
@@ -134,7 +155,7 @@ export class Store {
       return row.total;
     }
     const row = this.db
-      .prepare('SELECT COALESCE(SUM(count), 0) AS total FROM records WHERE buyer = ? AND item = ?')
+      .prepare("SELECT COALESCE(SUM(count), 0) AS total FROM records WHERE buyer = ? AND item = ?")
       .get(buyer, item) as { total: number };
     return row.total;
   }
@@ -145,25 +166,36 @@ export class Store {
         `INSERT INTO records (id, timestamp, buyer, count, category, item, item_id, quantity, price)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(entry.id, entry.timestamp, entry.buyer, entry.count, entry.category, entry.item, entry.itemId, entry.quantity, entry.price);
+      .run(
+        entry.id,
+        entry.timestamp,
+        entry.buyer,
+        entry.count,
+        entry.category,
+        entry.item,
+        entry.itemId,
+        entry.quantity,
+        entry.price,
+      );
   }
 
   // ── Settings ────────────────────────────────────────────────────────────
 
   getSettings(): KioskSettings | null {
-    const rows = this.db
-      .prepare('SELECT key, value FROM settings')
-      .all() as Array<{ key: string; value: string }>;
+    const rows = this.db.prepare("SELECT key, value FROM settings").all() as Array<{
+      key: string;
+      value: string;
+    }>;
     if (rows.length === 0) return null;
 
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return {
       idleDimMs: Number(map.idleDimMs) || 0,
       inactivityTimeoutMs: Number(map.inactivityTimeoutMs) || 0,
-      maintenance: map.maintenance === 'true',
-      locale: map.locale || 'cs',
-      currency: map.currency || 'CZK',
-      buyerNoun: map.buyerNoun || 'apartmán',
+      maintenance: map.maintenance === "true",
+      locale: map.locale || "cs",
+      currency: map.currency || "CZK",
+      buyerNoun: map.buyerNoun || "apartmán",
     };
   }
 
@@ -180,7 +212,7 @@ export class Store {
 
   getPreorderConfig(): PreorderConfig | null {
     const rows = this.db
-      .prepare('SELECT weekday, ordering, delivery FROM preorder_config ORDER BY weekday')
+      .prepare("SELECT weekday, ordering, delivery FROM preorder_config ORDER BY weekday")
       .all() as Array<{ weekday: number; ordering: number; delivery: number }>;
     if (rows.length === 0) return null;
 

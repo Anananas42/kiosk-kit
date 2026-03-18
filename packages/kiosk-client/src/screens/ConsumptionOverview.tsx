@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { parsePrice, formatCurrency, type EvidenceRow } from '@kioskkit/shared';
-import { fetchOverview } from '../api.js';
-import { useT } from '../i18n/index.js';
-import ScreenHeader from '../components/ScreenHeader.js';
+import { type EvidenceRow, formatCurrency, parsePrice } from "@kioskkit/shared";
+import { useEffect, useState } from "react";
+import { fetchOverview } from "../api.js";
+import ScreenHeader from "../components/ScreenHeader.js";
+import { useT } from "../i18n/useT.js";
 
 interface AggregatedItem {
   label: string;
@@ -21,7 +21,8 @@ function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, A
     const key = r.itemId || (r.quantity ? `${r.item} ${r.quantity}` : r.item);
     const label = r.quantity ? `${r.item} ${r.quantity}` : r.item;
 
-    if (!map[key]) map[key] = { label, added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
+    if (!map[key])
+      map[key] = { label, added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
 
     const absCount = Math.abs(r.count);
     const signedTotal = parsePrice(r.price);
@@ -51,7 +52,12 @@ interface ConsumptionOverviewProps {
   currency: string;
 }
 
-export default function ConsumptionOverview({ buyer, onBack, locale, currency }: ConsumptionOverviewProps) {
+export default function ConsumptionOverview({
+  buyer,
+  onBack,
+  locale,
+  currency,
+}: ConsumptionOverviewProps) {
   const t = useT();
   const [records, setRecords] = useState<EvidenceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +67,7 @@ export default function ConsumptionOverview({ buyer, onBack, locale, currency }:
   useEffect(() => {
     fetchOverview()
       .then((data) => setRecords(data.records))
-      .catch(() => setError(t('overview.loadError')));
+      .catch(() => setError(t("overview.loadError")));
   }, [t]);
 
   const byItem = records ? aggregateItems(records, buyer) : {};
@@ -72,28 +78,28 @@ export default function ConsumptionOverview({ buyer, onBack, locale, currency }:
   return (
     <div className="screen">
       <ScreenHeader
-        title={t('overview.title', { buyer })}
+        title={t("overview.title", { buyer })}
         onBack={onBack}
-        backLabel={t('overview.back')}
+        backLabel={t("overview.back")}
       />
       <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
         {records === null && !error && (
-          <div className="sending-overlay">{t('overview.loading')}</div>
+          <div className="sending-overlay">{t("overview.loading")}</div>
         )}
 
-        {records !== null && (
-          items.length === 0 ? (
-            <div className="overview-empty">{t('overview.empty')}</div>
+        {records !== null &&
+          (items.length === 0 ? (
+            <div className="overview-empty">{t("overview.empty")}</div>
           ) : (
             <div className="overview-grid">
               <div className="overview-row overview-row--header">
-                <span>{t('overview.headerItem')}</span>
-                <span>{t('overview.headerQty')}</span>
-                <span>{t('overview.headerAdded')}</span>
-                <span>{t('overview.headerStorno')}</span>
-                <span>{t('overview.headerTotal')}</span>
+                <span>{t("overview.headerItem")}</span>
+                <span>{t("overview.headerQty")}</span>
+                <span>{t("overview.headerAdded")}</span>
+                <span>{t("overview.headerStorno")}</span>
+                <span>{t("overview.headerTotal")}</span>
               </div>
               {items.map(([key, v]) => {
                 const net = v.added - v.removed;
@@ -103,27 +109,26 @@ export default function ConsumptionOverview({ buyer, onBack, locale, currency }:
                     <span className="overview-item-name">{v.label}</span>
                     <span className="overview-net overview-net--pos">{net}</span>
                     <span className="overview-net overview-net--pos">
-                      {v.addedKc > 0 ? fmt(v.addedKc) : t('overview.dash')}
+                      {v.addedKc > 0 ? fmt(v.addedKc) : t("overview.dash")}
                     </span>
                     <span className="overview-net overview-net--neg">
-                      {v.removedKc > 0 ? `−${fmt(v.removedKc)}` : t('overview.dash')}
+                      {v.removedKc > 0 ? `−${fmt(v.removedKc)}` : t("overview.dash")}
                     </span>
-                    <span className="overview-net overview-net--pos">
-                      {fmt(lineTotal)}
-                    </span>
+                    <span className="overview-net overview-net--pos">{fmt(lineTotal)}</span>
                   </div>
                 );
               })}
               <div className="overview-row overview-row--total">
-                <span>{t('overview.total')}</span>
+                <span>{t("overview.total")}</span>
                 <span></span>
-                <span>{total > 0 || totalStorno > 0 ? fmt(total + totalStorno) : t('overview.dash')}</span>
-                <span>{totalStorno > 0 ? `−${fmt(totalStorno)}` : t('overview.dash')}</span>
+                <span>
+                  {total > 0 || totalStorno > 0 ? fmt(total + totalStorno) : t("overview.dash")}
+                </span>
+                <span>{totalStorno > 0 ? `−${fmt(totalStorno)}` : t("overview.dash")}</span>
                 <span className="overview-net">{fmt(total)}</span>
               </div>
             </div>
-          )
-        )}
+          ))}
       </div>
     </div>
   );

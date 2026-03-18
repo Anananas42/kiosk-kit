@@ -1,13 +1,13 @@
-import { Hono } from 'hono';
-import { randomUUID } from 'node:crypto';
-import { validateRecordRequest, type RecordEntry } from '@kioskkit/shared';
-import type { Store } from '../db/store.js';
-import { withLock } from '../lock.js';
+import { randomUUID } from "node:crypto";
+import { type RecordEntry, validateRecordRequest } from "@kioskkit/shared";
+import { Hono } from "hono";
+import type { Store } from "../db/store.js";
+import { withLock } from "../lock.js";
 
 export function recordRoute(store: Store) {
   const app = new Hono();
 
-  app.post('/', async (c) => {
+  app.post("/", async (c) => {
     const body = await c.req.json();
     const validation = validateRecordRequest(body);
     if (!validation.ok) {
@@ -20,7 +20,7 @@ export function recordRoute(store: Store) {
       if (data.count < 0) {
         const balance = store.getItemBalance(data.buyer, data.item, data.itemId);
         if (balance + data.count < 0) {
-          return c.json({ error: 'insufficient_balance' }, 400);
+          return c.json({ error: "insufficient_balance" }, 400);
         }
       }
 
@@ -31,9 +31,9 @@ export function recordRoute(store: Store) {
         count: data.count,
         category: data.category,
         item: data.item,
-        itemId: data.itemId ?? '',
-        quantity: data.quantity ?? '',
-        price: data.price ?? '',
+        itemId: data.itemId ?? "",
+        quantity: data.quantity ?? "",
+        price: data.price ?? "",
       };
 
       store.insertRecord(entry);

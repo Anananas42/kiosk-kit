@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { SUCCESS_FLASH_MS } from '@kioskkit/shared';
+import { SUCCESS_FLASH_MS } from "@kioskkit/shared";
+import { useEffect } from "react";
 
 interface SuccessFlashProps {
   message: string;

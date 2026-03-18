@@ -1,12 +1,12 @@
-import { createContext, useContext, useMemo } from 'react';
-import cs from './cs.json';
-import en from './en.json';
+import { useMemo } from "react";
+import { I18nContext, type TFunction } from "./context.js";
+import cs from "./cs.json";
+import en from "./en.json";
+
+export { I18nContext, type TFunction } from "./context.js";
+export { useT } from "./useT.js";
 
 const locales: Record<string, Record<string, string>> = { cs, en };
-
-type TFunction = (key: string, params?: Record<string, string | number>) => string;
-
-const I18nContext = createContext<TFunction>((k) => k);
 
 export function I18nProvider({ locale, children }: { locale: string; children: React.ReactNode }) {
   const t = useMemo<TFunction>(() => {
@@ -23,5 +23,3 @@ export function I18nProvider({ locale, children }: { locale: string; children: R
   }, [locale]);
   return <I18nContext.Provider value={t}>{children}</I18nContext.Provider>;
 }
-
-export function useT() { return useContext(I18nContext); }

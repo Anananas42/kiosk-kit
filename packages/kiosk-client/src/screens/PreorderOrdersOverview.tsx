@@ -1,12 +1,20 @@
-import { useEffect, useState } from 'react';
-import { getDeliveryDate, formatDate, type EvidenceRow } from '@kioskkit/shared';
-import { fetchOverview } from '../api.js';
-import { useT } from '../i18n/index.js';
-import ScreenHeader from '../components/ScreenHeader.js';
+import { type EvidenceRow, formatDate, getDeliveryDate } from "@kioskkit/shared";
+import { useEffect, useState } from "react";
+import { fetchOverview } from "../api.js";
+import ScreenHeader from "../components/ScreenHeader.js";
+import { useT } from "../i18n/useT.js";
 
-interface PreorderItem { label: string; count: number }
+interface PreorderItem {
+  label: string;
+  count: number;
+}
 
-function aggregatePreorderOrders(records: EvidenceRow[], buyer: number, preorderNames: Set<string>, noDeliveryDays?: Set<number>): Record<string, Record<string, PreorderItem>> {
+function aggregatePreorderOrders(
+  records: EvidenceRow[],
+  buyer: number,
+  preorderNames: Set<string>,
+  noDeliveryDays?: Set<number>,
+): Record<string, Record<string, PreorderItem>> {
   const dayMap: Record<string, Record<string, PreorderItem>> = {};
 
   for (const r of records) {
@@ -31,7 +39,13 @@ interface PreorderOrdersOverviewProps {
   locale: string;
 }
 
-export default function PreorderOrdersOverview({ buyer, preorderNames, noDeliveryDays, onBack, locale }: PreorderOrdersOverviewProps) {
+export default function PreorderOrdersOverview({
+  buyer,
+  preorderNames,
+  noDeliveryDays,
+  onBack,
+  locale,
+}: PreorderOrdersOverviewProps) {
   const t = useT();
   const [records, setRecords] = useState<EvidenceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,29 +53,29 @@ export default function PreorderOrdersOverview({ buyer, preorderNames, noDeliver
   useEffect(() => {
     fetchOverview()
       .then((data) => setRecords(data.records))
-      .catch(() => setError(t('preorder.loadError')));
+      .catch(() => setError(t("preorder.loadError")));
   }, [t]);
 
-  const dayMap = records ? aggregatePreorderOrders(records, buyer, preorderNames, noDeliveryDays) : {};
+  const dayMap = records
+    ? aggregatePreorderOrders(records, buyer, preorderNames, noDeliveryDays)
+    : {};
   const days = Object.keys(dayMap).sort().reverse();
   const hasAny = days.some((day) => Object.values(dayMap[day]).some((v) => v.count > 0));
 
   return (
     <div className="screen">
       <ScreenHeader
-        title={t('preorder.ordersTitle', { buyer })}
+        title={t("preorder.ordersTitle", { buyer })}
         onBack={onBack}
-        backLabel={t('preorder.back')}
+        backLabel={t("preorder.back")}
       />
       <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
-        {records === null && !error && (
-          <div className="sending-overlay">{t('common.loading')}</div>
-        )}
+        {records === null && !error && <div className="sending-overlay">{t("common.loading")}</div>}
 
         {records !== null && !hasAny && (
-          <div className="overview-empty">{t('preorder.noOrders')}</div>
+          <div className="overview-empty">{t("preorder.noOrders")}</div>
         )}
 
         {days.map((day) => {
@@ -74,7 +88,9 @@ export default function PreorderOrdersOverview({ buyer, preorderNames, noDeliver
                 {items.map(([key, v]) => (
                   <div key={key} className="preorder-item-row">
                     <span className="preorder-item-name">{v.label}</span>
-                    <span className="preorder-item-qty">{t('preorder.unitCount', { count: v.count })}</span>
+                    <span className="preorder-item-qty">
+                      {t("preorder.unitCount", { count: v.count })}
+                    </span>
                   </div>
                 ))}
               </div>
