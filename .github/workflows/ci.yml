@@ -25,15 +25,8 @@ jobs:
 
       - uses: rharkor/caching-for-turbo@v1.8
 
-      - name: Lint, typecheck, test
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            pnpm turbo lint typecheck test --affected
-          else
-            pnpm turbo lint typecheck test
-          fi
-
-      - run: pnpm turbo build
+      - name: Lint, typecheck, test, build
+        run: pnpm turbo lint typecheck test build
 
   deploy-web:
     needs: ci
