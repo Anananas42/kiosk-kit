@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { ApartmentsResponse } from '@zahumny/shared';
 import type { CacheStore } from '../cache/store.js';
-import { readApartments } from '../sheets/apartments.js';
+import { readApartments, ApartmentValidationError } from '../sheets/apartments.js';
 import { env } from '../env.js';
 
 export function apartmentsRoute(cache: CacheStore) {
@@ -17,6 +17,14 @@ export function apartmentsRoute(cache: CacheStore) {
           return c.json(response);
         }
       } catch (err) {
+        if (err instanceof ApartmentValidationError) {
+          console.error(`[api] APARTMENT CONFIG BROKEN — refusing to serve until fixed:\n${err.message}`);
+          return c.json({
+            error: 'apartments_invalid',
+            message: 'Apartment config obsahuje chyby — aplikace je pozastavena, dokud nebudou opraveny.',
+            details: err.errors,
+          }, 503);
+        }
         console.error('[api] Apartments read from Sheets failed:', (err as Error).message);
       }
     }

@@ -13,29 +13,29 @@ export function useCatalog() {
   const [apartments, setApartments] = useState<Apartment[]>(() => cacheGet<Apartment[]>('apartments') ?? []);
   const [pastryConfig, setPastryConfig] = useState<PastryConfig>(() => cacheGet<PastryConfig>('pastryConfig') ?? DEFAULT_PASTRY_CONFIG);
   const [settings, setSettings] = useState<KioskSettings>(() => cacheGet<KioskSettings>('settings') ?? DEFAULT_KIOSK_SETTINGS);
-  const [error, setError] = useState<string | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [apartmentError, setApartmentError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetchCatalog()
       .then((data) => {
         setCatalog(data);
         cacheSet('catalog', data);
-        setError(null);
+        setCatalogError(null);
       })
       .catch((err) => {
         console.error('Catalog load error:', err);
-        setError(err instanceof Error ? err.message : 'Nelze načíst katalog.');
+        setCatalogError(err instanceof Error ? err.message : 'Nelze načíst katalog.');
       });
     fetchApartments()
       .then((data) => {
         setApartments(data.apartments);
         cacheSet('apartments', data.apartments);
+        setApartmentError(null);
       })
       .catch((err) => {
         console.error('Apartments load error:', err);
-        if (!cacheGet<Apartment[]>('apartments')) {
-          setError((prev) => prev ?? 'Nelze načíst data.');
-        }
+        setApartmentError(err instanceof Error ? err.message : 'Nelze načíst apartmány.');
       });
     fetchPastryConfig()
       .then((data) => {
@@ -56,6 +56,8 @@ export function useCatalog() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const error = catalogError ?? apartmentError;
 
   useEffect(() => {
     // Poll every 10s while in error state, normal interval otherwise

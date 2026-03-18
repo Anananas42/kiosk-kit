@@ -1,7 +1,14 @@
-import { CONFIG_SHEET, sheetRange, CONFIG_COLUMNS, type Apartment } from '@zahumny/shared';
+import { CONFIG_SHEET, sheetRange, CONFIG_COLUMNS, validateApartments, type Apartment } from '@zahumny/shared';
 import { getSheetsClient } from './client.js';
 import { env } from '../env.js';
 import { buildColumnMap, getCol } from './column-map.js';
+
+export class ApartmentValidationError extends Error {
+  constructor(public readonly errors: string[]) {
+    super(`Apartment config validation failed:\n${errors.map((e) => `  • ${e}`).join('\n')}`);
+    this.name = 'ApartmentValidationError';
+  }
+}
 
 export async function readApartments(): Promise<Apartment[]> {
   const sheets = await getSheetsClient();
@@ -15,14 +22,14 @@ export async function readApartments(): Promise<Apartment[]> {
 
   const colMap = buildColumnMap(rows[0].map(String));
 
-  return rows.slice(1)
-    .map((row) => ({
-      id: getCol(row, colMap, CONFIG_COLUMNS.id),
-      label: getCol(row, colMap, CONFIG_COLUMNS.label),
-    }))
-    .filter(({ id }) => id)
-    .map(({ id, label }) => ({
-      id: Number(id),
-      label: label?.trim() || id,
-    }));
+  const rawRows = rows.slice(1).map((row) => ({
+    id: getCol(row, colMap, CONFIG_COLUMNS.id),
+    label: getCol(row, colMap, CONFIG_COLUMNS.label),
+  }));
+
+  const result = validateApartments(rawRows);
+  if (!result.ok) {
+    throw new ApartmentValidationError(result.errors);
+  }
+  return result.data;
 }

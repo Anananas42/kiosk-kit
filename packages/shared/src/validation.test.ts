@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateRecordRequest, validateCatalog } from './validation.js';
+import { validateRecordRequest, validateCatalog, validateApartments } from './validation.js';
 
 describe('validateRecordRequest', () => {
   const valid = { buyer: 1, count: 1, category: 'Alko', item: 'Beer', quantity: '0,5 l', price: '46 Kč' };
@@ -145,6 +145,88 @@ describe('validateCatalog', () => {
 
   it('returns empty for empty input', () => {
     const result = validateCatalog([], 'pečivo');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([]);
+  });
+});
+
+describe('validateApartments', () => {
+  it('accepts valid apartments', () => {
+    const rows = [
+      { id: '1', label: '1A' },
+      { id: '2', label: '2B' },
+    ];
+    const result = validateApartments(rows);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([
+      { id: 1, label: '1A' },
+      { id: 2, label: '2B' },
+    ]);
+  });
+
+  it('defaults label to id when empty', () => {
+    const result = validateApartments([{ id: '5', label: '' }]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data[0].label).toBe('5');
+  });
+
+  it('skips blank rows', () => {
+    const rows = [
+      { id: '1', label: 'A' },
+      { id: '', label: '' },
+    ];
+    const result = validateApartments(rows);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toHaveLength(1);
+  });
+
+  it('rejects missing ID when label is present', () => {
+    const result = validateApartments([{ id: '', label: 'Mystery' }]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors[0]).toContain('Chybí ID');
+    expect(result.errors[0]).toContain('Mystery');
+  });
+
+  it('rejects malformed ID', () => {
+    const result = validateApartments([{ id: 'abc', label: 'Bad' }]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors[0]).toContain('Neplatné ID');
+    expect(result.errors[0]).toContain('abc');
+  });
+
+  it('rejects duplicate IDs', () => {
+    const rows = [
+      { id: '1', label: 'First' },
+      { id: '1', label: 'Second' },
+    ];
+    const result = validateApartments(rows);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors[0]).toContain('Duplicitní ID');
+    expect(result.errors[0]).toContain('First');
+    expect(result.errors[0]).toContain('Second');
+  });
+
+  it('reports all errors at once', () => {
+    const rows = [
+      { id: '', label: 'NoId' },
+      { id: '1', label: 'OK' },
+      { id: '1', label: 'Dupe' },
+    ];
+    const result = validateApartments(rows);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors).toHaveLength(2);
+  });
+
+  it('returns empty for empty input', () => {
+    const result = validateApartments([]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data).toEqual([]);
