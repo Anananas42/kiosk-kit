@@ -45,4 +45,7 @@ export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   idleDimMs: IDLE_DIM_MS,
   inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
   maintenance: false,
+  locale: 'cs',
+  currency: 'CZK',
+  buyerNoun: 'apartmán',
 };

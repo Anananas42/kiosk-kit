@@ -1,6 +1,6 @@
 # KioskKit
 
-Touchscreen kiosk platform for shared-resource tracking in apartment buildings. Residents use a locked-down Raspberry Pi touchscreen to record consumption; building managers use a web dashboard to configure catalogs, view reports, and manage payments.
+Touchscreen kiosk platform for honor-system self-service tracking. Buyers (apartment residents, hotel guests, office workers, etc.) use a locked-down Raspberry Pi touchscreen to record consumption; managers use a web dashboard to configure catalogs, view reports, and manage payments. Supports multiple languages and currencies via i18n.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ Touchscreen kiosk platform for shared-resource tracking in apartment buildings. 
               └───────────────┘
 ```
 
-**The Pi never initiates outbound connections.** It sits on a Tailscale tailnet reachable only by the web-server. All management — catalog changes, apartment config, settings, backups, reports — is driven by the web-server reading from and writing to the Pi's local API over Tailscale. The Pi's only job is serving the touchscreen UI and recording transactions into SQLite.
+**The Pi never initiates outbound connections.** It sits on a Tailscale tailnet reachable only by the web-server. All management — catalog changes, buyer config, settings, backups, reports — is driven by the web-server reading from and writing to the Pi's local API over Tailscale. The Pi's only job is serving the touchscreen UI and recording transactions into SQLite.
 
 If the internet or web-server goes down, the kiosk keeps working. Managers lose remote access until connectivity returns, but no guest-facing functionality is affected.
 
@@ -31,7 +31,7 @@ If the internet or web-server goes down, the kiosk keeps working. Managers lose 
 
 ```
 packages/
-├── shared/          # Types, constants, price/pastry utils
+├── shared/          # Types, constants, price/preorder utils
 ├── kiosk-client/    # Pi touchscreen SPA — React + Vite
 ├── kiosk-server/    # Pi backend — Hono + SQLite (port 3001)
 ├── web-client/      # Manager dashboard — React + Vite (port 5174)
@@ -48,11 +48,11 @@ ansible/             # Ansible playbooks for Pi provisioning and deploys
 
 ### shared
 
-Types and utilities shared across packages: `Apartment`, `CatalogCategory`, `RecordEntry`, `KioskSettings`, `PastryConfig`. Price parsing/formatting (Czech Kč), pastry delivery date calculation, record validation.
+Types and utilities shared across packages: `Buyer`, `CatalogCategory`, `RecordEntry`, `KioskSettings`, `PreorderConfig`. Locale-aware price parsing/formatting (`Intl.NumberFormat`), preorder delivery date calculation, record validation.
 
 ### kiosk-client
 
-React SPA for the Pi touchscreen. Offline-first — records queue locally and flush when the server is reachable. Screens: apartment select → category select → item select → confirm. Pastry categories get quantity pickers and delivery date display. Dims after 15s idle, resets to home after 60s.
+React SPA for the Pi touchscreen. Offline-first — records queue locally and flush when the server is reachable. Screens: buyer select → category select → item select → confirm. Preorder categories get quantity pickers and delivery date display. Dims after 15s idle, resets to home after 60s. All UI strings are i18n-ready (Czech and English included).
 
 ### kiosk-server
 
@@ -63,24 +63,24 @@ Hono API + SQLite running locally on the Pi. Serves the kiosk-client static buil
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/catalog` | GET | Product catalog |
-| `/api/apartments` | GET | Apartment list |
+| `/api/buyers` | GET | Buyer list |
 | `/api/health` | GET | Health check |
 | `/api/record` | POST | Submit a consumption record |
 | `/api/overview` | GET | All records |
 | `/api/item-count` | GET | Balance for buyer+item |
-| `/api/pastry-config` | GET | Ordering/delivery schedule |
+| `/api/preorder-config` | GET | Ordering/delivery schedule |
 | `/api/settings` | GET | Kiosk settings |
 
 **Management endpoints** (called by web-server over Tailscale):
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/admin/apartments` | POST/PUT/DELETE | CRUD apartments |
+| `/api/admin/buyers` | POST/PUT/DELETE | CRUD buyers |
 | `/api/admin/catalog` | POST/PUT/DELETE | CRUD categories and items |
 | `/api/admin/settings` | PUT | Update settings |
-| `/api/admin/pastry-config` | PUT | Update pastry config |
+| `/api/admin/preorder-config` | PUT | Update preorder config |
 | `/api/reports/consumption` | GET | Aggregated consumption report |
-| `/api/reports/pastry` | GET | Pastry orders by delivery date |
+| `/api/reports/preorders` | GET | Preorders by delivery date |
 
 ### web-server
 
@@ -92,7 +92,7 @@ Periodically reads each Pi's SQLite database over Tailscale for backup snapshots
 
 ### web-client
 
-Manager dashboard SPA. Login via Google SSO. Shows a device grid (online/offline, last backup). Click a device to manage: edit catalog, configure apartments, view consumption reports, download/restore backups. All management requests go through the web-server, which proxies to the Pi.
+Manager dashboard SPA. Login via Google SSO. Shows a device grid (online/offline, last backup). Click a device to manage: edit catalog, configure buyers, view consumption reports, download/restore backups. All management requests go through the web-server, which proxies to the Pi.
 
 ### landing
 
@@ -120,6 +120,7 @@ pnpm --filter @kioskkit/landing dev
 | Variable | Used by | Default | Description |
 |----------|---------|---------|-------------|
 | `PORT` | kiosk-server | `3001` | Kiosk API port |
+| `KIOSK_TZ` | shared | `Europe/Prague` | Timezone for delivery date calculations |
 
 ## Pi Deployment
 

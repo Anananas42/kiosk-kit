@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parsePrice, formatPrice, ensureKc } from './price.js';
+import { parsePrice, formatCurrency } from './price.js';
 
 describe('parsePrice', () => {
   it('parses Czech format "12,50 Kč"', () => {
@@ -23,31 +23,33 @@ describe('parsePrice', () => {
   });
 });
 
-describe('formatPrice', () => {
-  it('formats whole number without decimals', () => {
-    expect(formatPrice(100)).toBe('100 Kč');
+describe('formatCurrency', () => {
+  it('formats CZK whole number', () => {
+    const result = formatCurrency(100, 'cs', 'CZK');
+    expect(result).toContain('100');
+    expect(result).toContain('Kč');
   });
 
-  it('formats decimal with comma', () => {
-    expect(formatPrice(12.5)).toBe('12,50 Kč');
+  it('formats CZK decimal', () => {
+    const result = formatCurrency(12.5, 'cs', 'CZK');
+    expect(result).toContain('12');
+    expect(result).toContain('Kč');
   });
 
-  it('round-trips with parsePrice', () => {
-    expect(parsePrice(formatPrice(46))).toBe(46);
-    expect(parsePrice(formatPrice(12.5))).toBe(12.5);
-  });
-});
-
-describe('ensureKc', () => {
-  it('appends " Kč" when missing', () => {
-    expect(ensureKc('100')).toBe('100 Kč');
+  it('formats EUR', () => {
+    const result = formatCurrency(42, 'en', 'EUR');
+    expect(result).toContain('42');
+    expect(result).toContain('€');
   });
 
-  it('does not double-append', () => {
-    expect(ensureKc('100 Kč')).toBe('100 Kč');
+  it('formats USD', () => {
+    const result = formatCurrency(9.99, 'en', 'USD');
+    expect(result).toContain('9');
+    expect(result).toContain('$');
   });
 
-  it('handles case-insensitive "kč"', () => {
-    expect(ensureKc('50 kč')).toBe('50 kč');
+  it('round-trips with parsePrice for CZK', () => {
+    const formatted = formatCurrency(46, 'cs', 'CZK');
+    expect(parsePrice(formatted)).toBe(46);
   });
 });

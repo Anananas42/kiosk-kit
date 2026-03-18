@@ -4,9 +4,9 @@ import type {
   OverviewResponse,
   RecordRequest,
   RecordResponse,
-  ApartmentsResponse,
+  BuyersResponse,
   ItemCountResponse,
-  PastryConfig,
+  PreorderConfig,
   KioskSettings,
 } from '@kioskkit/shared';
 
@@ -23,15 +23,15 @@ export async function fetchCatalog(): Promise<CatalogCategory[]> {
   return res.json();
 }
 
-export async function fetchApartments(): Promise<ApartmentsResponse> {
-  const res = await fetch('/api/apartments');
+export async function fetchBuyers(): Promise<BuyersResponse> {
+  const res = await fetch('/api/buyers');
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    if (body.error === 'apartments_invalid') {
+    if (body.error === 'buyers_invalid') {
       const details = (body.details as string[])?.join('\n• ') ?? '';
       throw new Error(`${body.message}\n\n• ${details}`);
     }
-    throw new Error(`Apartments fetch failed: HTTP ${res.status}`);
+    throw new Error(`Buyers fetch failed: HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -46,8 +46,8 @@ export async function fetchOverview(): Promise<OverviewResponse> {
   return res.json();
 }
 
-export async function fetchPastryConfig(): Promise<PastryConfig> {
-  const res = await fetch('/api/pastry-config');
+export async function fetchPreorderConfig(): Promise<PreorderConfig> {
+  const res = await fetch('/api/preorder-config');
   return res.json();
 }
 

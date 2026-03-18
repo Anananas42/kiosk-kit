@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Store } from '../../db/store.js';
 
-export function adminApartmentsRoute(store: Store) {
+export function adminBuyersRoute(store: Store) {
   const app = new Hono();
 
   app.post('/', async (c) => {
@@ -13,9 +13,9 @@ export function adminApartmentsRoute(store: Store) {
       return c.json({ error: 'Invalid label' }, 400);
     }
     try {
-      store.createApartment(id, label.trim());
+      store.createBuyer(id, label.trim());
     } catch {
-      return c.json({ error: 'Apartment already exists' }, 409);
+      return c.json({ error: 'Buyer already exists' }, 409);
     }
     return c.json({ ok: true }, 201);
   });
@@ -28,7 +28,7 @@ export function adminApartmentsRoute(store: Store) {
     if (typeof label !== 'string' || !label.trim()) {
       return c.json({ error: 'Invalid label' }, 400);
     }
-    store.updateApartment(id, label.trim());
+    store.updateBuyer(id, label.trim());
     return c.json({ ok: true });
   });
 
@@ -37,7 +37,7 @@ export function adminApartmentsRoute(store: Store) {
     if (typeof id !== 'number' || !Number.isInteger(id) || id < 1) {
       return c.json({ error: 'Invalid id' }, 400);
     }
-    store.deleteApartment(id);
+    store.deleteBuyer(id);
     return c.json({ ok: true });
   });
 

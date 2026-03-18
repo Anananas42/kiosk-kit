@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDeliveryDate, noDeliveryDaysSet, isOrderingAllowed, getCurrentWeekday } from './pastry.js';
+import { getDeliveryDate, noDeliveryDaysSet, isOrderingAllowed, getCurrentWeekday } from './preorder.js';
 
 describe('getDeliveryDate', () => {
   it('before 11:00 Prague → next day', () => {

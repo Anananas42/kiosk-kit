@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { getDeliveryDate, formatDateCs, type EvidenceRow } from '@kioskkit/shared';
+import { getDeliveryDate, formatDate, type EvidenceRow } from '@kioskkit/shared';
 import { fetchOverview } from '../api.js';
+import { useT } from '../i18n/index.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
-interface PastryItem { label: string; count: number }
+interface PreorderItem { label: string; count: number }
 
-function aggregatePastryOrders(records: EvidenceRow[], buyer: number, pastryNames: Set<string>, noDeliveryDays?: Set<number>): Record<string, Record<string, PastryItem>> {
-  const dayMap: Record<string, Record<string, PastryItem>> = {};
+function aggregatePreorderOrders(records: EvidenceRow[], buyer: number, preorderNames: Set<string>, noDeliveryDays?: Set<number>): Record<string, Record<string, PreorderItem>> {
+  const dayMap: Record<string, Record<string, PreorderItem>> = {};
 
   for (const r of records) {
-    if (!pastryNames.has(r.category)) continue;
+    if (!preorderNames.has(r.category)) continue;
     if (Number(r.buyer) !== buyer) continue;
     const deliveryDate = getDeliveryDate(r.timestamp, noDeliveryDays);
     if (!deliveryDate) continue;
@@ -22,56 +23,58 @@ function aggregatePastryOrders(records: EvidenceRow[], buyer: number, pastryName
   return dayMap;
 }
 
-interface PastryOrdersOverviewProps {
+interface PreorderOrdersOverviewProps {
   buyer: number;
-  pastryNames: Set<string>;
+  preorderNames: Set<string>;
   noDeliveryDays?: Set<number>;
   onBack: () => void;
+  locale: string;
 }
 
-export default function PastryOrdersOverview({ buyer, pastryNames, noDeliveryDays, onBack }: PastryOrdersOverviewProps) {
+export default function PreorderOrdersOverview({ buyer, preorderNames, noDeliveryDays, onBack, locale }: PreorderOrdersOverviewProps) {
+  const t = useT();
   const [records, setRecords] = useState<EvidenceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOverview()
       .then((data) => setRecords(data.records))
-      .catch(() => setError('Nepodařilo se načíst data.'));
-  }, []);
+      .catch(() => setError(t('preorder.loadError')));
+  }, [t]);
 
-  const dayMap = records ? aggregatePastryOrders(records, buyer, pastryNames, noDeliveryDays) : {};
+  const dayMap = records ? aggregatePreorderOrders(records, buyer, preorderNames, noDeliveryDays) : {};
   const days = Object.keys(dayMap).sort().reverse();
   const hasAny = days.some((day) => Object.values(dayMap[day]).some((v) => v.count > 0));
 
   return (
     <div className="screen">
       <ScreenHeader
-        title={`🥐 Objednávky pečiva #${buyer}`}
+        title={t('preorder.ordersTitle', { buyer })}
         onBack={onBack}
-        backLabel="Zpět"
+        backLabel={t('preorder.back')}
       />
       <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
         {records === null && !error && (
-          <div className="sending-overlay">Načítám…</div>
+          <div className="sending-overlay">{t('common.loading')}</div>
         )}
 
         {records !== null && !hasAny && (
-          <div className="overview-empty">Žádné objednávky pečiva.</div>
+          <div className="overview-empty">{t('preorder.noOrders')}</div>
         )}
 
         {days.map((day) => {
           const items = Object.entries(dayMap[day]).filter(([, v]) => v.count > 0);
           if (items.length === 0) return null;
           return (
-            <div key={day} className="pastry-buyer-section">
-              <div className="pastry-buyer-header">{formatDateCs(day)}</div>
-              <div className="pastry-items">
+            <div key={day} className="preorder-buyer-section">
+              <div className="preorder-buyer-header">{formatDate(day, locale)}</div>
+              <div className="preorder-items">
                 {items.map(([key, v]) => (
-                  <div key={key} className="pastry-item-row">
-                    <span className="pastry-item-name">{v.label}</span>
-                    <span className="pastry-item-qty">{v.count} ks</span>
+                  <div key={key} className="preorder-item-row">
+                    <span className="preorder-item-name">{v.label}</span>
+                    <span className="preorder-item-qty">{t('preorder.unitCount', { count: v.count })}</span>
                   </div>
                 ))}
               </div>

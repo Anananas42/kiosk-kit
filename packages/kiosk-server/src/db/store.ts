@@ -1,49 +1,49 @@
 import type Database from 'better-sqlite3';
 import type {
-  Apartment,
+  Buyer,
   CatalogCategory,
   CatalogItem,
   EvidenceRow,
   KioskSettings,
-  PastryConfig,
+  PreorderConfig,
   RecordEntry,
 } from '@kioskkit/shared';
 
-// ── Apartments ──────────────────────────────────────────────────────────────
+// ── Buyers ──────────────────────────────────────────────────────────────────
 
 export class Store {
   constructor(private db: Database.Database) {}
 
-  // ── Apartments ──────────────────────────────────────────────────────────
+  // ── Buyers ────────────────────────────────────────────────────────────
 
-  getApartments(): Apartment[] {
+  getBuyers(): Buyer[] {
     return this.db
-      .prepare('SELECT id, label FROM apartments ORDER BY id')
-      .all() as Apartment[];
+      .prepare('SELECT id, label FROM buyers ORDER BY id')
+      .all() as Buyer[];
   }
 
-  createApartment(id: number, label: string): void {
+  createBuyer(id: number, label: string): void {
     this.db
-      .prepare('INSERT INTO apartments (id, label) VALUES (?, ?)')
+      .prepare('INSERT INTO buyers (id, label) VALUES (?, ?)')
       .run(id, label);
   }
 
-  updateApartment(id: number, label: string): void {
+  updateBuyer(id: number, label: string): void {
     this.db
-      .prepare('UPDATE apartments SET label = ? WHERE id = ?')
+      .prepare('UPDATE buyers SET label = ? WHERE id = ?')
       .run(label, id);
   }
 
-  deleteApartment(id: number): void {
-    this.db.prepare('DELETE FROM apartments WHERE id = ?').run(id);
+  deleteBuyer(id: number): void {
+    this.db.prepare('DELETE FROM buyers WHERE id = ?').run(id);
   }
 
   // ── Catalog ─────────────────────────────────────────────────────────────
 
   getCatalog(): CatalogCategory[] {
     const cats = this.db
-      .prepare('SELECT id, name, pastry, sort_order FROM catalog_categories ORDER BY sort_order, id')
-      .all() as Array<{ id: number; name: string; pastry: number; sort_order: number }>;
+      .prepare('SELECT id, name, preorder, sort_order FROM catalog_categories ORDER BY sort_order, id')
+      .all() as Array<{ id: number; name: string; preorder: number; sort_order: number }>;
 
     const itemStmt = this.db.prepare(
       'SELECT id, name, quantity, price, dph_rate, sort_order FROM catalog_items WHERE category_id = ? ORDER BY sort_order, id',
@@ -56,7 +56,7 @@ export class Store {
       return {
         id: String(cat.id),
         name: cat.name,
-        pastry: cat.pastry === 1,
+        preorder: cat.preorder === 1,
         items: items.map((it): CatalogItem => ({
           id: String(it.id),
           name: it.name,
@@ -68,17 +68,17 @@ export class Store {
     });
   }
 
-  createCategory(name: string, pastry: boolean, sortOrder: number): number {
+  createCategory(name: string, preorder: boolean, sortOrder: number): number {
     const result = this.db
-      .prepare('INSERT INTO catalog_categories (name, pastry, sort_order) VALUES (?, ?, ?)')
-      .run(name, pastry ? 1 : 0, sortOrder);
+      .prepare('INSERT INTO catalog_categories (name, preorder, sort_order) VALUES (?, ?, ?)')
+      .run(name, preorder ? 1 : 0, sortOrder);
     return Number(result.lastInsertRowid);
   }
 
-  updateCategory(id: number, name: string, pastry: boolean, sortOrder: number): void {
+  updateCategory(id: number, name: string, preorder: boolean, sortOrder: number): void {
     this.db
-      .prepare('UPDATE catalog_categories SET name = ?, pastry = ?, sort_order = ? WHERE id = ?')
-      .run(name, pastry ? 1 : 0, sortOrder, id);
+      .prepare('UPDATE catalog_categories SET name = ?, preorder = ?, sort_order = ? WHERE id = ?')
+      .run(name, preorder ? 1 : 0, sortOrder, id);
   }
 
   deleteCategory(id: number): void {
@@ -161,6 +161,9 @@ export class Store {
       idleDimMs: Number(map.idleDimMs) || 0,
       inactivityTimeoutMs: Number(map.inactivityTimeoutMs) || 0,
       maintenance: map.maintenance === 'true',
+      locale: map.locale || 'cs',
+      currency: map.currency || 'CZK',
+      buyerNoun: map.buyerNoun || 'apartmán',
     };
   }
 
@@ -173,11 +176,11 @@ export class Store {
       .run(key, value);
   }
 
-  // ── Pastry Config ───────────────────────────────────────────────────────
+  // ── Preorder Config ───────────────────────────────────────────────────────
 
-  getPastryConfig(): PastryConfig | null {
+  getPreorderConfig(): PreorderConfig | null {
     const rows = this.db
-      .prepare('SELECT weekday, ordering, delivery FROM pastry_config ORDER BY weekday')
+      .prepare('SELECT weekday, ordering, delivery FROM preorder_config ORDER BY weekday')
       .all() as Array<{ weekday: number; ordering: number; delivery: number }>;
     if (rows.length === 0) return null;
 
@@ -190,10 +193,10 @@ export class Store {
     return { orderingDays, deliveryDays };
   }
 
-  putPastryConfig(weekday: number, ordering: boolean, delivery: boolean): void {
+  putPreorderConfig(weekday: number, ordering: boolean, delivery: boolean): void {
     this.db
       .prepare(
-        `INSERT INTO pastry_config (weekday, ordering, delivery) VALUES (?, ?, ?)
+        `INSERT INTO preorder_config (weekday, ordering, delivery) VALUES (?, ?, ?)
          ON CONFLICT(weekday) DO UPDATE SET ordering = excluded.ordering, delivery = excluded.delivery`,
       )
       .run(weekday, ordering ? 1 : 0, delivery ? 1 : 0);

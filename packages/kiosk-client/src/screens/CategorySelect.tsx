@@ -1,4 +1,5 @@
 import type { CatalogCategory } from '@kioskkit/shared';
+import { useT } from '../i18n/index.js';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
@@ -7,20 +8,21 @@ interface CategorySelectProps {
   catalog: CatalogCategory[];
   onSelect: (category: CatalogCategory) => void;
   onOverview: () => void;
-  onPastry: () => void;
+  onPreorder: () => void;
   onMainMenu: () => void;
 }
 
-export default function CategorySelect({ buyerLabel, catalog, onSelect, onOverview, onPastry, onMainMenu }: CategorySelectProps) {
-  const mainCategories = catalog.filter((cat) => !cat.pastry);
+export default function CategorySelect({ buyerLabel, catalog, onSelect, onOverview, onPreorder, onMainMenu }: CategorySelectProps) {
+  const t = useT();
+  const mainCategories = catalog.filter((cat) => !cat.preorder);
 
   return (
     <div className="screen">
       <ScreenHeader
-        title="📋 Vyberte kategorii"
+        title={t('category.title')}
         onBack={onMainMenu}
-        backLabel="Změnit kupujícího"
-        crumbs={[{ label: 'Kupující', value: buyerLabel }]}
+        backLabel={t('category.changeBuyer')}
+        crumbs={[{ label: t('category.buyer'), value: buyerLabel }]}
       />
       <div className="screen-body">
         <div className="tile-grid tile-grid--categories">
@@ -34,8 +36,8 @@ export default function CategorySelect({ buyerLabel, catalog, onSelect, onOvervi
           ))}
         </div>
         <div className="category-footer">
-          <Tile label="Objednat pečivo" icon="🥐" variant="overview" onClick={onPastry} />
-          <Tile label="Přehled konzumace" icon="📊" variant="overview" onClick={onOverview} />
+          <Tile label={t('category.preorder')} icon="🥐" variant="overview" onClick={onPreorder} />
+          <Tile label={t('category.overview')} icon="📊" variant="overview" onClick={onOverview} />
         </div>
       </div>
     </div>

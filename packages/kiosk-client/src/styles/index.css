@@ -430,13 +430,13 @@ body {
   color: var(--color-muted);
 }
 
-/* Pastry confirm layout — compact to fit everything */
-.screen-body--pastry-confirm {
+/* Preorder confirm layout — compact to fit everything */
+.screen-body--preorder-confirm {
   gap: 6px;
   padding: 8px 12px;
 }
 
-.pastry-confirm-summary {
+.preorder-confirm-summary {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -452,50 +452,50 @@ body {
   flex-shrink: 0;
 }
 
-.pastry-confirm-summary__sep {
+.preorder-confirm-summary__sep {
   color: var(--color-muted);
   opacity: 0.5;
 }
 
-.pastry-confirm-qty {
+.preorder-confirm-qty {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.pastry-confirm-qty .tile-grid--quantity {
+.preorder-confirm-qty .tile-grid--quantity {
   flex: 1;
   min-height: 0;
 }
 
-.pastry-confirm-qty .tile {
+.preorder-confirm-qty .tile {
   max-height: 30vh;
 }
 
-.confirm-actions--pastry .btn-confirm--add {
+.confirm-actions--preorder .btn-confirm--add {
   min-height: 70px;
   font-size: 2.2rem;
   flex: 2;
 }
 
-.confirm-actions--pastry .btn-confirm--remove {
+.confirm-actions--preorder .btn-confirm--remove {
   min-height: 50px;
   font-size: 1.7rem;
   flex: 1;
 }
 
-.confirm-actions--pastry .confirm-storno-gate {
+.confirm-actions--preorder .confirm-storno-gate {
   min-height: 50px;
   flex: 1;
 }
 
-.confirm-actions--pastry .confirm-storno-gate__label {
+.confirm-actions--preorder .confirm-storno-gate__label {
   font-size: 1.4rem;
 }
 
-.confirm-actions--pastry .btn-confirm--remove-yes,
-.confirm-actions--pastry .btn-confirm--remove-no {
+.confirm-actions--preorder .btn-confirm--remove-yes,
+.confirm-actions--preorder .btn-confirm--remove-no {
   font-size: 1.3rem;
 }
 
@@ -691,8 +691,8 @@ body {
   text-align: center;
 }
 
-/* ===== Pastry ordering disabled banner ===== */
-.pastry-ordering-disabled {
+/* ===== Preorder ordering disabled banner ===== */
+.preorder-ordering-disabled {
   background: #fef2f2;
   border: 2px solid var(--color-remove);
   border-radius: var(--radius);
@@ -728,15 +728,15 @@ body {
   flex-shrink: 0;
 }
 
-/* ===== Pastry orders overview ===== */
-.pastry-buyer-section {
+/* ===== Preorder orders overview ===== */
+.preorder-buyer-section {
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
-.pastry-buyer-header {
+.preorder-buyer-header {
   background: var(--color-neutral);
   color: #fff;
   font-size: 1.1rem;
@@ -744,15 +744,15 @@ body {
   padding: 10px 16px;
 }
 
-.pastry-day-section {
+.preorder-day-section {
   border-top: 1px solid var(--color-border);
 }
 
-.pastry-day-section:first-of-type {
+.preorder-day-section:first-of-type {
   border-top: none;
 }
 
-.pastry-day-header {
+.preorder-day-header {
   background: #f8fafc;
   color: var(--color-neutral);
   font-size: 0.85rem;
@@ -763,12 +763,12 @@ body {
   border-bottom: 1px solid var(--color-border);
 }
 
-.pastry-items {
+.preorder-items {
   display: flex;
   flex-direction: column;
 }
 
-.pastry-item-row {
+.preorder-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -777,15 +777,15 @@ body {
   border-bottom: 1px solid var(--color-border);
 }
 
-.pastry-item-row:last-child {
+.preorder-item-row:last-child {
   border-bottom: none;
 }
 
-.pastry-item-name {
+.preorder-item-name {
   font-weight: 600;
 }
 
-.pastry-item-qty {
+.preorder-item-qty {
   font-weight: 700;
   color: var(--color-add);
   font-size: 1.1rem;

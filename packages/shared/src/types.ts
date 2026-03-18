@@ -1,4 +1,4 @@
-export interface Apartment {
+export interface Buyer {
   id: number;
   label: string;
 }
@@ -14,7 +14,7 @@ export interface CatalogItem {
 export interface CatalogCategory {
   id: string;
   name: string;
-  pastry: boolean;
+  preorder: boolean;
   items: CatalogItem[];
 }
 
@@ -64,8 +64,8 @@ export interface OverviewResponse {
   records: EvidenceRow[];
 }
 
-export interface ApartmentsResponse {
-  apartments: Apartment[];
+export interface BuyersResponse {
+  buyers: Buyer[];
 }
 
 export interface ItemCountResponse {
@@ -80,10 +80,16 @@ export interface KioskSettings {
   inactivityTimeoutMs: number;
   /** When true, show maintenance screen and block all interaction. */
   maintenance: boolean;
+  /** UI locale code (e.g. "cs", "en"). */
+  locale: string;
+  /** ISO 4217 currency code (e.g. "CZK", "EUR"). */
+  currency: string;
+  /** Display noun for the buyer entity (e.g. "apartmán", "room"). */
+  buyerNoun: string;
 }
 
-/** Pastry ordering/delivery configuration per weekday. */
-export interface PastryConfig {
+/** Preorder ordering/delivery configuration per weekday. */
+export interface PreorderConfig {
   /** Whether ordering is allowed on each weekday (index 0=Sunday, 6=Saturday). */
   orderingDays: boolean[];
   /** Whether delivery happens on each weekday (index 0=Sunday, 6=Saturday). */

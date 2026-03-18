@@ -7,21 +7,21 @@ export function adminCatalogRoute(store: Store) {
   // ── Categories ──────────────────────────────────────────────────────────
 
   app.post('/categories', async (c) => {
-    const { name, pastry, sortOrder } = await c.req.json();
+    const { name, preorder, sortOrder } = await c.req.json();
     if (typeof name !== 'string' || !name.trim()) {
       return c.json({ error: 'Invalid name' }, 400);
     }
-    const id = store.createCategory(name.trim(), !!pastry, Number(sortOrder) || 0);
+    const id = store.createCategory(name.trim(), !!preorder, Number(sortOrder) || 0);
     return c.json({ ok: true, id }, 201);
   });
 
   app.put('/categories', async (c) => {
-    const { id, name, pastry, sortOrder } = await c.req.json();
+    const { id, name, preorder, sortOrder } = await c.req.json();
     if (typeof id !== 'number') return c.json({ error: 'Invalid id' }, 400);
     if (typeof name !== 'string' || !name.trim()) {
       return c.json({ error: 'Invalid name' }, 400);
     }
-    store.updateCategory(id, name.trim(), !!pastry, Number(sortOrder) || 0);
+    store.updateCategory(id, name.trim(), !!preorder, Number(sortOrder) || 0);
     return c.json({ ok: true });
   });
 

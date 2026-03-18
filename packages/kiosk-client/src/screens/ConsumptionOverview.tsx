@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { parsePrice, type EvidenceRow } from '@kioskkit/shared';
+import { parsePrice, formatCurrency, type EvidenceRow } from '@kioskkit/shared';
 import { fetchOverview } from '../api.js';
+import { useT } from '../i18n/index.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
 interface AggregatedItem {
@@ -22,8 +23,6 @@ function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, A
 
     if (!map[key]) map[key] = { label, added: 0, removed: 0, addedKc: 0, removedKc: 0, unitPrice: 0 };
 
-    // r.price is the signed total (unitPrice * count) from the evidence sheet,
-    // so derive the unit price by dividing by absolute count
     const absCount = Math.abs(r.count);
     const signedTotal = parsePrice(r.price);
     const unitPrice = absCount > 0 ? signedTotal / absCount : 0;
@@ -48,17 +47,22 @@ function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, A
 interface ConsumptionOverviewProps {
   buyer: number;
   onBack: () => void;
+  locale: string;
+  currency: string;
 }
 
-export default function ConsumptionOverview({ buyer, onBack }: ConsumptionOverviewProps) {
+export default function ConsumptionOverview({ buyer, onBack, locale, currency }: ConsumptionOverviewProps) {
+  const t = useT();
   const [records, setRecords] = useState<EvidenceRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const fmt = (amount: number) => formatCurrency(amount, locale, currency);
 
   useEffect(() => {
     fetchOverview()
       .then((data) => setRecords(data.records))
-      .catch(() => setError('Nepodařilo se načíst data.'));
-  }, []);
+      .catch(() => setError(t('overview.loadError')));
+  }, [t]);
 
   const byItem = records ? aggregateItems(records, buyer) : {};
   const items = Object.entries(byItem).filter(([, v]) => v.added > 0);
@@ -68,28 +72,28 @@ export default function ConsumptionOverview({ buyer, onBack }: ConsumptionOvervi
   return (
     <div className="screen">
       <ScreenHeader
-        title={`📊 Konzumace #${buyer}`}
+        title={t('overview.title', { buyer })}
         onBack={onBack}
-        backLabel="Zpět"
+        backLabel={t('overview.back')}
       />
       <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
         {records === null && !error && (
-          <div className="sending-overlay">Načítám…</div>
+          <div className="sending-overlay">{t('overview.loading')}</div>
         )}
 
         {records !== null && (
           items.length === 0 ? (
-            <div className="overview-empty">Žádná konzumace.</div>
+            <div className="overview-empty">{t('overview.empty')}</div>
           ) : (
             <div className="overview-grid">
               <div className="overview-row overview-row--header">
-                <span>Položka</span>
-                <span>Ks</span>
-                <span>Přidáno</span>
-                <span>Storno</span>
-                <span>Celkem</span>
+                <span>{t('overview.headerItem')}</span>
+                <span>{t('overview.headerQty')}</span>
+                <span>{t('overview.headerAdded')}</span>
+                <span>{t('overview.headerStorno')}</span>
+                <span>{t('overview.headerTotal')}</span>
               </div>
               {items.map(([key, v]) => {
                 const net = v.added - v.removed;
@@ -99,23 +103,23 @@ export default function ConsumptionOverview({ buyer, onBack }: ConsumptionOvervi
                     <span className="overview-item-name">{v.label}</span>
                     <span className="overview-net overview-net--pos">{net}</span>
                     <span className="overview-net overview-net--pos">
-                      {v.addedKc > 0 ? `${v.addedKc.toFixed(0)} Kč` : '—'}
+                      {v.addedKc > 0 ? fmt(v.addedKc) : t('overview.dash')}
                     </span>
                     <span className="overview-net overview-net--neg">
-                      {v.removedKc > 0 ? `−${v.removedKc.toFixed(0)} Kč` : '—'}
+                      {v.removedKc > 0 ? `−${fmt(v.removedKc)}` : t('overview.dash')}
                     </span>
                     <span className="overview-net overview-net--pos">
-                      {`${lineTotal.toFixed(0)} Kč`}
+                      {fmt(lineTotal)}
                     </span>
                   </div>
                 );
               })}
               <div className="overview-row overview-row--total">
-                <span>Celkem</span>
+                <span>{t('overview.total')}</span>
                 <span></span>
-                <span>{total > 0 || totalStorno > 0 ? `${(total + totalStorno).toFixed(0)} Kč` : '—'}</span>
-                <span>{totalStorno > 0 ? `−${totalStorno.toFixed(0)} Kč` : '—'}</span>
-                <span className="overview-net">{total.toFixed(0)} Kč</span>
+                <span>{total > 0 || totalStorno > 0 ? fmt(total + totalStorno) : t('overview.dash')}</span>
+                <span>{totalStorno > 0 ? `−${fmt(totalStorno)}` : t('overview.dash')}</span>
+                <span className="overview-net">{fmt(total)}</span>
               </div>
             </div>
           )

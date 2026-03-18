@@ -32,18 +32,18 @@ export function reportsRoute(store: Store) {
     return c.json({ rows });
   });
 
-  app.get('/pastry', (c) => {
-    const config = store.getPastryConfig();
+  app.get('/preorders', (c) => {
+    const config = store.getPreorderConfig();
     const noDelivery = config ? noDeliveryDaysSet(config.deliveryDays) : new Set<number>();
 
     const records = store.getRecords();
     const catalog = store.getCatalog();
-    const pastryCategories = new Set(catalog.filter((cat) => cat.pastry).map((cat) => cat.name));
+    const preorderCategories = new Set(catalog.filter((cat) => cat.preorder).map((cat) => cat.name));
 
-    const pastryRecords = records.filter((r) => pastryCategories.has(r.category));
+    const preorderRecords = records.filter((r) => preorderCategories.has(r.category));
 
     const byDate = new Map<string, Map<string, number>>();
-    for (const r of pastryRecords) {
+    for (const r of preorderRecords) {
       const date = getDeliveryDate(r.timestamp, noDelivery);
       if (!date) continue;
       let dateMap = byDate.get(date);

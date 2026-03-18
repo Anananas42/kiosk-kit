@@ -1,7 +1,7 @@
 import { TZ } from './constants.js';
 
 /**
- * Calculate pastry delivery date from an order timestamp.
+ * Calculate preorder delivery date from an order timestamp.
  * Orders before 11:00 Prague time → next day.
  * Orders at or after 11:00 → day after next.
  * Then skips any days in noDeliveryDays (weekday indices, 0=Sunday).
@@ -37,10 +37,10 @@ export function getDeliveryDate(timestamp: string, noDeliveryDays?: Set<number>)
 
 /**
  * Get a human-readable delivery date for display.
- * Uses Europe/Prague timezone for "now".
- * Returns e.g. "pondělí 15. 3."
+ * Uses the configured timezone for "now".
+ * Returns a locale-formatted string like "pondělí 15. 3." (cs) or "Monday, March 15" (en).
  */
-export function getDeliveryDateLabel(noDeliveryDays?: Set<number>): string {
+export function getDeliveryDateLabel(noDeliveryDays?: Set<number>, locale: string = 'cs'): string {
   const now = new Date();
   const deliveryDate = getDeliveryDate(now.toISOString(), noDeliveryDays);
   if (!deliveryDate) return '';
@@ -48,13 +48,15 @@ export function getDeliveryDateLabel(noDeliveryDays?: Set<number>): string {
   const [y, m, d] = deliveryDate.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
 
-  const DAYS_CS = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
-  const day = DAYS_CS[date.getUTCDay()];
-  return `${day} ${d}. ${m}.`;
+  return date.toLocaleDateString(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+  });
 }
 
 /**
- * Get the current weekday index (0=Sunday) in Prague timezone.
+ * Get the current weekday index (0=Sunday) in the configured timezone.
  */
 export function getCurrentWeekday(): number {
   const now = new Date();
@@ -66,21 +68,21 @@ export function getCurrentWeekday(): number {
 }
 
 /**
- * Check whether pastry ordering is currently allowed.
- * Returns true if today (Prague time) is a valid ordering day.
+ * Check whether preorder ordering is currently allowed.
+ * Returns true if today (configured timezone) is a valid ordering day.
  */
 export function isOrderingAllowed(orderingDays: boolean[]): boolean {
   return orderingDays[getCurrentWeekday()] !== false;
 }
 
 /**
- * Format an ISO date string to Czech long format.
- * e.g. "2026-03-14" → "pátek 14. března 2026"
+ * Format an ISO date string using Intl.DateTimeFormat.
+ * e.g. "2026-03-14" → "pátek 14. března 2026" (cs) or "Friday, March 14, 2026" (en)
  */
-export function formatDateCs(isoDate: string): string {
+export function formatDate(isoDate: string, locale: string = 'cs'): string {
   const [y, m, d] = isoDate.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('cs-CZ', {
+  return date.toLocaleDateString(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

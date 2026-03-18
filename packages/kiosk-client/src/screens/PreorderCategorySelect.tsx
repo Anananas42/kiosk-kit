@@ -1,8 +1,9 @@
 import type { CatalogCategory } from '@kioskkit/shared';
+import { useT } from '../i18n/index.js';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
-interface PastryCategorySelectProps {
+interface PreorderCategorySelectProps {
   buyerLabel: string;
   categories: CatalogCategory[];
   orderingAllowed: boolean;
@@ -11,19 +12,20 @@ interface PastryCategorySelectProps {
   onBack: () => void;
 }
 
-export default function PastryCategorySelect({ buyerLabel, categories, orderingAllowed, onSelect, onViewOrders, onBack }: PastryCategorySelectProps) {
+export default function PreorderCategorySelect({ buyerLabel, categories, orderingAllowed, onSelect, onViewOrders, onBack }: PreorderCategorySelectProps) {
+  const t = useT();
   return (
     <div className="screen">
       <ScreenHeader
-        title="🥐 Objednat pečivo"
+        title={t('preorder.title')}
         onBack={onBack}
-        backLabel="Zpět na kategorie"
-        crumbs={[{ label: 'Kupující', value: buyerLabel }]}
+        backLabel={t('preorder.backToCategories')}
+        crumbs={[{ label: t('preorder.buyer'), value: buyerLabel }]}
       />
       <div className="screen-body">
         {!orderingAllowed && (
-          <div className="pastry-ordering-disabled">
-            Objednávky pečiva dnes nejsou k dispozici.
+          <div className="preorder-ordering-disabled">
+            {t('preorder.orderingDisabled')}
           </div>
         )}
         {orderingAllowed && (
@@ -39,7 +41,7 @@ export default function PastryCategorySelect({ buyerLabel, categories, orderingA
           </div>
         )}
         <div className="category-footer">
-          <Tile label="Přehled objednávek" icon="📋" variant="overview" onClick={onViewOrders} />
+          <Tile label={t('preorder.viewOrders')} icon="📋" variant="overview" onClick={onViewOrders} />
         </div>
       </div>
     </div>

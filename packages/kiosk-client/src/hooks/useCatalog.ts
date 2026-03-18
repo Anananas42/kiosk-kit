@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CATALOG_RELOAD_INTERVAL_MS, DEFAULT_KIOSK_SETTINGS, type CatalogCategory, type Apartment, type PastryConfig, type KioskSettings } from '@kioskkit/shared';
-import { fetchCatalog, fetchApartments, fetchPastryConfig, fetchSettings } from '../api.js';
+import { CATALOG_RELOAD_INTERVAL_MS, DEFAULT_KIOSK_SETTINGS, type CatalogCategory, type Buyer, type PreorderConfig, type KioskSettings } from '@kioskkit/shared';
+import { fetchCatalog, fetchBuyers, fetchPreorderConfig, fetchSettings } from '../api.js';
 import { cacheGet, cacheSet } from '../utils/cache.js';
 
-const DEFAULT_PASTRY_CONFIG: PastryConfig = {
+const DEFAULT_PREORDER_CONFIG: PreorderConfig = {
   orderingDays: Array(7).fill(true),
   deliveryDays: Array(7).fill(true),
 };
 
 export function useCatalog() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>(() => cacheGet<CatalogCategory[]>('catalog') ?? []);
-  const [apartments, setApartments] = useState<Apartment[]>(() => cacheGet<Apartment[]>('apartments') ?? []);
-  const [pastryConfig, setPastryConfig] = useState<PastryConfig>(() => cacheGet<PastryConfig>('pastryConfig') ?? DEFAULT_PASTRY_CONFIG);
+  const [buyers, setBuyers] = useState<Buyer[]>(() => cacheGet<Buyer[]>('buyers') ?? []);
+  const [preorderConfig, setPreorderConfig] = useState<PreorderConfig>(() => cacheGet<PreorderConfig>('preorderConfig') ?? DEFAULT_PREORDER_CONFIG);
   const [settings, setSettings] = useState<KioskSettings>(() => cacheGet<KioskSettings>('settings') ?? DEFAULT_KIOSK_SETTINGS);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [apartmentError, setApartmentError] = useState<string | null>(null);
+  const [buyerError, setBuyerError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetchCatalog()
@@ -25,25 +25,25 @@ export function useCatalog() {
       })
       .catch((err) => {
         console.error('Catalog load error:', err);
-        setCatalogError(err instanceof Error ? err.message : 'Nelze načíst katalog.');
+        setCatalogError(err instanceof Error ? err.message : 'Failed to load catalog.');
       });
-    fetchApartments()
+    fetchBuyers()
       .then((data) => {
-        setApartments(data.apartments);
-        cacheSet('apartments', data.apartments);
-        setApartmentError(null);
+        setBuyers(data.buyers);
+        cacheSet('buyers', data.buyers);
+        setBuyerError(null);
       })
       .catch((err) => {
-        console.error('Apartments load error:', err);
-        setApartmentError(err instanceof Error ? err.message : 'Nelze načíst apartmány.');
+        console.error('Buyers load error:', err);
+        setBuyerError(err instanceof Error ? err.message : 'Failed to load buyers.');
       });
-    fetchPastryConfig()
+    fetchPreorderConfig()
       .then((data) => {
-        setPastryConfig(data);
-        cacheSet('pastryConfig', data);
+        setPreorderConfig(data);
+        cacheSet('preorderConfig', data);
       })
       .catch((err) => {
-        console.error('Pastry config load error:', err);
+        console.error('Preorder config load error:', err);
       });
     fetchSettings()
       .then((data) => {
@@ -57,7 +57,7 @@ export function useCatalog() {
 
   useEffect(() => { load(); }, [load]);
 
-  const error = catalogError ?? apartmentError;
+  const error = catalogError ?? buyerError;
 
   useEffect(() => {
     // Poll every 10s while in error state, normal interval otherwise
@@ -66,5 +66,5 @@ export function useCatalog() {
     return () => clearInterval(id);
   }, [load, error]);
 
-  return { catalog, apartments, pastryConfig, settings, reload: load, error };
+  return { catalog, buyers, preorderConfig, settings, reload: load, error };
 }

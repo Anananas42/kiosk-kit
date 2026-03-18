@@ -1,22 +1,23 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type Apartment, type CatalogCategory, type CatalogItem } from '@kioskkit/shared';
+import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type Buyer, type CatalogCategory, type CatalogItem } from '@kioskkit/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
 import { useInactivityReset } from './hooks/useInactivityReset.js';
 import { useIdleDim } from './hooks/useIdleDim.js';
 import { enqueueRecord, startFlushTimer } from './utils/submitQueue.js';
+import { I18nProvider, useT } from './i18n/index.js';
 import OfflineBanner from './components/OfflineBanner.js';
 import SuccessFlash from './components/SuccessFlash.js';
 import BuyerSelect from './screens/BuyerSelect.js';
 import CategorySelect from './screens/CategorySelect.js';
-import PastryCategorySelect from './screens/PastryCategorySelect.js';
+import PreorderCategorySelect from './screens/PreorderCategorySelect.js';
 import ItemSelect from './screens/ItemSelect.js';
 import Confirm from './screens/Confirm.js';
 import ConsumptionOverview from './screens/ConsumptionOverview.js';
-import PastryOrdersOverview from './screens/PastryOrdersOverview.js';
+import PreorderOrdersOverview from './screens/PreorderOrdersOverview.js';
 
-type Screen = 'buyer' | 'category' | 'pastry-category' | 'item' | 'confirm' | 'overview' | 'pastry-orders';
+type Screen = 'buyer' | 'category' | 'preorder-category' | 'item' | 'confirm' | 'overview' | 'preorder-orders';
 
 interface AppState {
   screen: Screen;
@@ -45,8 +46,34 @@ const INITIAL_STATE: AppState = {
   item: null,
 };
 
-
 export default function App() {
+  const { catalog, buyers, preorderConfig, settings, reload, error: catalogError } = useCatalog();
+
+  return (
+    <I18nProvider locale={settings.locale}>
+      <AppInner
+        catalog={catalog}
+        buyers={buyers}
+        preorderConfig={{ orderingDays: preorderConfig.orderingDays, deliveryDays: preorderConfig.deliveryDays }}
+        settings={settings}
+        reload={reload}
+        catalogError={catalogError}
+      />
+    </I18nProvider>
+  );
+}
+
+interface AppInnerProps {
+  catalog: CatalogCategory[];
+  buyers: Buyer[];
+  preorderConfig: { orderingDays: boolean[]; deliveryDays: boolean[] };
+  settings: { idleDimMs: number; inactivityTimeoutMs: number; maintenance: boolean; locale: string; currency: string; buyerNoun: string };
+  reload: () => void;
+  catalogError: string | null;
+}
+
+function AppInner({ catalog, buyers, preorderConfig, settings, reload, catalogError }: AppInnerProps) {
+  const t = useT();
   const [state, setState] = useState<AppState>(INITIAL_STATE);
   const [isSending, setIsSending] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -55,13 +82,12 @@ export default function App() {
   const repeatTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const isOffline = useHealth();
-  const { catalog, apartments, pastryConfig, settings, reload, error: catalogError } = useCatalog();
   const dimmed = useIdleDim(settings.idleDimMs);
 
-  const pastryCategories = catalog.filter((cat) => cat.pastry);
-  const pastryNames = new Set(pastryCategories.map((cat) => cat.name));
-  const pastryOrderingAllowed = isOrderingAllowed(pastryConfig.orderingDays);
-  const noDeliveryDays = noDeliveryDaysSet(pastryConfig.deliveryDays);
+  const preorderCategories = catalog.filter((cat) => cat.preorder);
+  const preorderNames = new Set(preorderCategories.map((cat) => cat.name));
+  const preorderOrderingAllowed = isOrderingAllowed(preorderConfig.orderingDays);
+  const noDeliveryDays = noDeliveryDaysSet(preorderConfig.deliveryDays);
 
   useEffect(() => { startFlushTimer(); }, []);
 
@@ -86,22 +112,21 @@ export default function App() {
     return () => clearInterval(id);
   }, [state.screen, reload]);
 
-  const handleBuyerSelect = useCallback((apt: Apartment) => {
-    setState((s) => ({ ...s, buyer: apt.id, buyerLabel: formatBuyerLabel(apt.label), screen: 'category' }));
+  const handleBuyerSelect = useCallback((b: Buyer) => {
+    setState((s) => ({ ...s, buyer: b.id, buyerLabel: formatBuyerLabel(b.label), screen: 'category' }));
   }, []);
 
   const handleCategorySelect = useCallback((category: CatalogCategory) => {
     setState((s) => ({ ...s, category, screen: 'item' }));
   }, []);
 
-  const handlePastryEntry = useCallback(() => {
-    // If ordering disabled or multiple categories, show the pastry category screen
-    if (!pastryOrderingAllowed || pastryCategories.length !== 1) {
-      setState((s) => ({ ...s, screen: 'pastry-category' }));
+  const handlePreorderEntry = useCallback(() => {
+    if (!preorderOrderingAllowed || preorderCategories.length !== 1) {
+      setState((s) => ({ ...s, screen: 'preorder-category' }));
     } else {
-      setState((s) => ({ ...s, category: pastryCategories[0], screen: 'item' }));
+      setState((s) => ({ ...s, category: preorderCategories[0], screen: 'item' }));
     }
-  }, [pastryCategories, pastryOrderingAllowed]);
+  }, [preorderCategories, preorderOrderingAllowed]);
 
   const handleItemSelect = useCallback((item: CatalogItem) => {
     setConfirmError(null);
@@ -110,8 +135,8 @@ export default function App() {
 
   const handleBackToCategory = useCallback(() => {
     setState((s) => {
-      if (s.category?.pastry) {
-        return { ...s, item: null, category: null, screen: 'pastry-category' };
+      if (s.category?.preorder) {
+        return { ...s, item: null, category: null, screen: 'preorder-category' };
       }
       return { ...s, item: null, category: null, screen: 'category' };
     });
@@ -130,7 +155,7 @@ export default function App() {
   }, [lastOrder]);
 
   const handleConfirm = useCallback(async (operation: '+' | '-', quantity: number) => {
-    const isPastry = state.category!.pastry;
+    const isPreorder = state.category!.preorder;
     const count = operation === '+' ? quantity : -quantity;
 
     const recordData = {
@@ -145,10 +170,10 @@ export default function App() {
 
     if (operation === '+') {
       enqueueRecord(recordData);
-      const label = isPastry
+      const label = isPreorder
         ? `${quantity}\u00d7 ${state.item!.name}`
         : state.item!.name;
-      setLastSuccess(`Přidáno: ${label}`);
+      setLastSuccess(t('app.added', { label }));
       setLastOrder({
         buyer: state.buyer!,
         buyerLabel: state.buyerLabel!,
@@ -163,28 +188,28 @@ export default function App() {
     setIsSending(true);
     try {
       await postRecord(recordData);
-      setLastSuccess(`Odebráno: ${state.item!.name}`);
+      setLastSuccess(t('app.removed', { label: state.item!.name }));
       reset();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg === 'insufficient_balance') {
-        setConfirmError(`Kupující ${state.buyerLabel} nemá žádný „${state.item!.name}" k odebrání.`);
+        setConfirmError(t('app.insufficientBalance', { buyer: state.buyerLabel!, item: state.item!.name }));
       } else {
         console.error('Record error:', err);
-        setConfirmError('Připojení selhalo. Zkuste to znovu.');
+        setConfirmError(t('app.connectionFailed'));
       }
     } finally {
       setIsSending(false);
     }
-  }, [state, reset]);
+  }, [state, reset, t]);
 
   if (settings.maintenance) {
     return (
       <div className="app">
         <div className="maintenance-screen">
           <div className="maintenance-screen__icon">🔧</div>
-          <div className="maintenance-screen__title">Údržba</div>
-          <div className="maintenance-screen__message">Kiosek je dočasně mimo provoz.</div>
+          <div className="maintenance-screen__title">{t('app.maintenance.title')}</div>
+          <div className="maintenance-screen__message">{t('app.maintenance.message')}</div>
         </div>
       </div>
     );
@@ -196,7 +221,7 @@ export default function App() {
       <div className="toast-layer">
         {secondsLeft !== null && (
           <div className="inactivity-warning" onClick={dismissWarning}>
-            Neaktivita — resetuji za {secondsLeft}s &middot; <strong>Klepněte pro pokračování</strong>
+            {t('app.inactivityWarning', { seconds: secondsLeft })}
           </div>
         )}
       </div>
@@ -209,11 +234,12 @@ export default function App() {
 
       {state.screen === 'buyer' && (
         <BuyerSelect
-          apartments={apartments}
+          buyers={buyers}
           onSelect={handleBuyerSelect}
           error={catalogError}
           lastOrder={lastOrder}
           onRepeat={handleRepeat}
+          buyerNoun={settings.buyerNoun}
         />
       )}
 
@@ -223,18 +249,18 @@ export default function App() {
           catalog={catalog}
           onSelect={handleCategorySelect}
           onOverview={() => setState((s) => ({ ...s, screen: 'overview' }))}
-          onPastry={handlePastryEntry}
+          onPreorder={handlePreorderEntry}
           onMainMenu={reset}
         />
       )}
 
-      {state.screen === 'pastry-category' && state.buyer !== null && state.buyerLabel !== null && (
-        <PastryCategorySelect
+      {state.screen === 'preorder-category' && state.buyer !== null && state.buyerLabel !== null && (
+        <PreorderCategorySelect
           buyerLabel={state.buyerLabel}
-          categories={pastryCategories}
-          orderingAllowed={pastryOrderingAllowed}
+          categories={preorderCategories}
+          orderingAllowed={preorderOrderingAllowed}
           onSelect={handleCategorySelect}
-          onViewOrders={() => setState((s) => ({ ...s, screen: 'pastry-orders' }))}
+          onViewOrders={() => setState((s) => ({ ...s, screen: 'preorder-orders' }))}
           onBack={() => setState((s) => ({ ...s, screen: 'category' }))}
         />
       )}
@@ -245,7 +271,8 @@ export default function App() {
           category={state.category}
           onSelect={handleItemSelect}
           onBack={handleBackToCategory}
-          backLabel={state.category.pastry ? 'Zpět na objednat pečivo' : undefined}
+          locale={settings.locale}
+          currency={settings.currency}
         />
       )}
 
@@ -255,13 +282,15 @@ export default function App() {
           buyerLabel={state.buyerLabel}
           category={state.category}
           item={state.item}
-          isPastry={state.category.pastry}
+          isPreorder={state.category.preorder}
           noDeliveryDays={noDeliveryDays}
           onConfirm={handleConfirm}
           onBack={() => setState((s) => ({ ...s, item: null, screen: 'item' }))}
           isSending={isSending}
           error={confirmError}
           onErrorDismiss={() => setConfirmError(null)}
+          locale={settings.locale}
+          currency={settings.currency}
         />
       )}
 
@@ -269,15 +298,18 @@ export default function App() {
         <ConsumptionOverview
           buyer={state.buyer}
           onBack={() => setState((s) => ({ ...s, screen: 'category' }))}
+          locale={settings.locale}
+          currency={settings.currency}
         />
       )}
 
-      {state.screen === 'pastry-orders' && state.buyer !== null && (
-        <PastryOrdersOverview
+      {state.screen === 'preorder-orders' && state.buyer !== null && (
+        <PreorderOrdersOverview
           buyer={state.buyer}
-          pastryNames={pastryNames}
+          preorderNames={preorderNames}
           noDeliveryDays={noDeliveryDays}
-          onBack={() => setState((s) => ({ ...s, screen: state.category ? 'pastry-category' as Screen : 'category' }))}
+          onBack={() => setState((s) => ({ ...s, screen: state.category ? 'preorder-category' as Screen : 'category' }))}
+          locale={settings.locale}
         />
       )}
     </div>

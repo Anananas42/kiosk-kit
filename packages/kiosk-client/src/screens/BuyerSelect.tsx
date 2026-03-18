@@ -1,4 +1,5 @@
-import type { Apartment, CatalogCategory, CatalogItem } from '@kioskkit/shared';
+import type { Buyer, CatalogCategory, CatalogItem } from '@kioskkit/shared';
+import { useT } from '../i18n/index.js';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
@@ -10,21 +11,23 @@ interface LastOrder {
 }
 
 interface BuyerSelectProps {
-  apartments: Apartment[];
-  onSelect: (apt: Apartment) => void;
+  buyers: Buyer[];
+  onSelect: (buyer: Buyer) => void;
   error: string | null;
   lastOrder: LastOrder | null;
   onRepeat: () => void;
+  buyerNoun: string;
 }
 
-export default function BuyerSelect({ apartments, onSelect, error, lastOrder, onRepeat }: BuyerSelectProps) {
+export default function BuyerSelect({ buyers, onSelect, error, lastOrder, onRepeat, buyerNoun }: BuyerSelectProps) {
+  const t = useT();
   return (
     <div className="screen">
       <ScreenHeader
-        title="🏠 Vyberte apartmán"
+        title={t('buyer.title', { buyerNoun })}
         right={lastOrder ? (
           <button className="screen-header__action" onClick={onRepeat} type="button">
-            🔁 Opakovat {lastOrder.buyerLabel} {lastOrder.item.name}
+            {t('buyer.repeat', { buyer: lastOrder.buyerLabel, item: lastOrder.item.name })}
           </button>
         ) : undefined}
       />
@@ -34,18 +37,18 @@ export default function BuyerSelect({ apartments, onSelect, error, lastOrder, on
             <div className="catalog-error__icon">⚠️</div>
             <div className="catalog-error__message">{error}</div>
           </div>
-        ) : apartments.length === 0 ? (
+        ) : buyers.length === 0 ? (
           <div className="empty-state">
-            Načítám&hellip;
+            {t('buyer.loading')}
           </div>
         ) : (
           <div className="tile-grid tile-grid--buyers">
-            {apartments.map((apt) => (
+            {buyers.map((b) => (
               <Tile
-                key={apt.id}
-                label={apt.label}
+                key={b.id}
+                label={b.label}
                 variant="neutral"
-                onClick={() => onSelect(apt)}
+                onClick={() => onSelect(b)}
               />
             ))}
           </div>

@@ -1,5 +1,6 @@
 import type { CatalogCategory, CatalogItem } from '@kioskkit/shared';
-import { ensureKc } from '@kioskkit/shared';
+import { formatCurrency, parsePrice } from '@kioskkit/shared';
+import { useT } from '../i18n/index.js';
 import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
@@ -8,26 +9,31 @@ interface ItemSelectProps {
   category: CatalogCategory;
   onSelect: (item: CatalogItem) => void;
   onBack: () => void;
-  backLabel?: string;
+  locale: string;
+  currency: string;
 }
 
-function itemSubtitle(item: CatalogItem): string {
-  const parts: string[] = [];
-  if (item.quantity) parts.push(item.quantity);
-  if (item.price) parts.push(ensureKc(item.price));
-  return parts.join(' \u00b7 ');
-}
+export default function ItemSelect({ buyerLabel, category, onSelect, onBack, locale, currency }: ItemSelectProps) {
+  const t = useT();
 
-export default function ItemSelect({ buyerLabel, category, onSelect, onBack, backLabel = 'Zpět na kategorie' }: ItemSelectProps) {
+  function itemSubtitle(item: CatalogItem): string {
+    const parts: string[] = [];
+    if (item.quantity) parts.push(item.quantity);
+    if (item.price) parts.push(formatCurrency(parsePrice(item.price), locale, currency));
+    return parts.join(' \u00b7 ');
+  }
+
+  const backLabel = category.preorder ? t('item.backToPreorder') : t('item.backToCategories');
+
   return (
     <div className="screen">
       <ScreenHeader
-        title="🛒 Vyberte položku"
+        title={t('item.title')}
         onBack={onBack}
         backLabel={backLabel}
         crumbs={[
-          { label: 'Kupující', value: buyerLabel },
-          { label: 'Kategorie', value: category.name },
+          { label: t('item.buyer'), value: buyerLabel },
+          { label: t('item.category'), value: category.name },
         ]}
       />
       <div className="screen-body">

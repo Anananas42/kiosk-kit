@@ -1,4 +1,4 @@
-/** Parse a Czech price string like "12,50 Kč" or "12.5" into a number. Returns 0 for invalid. */
+/** Parse a price string like "12,50 Kč", "12.5", or "€12.50" into a number. Returns 0 for invalid. */
 export function parsePrice(str: string): number {
   if (!str) return 0;
   const cleaned = str.replace(/[^\d,.]/g, '');
@@ -10,14 +10,12 @@ export function parsePrice(str: string): number {
   return isNaN(n) ? 0 : n;
 }
 
-/** Format a number as a Czech price string like "12,50 Kč". Drops decimals if whole. */
-export function formatPrice(amount: number): string {
-  const formatted = amount % 1 === 0 ? String(amount) : amount.toFixed(2).replace('.', ',');
-  return `${formatted} Kč`;
-}
-
-/** Ensure a price string ends with " Kč". */
-export function ensureKc(price: string): string {
-  const s = price.trim();
-  return s.toLowerCase().includes('kč') ? s : `${s} Kč`;
+/** Format an amount using Intl.NumberFormat with the given locale and ISO 4217 currency code. */
+export function formatCurrency(amount: number, locale: string, currency: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
 }

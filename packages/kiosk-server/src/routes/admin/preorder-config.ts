@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Store } from '../../db/store.js';
 
-export function adminPastryConfigRoute(store: Store) {
+export function adminPreorderConfigRoute(store: Store) {
   const app = new Hono();
 
   app.put('/', async (c) => {
@@ -9,7 +9,7 @@ export function adminPastryConfigRoute(store: Store) {
     if (typeof weekday !== 'number' || weekday < 0 || weekday > 6) {
       return c.json({ error: 'Invalid weekday (0-6)' }, 400);
     }
-    store.putPastryConfig(weekday, !!ordering, !!delivery);
+    store.putPreorderConfig(weekday, !!ordering, !!delivery);
     return c.json({ ok: true });
   });
 
