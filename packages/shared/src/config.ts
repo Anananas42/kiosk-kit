@@ -2,7 +2,7 @@
 // Centralized timing & behavioral constants for the kiosk app.
 //
 // System-level constants (sway, display-sleep.py) live in their own files
-// under system/config/ — see comments there for display-off timeout (15 min)
+// under system/config/ — see comments there for display-off timeout (45 min)
 // and wake-touch grab hold (1.5s).
 // ---------------------------------------------------------------------------
 

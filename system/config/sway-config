@@ -1,13 +1,13 @@
 # Sway compositor config for kiosk mode.
 # App-level timing constants live in packages/shared/src/config.ts.
-# Display-off timeout (1800s/30min) and wake grab hold (4s) are system-level
+# Display-off timeout (2700s/45min) and wake grab hold (4s) are system-level
 # and kept here / in display-sleep.py respectively.
 
 seat * hide_cursor 1
 default_border none
 default_floating_border none
 
-exec swayidle -w timeout 1800 '/opt/zahumny-kiosk/system/config/display-sleep.py'
+exec swayidle -w timeout 2700 '/opt/zahumny-kiosk/system/config/display-sleep.py'
 
 exec chromium \
     --kiosk \
