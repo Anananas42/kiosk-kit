@@ -14,7 +14,7 @@ Replaces: a whiteboard. That's the pitch. Photo of whiteboard → photo of kiosk
 
 ## What Exists Today
 
-Working production deployment at a family pension. Full source in `zahumny-kiosk` repo.
+Working production deployment at a family pension. Full source in this repo (formerly `zahumny-kiosk`).
 
 ### Current Stack
 - **Client:** React SPA (Vite), works offline with local submit queue

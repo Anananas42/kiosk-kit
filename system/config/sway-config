@@ -7,7 +7,7 @@ seat * hide_cursor 1
 default_border none
 default_floating_border none
 
-exec swayidle -w timeout 2700 '/opt/zahumny-kiosk/system/config/display-sleep.py'
+exec swayidle -w timeout 2700 '/opt/kioskkit/system/config/display-sleep.py'
 
 exec chromium \
     --kiosk \
