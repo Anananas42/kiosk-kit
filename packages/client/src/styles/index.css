@@ -37,7 +37,7 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
