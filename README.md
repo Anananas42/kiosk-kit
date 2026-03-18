@@ -42,7 +42,7 @@ system/              # Raspberry Pi OS-level kiosk config (configs, services)
 ansible/             # Ansible playbooks for Pi provisioning and deploys
 ```
 
-**Tooling**: pnpm workspaces, Turborepo, TypeScript strict mode, Vitest.
+**Tooling**: pnpm workspaces, Turborepo, TypeScript strict mode, Vitest, Biome (lint + format), Docker Compose (local Postgres), Drizzle ORM, GitHub Actions CI.
 
 ## Packages
 
@@ -102,10 +102,13 @@ Static marketing site with an interactive kiosk demo. Astro with React islands f
 
 ```bash
 pnpm install
-pnpm dev          # starts all packages with hot reload (turbo)
-pnpm build        # production build (turbo, cached)
-pnpm typecheck    # type-check all packages
-pnpm test         # vitest
+docker compose up -d  # start local Postgres
+pnpm dev              # starts all packages with hot reload (turbo)
+pnpm build            # production build (turbo, cached)
+pnpm typecheck        # type-check all packages
+pnpm test             # vitest
+pnpm lint             # biome check
+pnpm lint:fix         # biome auto-fix
 ```
 
 Run a single package:
@@ -115,12 +118,27 @@ pnpm --filter @kioskkit/kiosk-server dev
 pnpm --filter @kioskkit/landing dev
 ```
 
+### Database
+
+web-server uses Postgres via Drizzle ORM. Local dev uses Docker Compose:
+
+```bash
+docker compose up -d                          # start Postgres
+pnpm --filter web-server run db:push          # apply schema
+pnpm --filter web-server run db:generate      # generate migrations
+pnpm --filter web-server run db:migrate       # run migrations
+```
+
 ## Environment
 
 | Variable | Used by | Default | Description |
 |----------|---------|---------|-------------|
 | `PORT` | kiosk-server | `3001` | Kiosk API port |
 | `KIOSK_TZ` | shared | `Europe/Prague` | Timezone for delivery date calculations |
+| `DATABASE_URL` | web-server | — | Postgres connection string |
+| `GOOGLE_CLIENT_ID` | web-server | — | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | web-server | — | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | web-server | `http://localhost:3002/api/auth/google/callback` | OAuth redirect URI |
 
 ## Pi Deployment
 

@@ -5,3 +5,4 @@ data/
 *.tsbuildinfo
 .turbo/
 .venv/
+docker-compose.override.yml

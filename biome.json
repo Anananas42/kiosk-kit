@@ -1,0 +1,17 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+  "files": {
+    "includes": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.json"],
+    "experimentalScannerIgnores": ["**/dist/**", "**/node_modules/**", "**/.turbo/**"]
+  },
+  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "correctness": { "noUnusedVariables": "error", "noUnusedImports": "error" },
+      "style": { "noNonNullAssertion": "off" }
+    },
+    "domains": { "react": "all" }
+  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+}

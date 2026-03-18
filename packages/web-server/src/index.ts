@@ -1,13 +1,23 @@
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+import "dotenv/config";
+import { serve } from "@hono/node-server";
+import { createApp } from "./app.js";
+import { createGoogleOAuth } from "./auth/google.js";
+import { createDb } from "./db/index.js";
 
-const app = new Hono();
+const db = createDb(process.env.DATABASE_URL!);
 
-app.use('/api/*', cors());
+const google =
+  process.env.GOOGLE_CLIENT_ID &&
+  process.env.GOOGLE_CLIENT_SECRET &&
+  process.env.GOOGLE_REDIRECT_URI
+    ? createGoogleOAuth(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI,
+      )
+    : undefined;
 
-app.get('/api/health', (c) => c.json({ ok: true }));
-
+const app = createApp(db, google);
 const port = Number(process.env.PORT) || 3002;
 
 serve({ fetch: app.fetch, port }, (info) => {

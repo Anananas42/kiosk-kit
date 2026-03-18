@@ -6,6 +6,8 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
+    "lint": "biome check packages/web-server/src packages/web-client/src",
+    "lint:fix": "biome check --fix packages/web-server/src packages/web-client/src",
     "test": "vitest run",
     "start:kiosk": "node packages/kiosk-server/dist/index.js"
   },
@@ -17,6 +19,7 @@
     ]
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
     "turbo": "^2.5.0",
     "typescript": "^5.7.3",
     "vitest": "^4.1.0"
