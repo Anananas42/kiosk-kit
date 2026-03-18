@@ -47,6 +47,8 @@ The app uses **header-based column lookup** — columns are matched by header na
 
 App-managed sheet tabs are prefixed with `[brackets]` to distinguish them from manual/reporting sheets.
 
+Both the **[Katalog]** and **[Apartment config]** sheets are validated on load. If any row has a missing, malformed (non-integer or ≤ 0), or duplicate ID, the app returns a 503 error with details and blocks usage until the sheet is fixed.
+
 ### Category types (Typ column)
 
 The `Typ` column in the Katalog sheet controls how a category behaves in the UI. Set `Typ` to `pečivo` for pastry categories — these get a quantity picker (1–10), delivery date calculation, and a dedicated orders overview. All other categories (empty `Typ`) use the standard single-item add/remove flow.
@@ -109,7 +111,7 @@ pnpm dev               # starts server + client with hot reload
 pnpm test     # runs all tests (vitest)
 ```
 
-Tests are co-located with source files (`*.test.ts`). Coverage includes price parsing, catalog validation, delivery date calculation (with skip-day logic), balance computation, and header-based column mapping.
+Tests are co-located with source files (`*.test.ts`). Coverage includes price parsing, catalog validation, apartment validation, delivery date calculation (with skip-day logic), balance computation, and header-based column mapping.
 
 ## Building
 
@@ -204,7 +206,7 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 ### Display Behavior
 
 - **15s idle**: app dims (70% dark overlay, fades in over 1s)
-- **30min idle**: display turns off via DPMS (`swayidle`)
+- **45min idle**: display turns off via DPMS (`swayidle`)
 - **Touch when off**: first touch wakes the display but is consumed (evdev grab prevents it from reaching the app)
 - **Touch when dimmed**: dismisses dim overlay
 - **Cursor**: hidden (sway `hide_cursor 1` — invisible on touchscreen)
@@ -215,6 +217,7 @@ The deploy script (`system/deploy.sh`) preserves `data/`, `.env`, and `credentia
 |-------|----------|
 | sway (Wayland compositor) | VT switching, window management escape |
 | `exec` in .bash_profile | Shell access after sway exits |
+| Viewport meta + CSS `touch-action` | Pinch-to-zoom gesture |
 | Chromium `--kiosk` | Address bar, keyboard shortcuts |
 | Chromium managed policies | DevTools, downloads, file:// URLs, non-localhost navigation |
 | nftables firewall | Network access beyond SSH/Tailscale in + HTTP/HTTPS/DNS/NTP/DHCP/WireGuard out |
