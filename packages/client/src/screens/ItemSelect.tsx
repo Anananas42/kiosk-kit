@@ -4,7 +4,7 @@ import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
 interface ItemSelectProps {
-  buyer: number;
+  buyerLabel: string;
   category: CatalogCategory;
   onSelect: (item: CatalogItem) => void;
   onBack: () => void;
@@ -18,7 +18,7 @@ function itemSubtitle(item: CatalogItem): string {
   return parts.join(' \u00b7 ');
 }
 
-export default function ItemSelect({ buyer, category, onSelect, onBack, backLabel = 'Zpět na kategorie' }: ItemSelectProps) {
+export default function ItemSelect({ buyerLabel, category, onSelect, onBack, backLabel = 'Zpět na kategorie' }: ItemSelectProps) {
   return (
     <div className="screen">
       <ScreenHeader
@@ -26,7 +26,7 @@ export default function ItemSelect({ buyer, category, onSelect, onBack, backLabe
         onBack={onBack}
         backLabel={backLabel}
         crumbs={[
-          { label: 'Kupující', value: `#${buyer}` },
+          { label: 'Kupující', value: buyerLabel },
           { label: 'Kategorie', value: category.name },
         ]}
       />

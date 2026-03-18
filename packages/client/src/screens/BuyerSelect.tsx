@@ -4,13 +4,14 @@ import ScreenHeader from '../components/ScreenHeader.js';
 
 interface LastOrder {
   buyer: number;
+  buyerLabel: string;
   category: CatalogCategory;
   item: CatalogItem;
 }
 
 interface BuyerSelectProps {
   apartments: Apartment[];
-  onSelect: (buyer: number) => void;
+  onSelect: (apt: Apartment) => void;
   error: string | null;
   lastOrder: LastOrder | null;
   onRepeat: () => void;
@@ -23,7 +24,7 @@ export default function BuyerSelect({ apartments, onSelect, error, lastOrder, on
         title="🏠 Vyberte apartmán"
         right={lastOrder ? (
           <button className="screen-header__action" onClick={onRepeat} type="button">
-            🔁 Opakovat #{lastOrder.buyer} {lastOrder.item.name}
+            🔁 Opakovat {lastOrder.buyerLabel} {lastOrder.item.name}
           </button>
         ) : undefined}
       />
@@ -44,7 +45,7 @@ export default function BuyerSelect({ apartments, onSelect, error, lastOrder, on
                 key={apt.id}
                 label={apt.label}
                 variant="neutral"
-                onClick={() => onSelect(apt.id)}
+                onClick={() => onSelect(apt)}
               />
             ))}
           </div>

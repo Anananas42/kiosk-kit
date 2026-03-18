@@ -3,7 +3,7 @@ import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
 interface CategorySelectProps {
-  buyer: number;
+  buyerLabel: string;
   catalog: CatalogCategory[];
   onSelect: (category: CatalogCategory) => void;
   onOverview: () => void;
@@ -11,7 +11,7 @@ interface CategorySelectProps {
   onMainMenu: () => void;
 }
 
-export default function CategorySelect({ buyer, catalog, onSelect, onOverview, onPastry, onMainMenu }: CategorySelectProps) {
+export default function CategorySelect({ buyerLabel, catalog, onSelect, onOverview, onPastry, onMainMenu }: CategorySelectProps) {
   const mainCategories = catalog.filter((cat) => !cat.pastry);
 
   return (
@@ -20,7 +20,7 @@ export default function CategorySelect({ buyer, catalog, onSelect, onOverview, o
         title="📋 Vyberte kategorii"
         onBack={onMainMenu}
         backLabel="Změnit kupujícího"
-        crumbs={[{ label: 'Kupující', value: `#${buyer}` }]}
+        crumbs={[{ label: 'Kupující', value: buyerLabel }]}
       />
       <div className="screen-body">
         <div className="tile-grid tile-grid--categories">

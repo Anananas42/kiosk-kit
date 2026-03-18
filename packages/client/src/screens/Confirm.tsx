@@ -9,6 +9,7 @@ const QUANTITIES = Array.from({ length: 10 }, (_, i) => i + 1);
 
 interface ConfirmProps {
   buyer: number;
+  buyerLabel: string;
   category: CatalogCategory;
   item: CatalogItem;
   isPastry: boolean;
@@ -20,7 +21,7 @@ interface ConfirmProps {
   onErrorDismiss: () => void;
 }
 
-export default function Confirm({ buyer, category, item, isPastry, noDeliveryDays, onConfirm, onBack, isSending, error, onErrorDismiss }: ConfirmProps) {
+export default function Confirm({ buyer, buyerLabel, category, item, isPastry, noDeliveryDays, onConfirm, onBack, isSending, error, onErrorDismiss }: ConfirmProps) {
   const [qty, setQty] = useState(1);
   const [confirmingStorno, setConfirmingStorno] = useState(false);
   const [existingQty, setExistingQty] = useState<number | null>(null);
@@ -63,7 +64,7 @@ export default function Confirm({ buyer, category, item, isPastry, noDeliveryDay
         <div className="screen-body screen-body--pastry-confirm">
           {/* Compact summary: apartment + item + unit price on one line */}
           <div className="pastry-confirm-summary">
-            <span>#{buyer}</span>
+            <span>{buyerLabel}</span>
             <span className="pastry-confirm-summary__sep">&middot;</span>
             <span>{item.name}</span>
             {unitPrice > 0 && (
@@ -145,7 +146,7 @@ export default function Confirm({ buyer, category, item, isPastry, noDeliveryDay
       />
       <div className="screen-body">
         <div className="confirm-card">
-          <div className="confirm-info-row">#{buyer}</div>
+          <div className="confirm-info-row">{buyerLabel}</div>
           <div className="confirm-info-row">{item.name}</div>
           <div className="confirm-info-row confirm-info-row--muted">
             {item.quantity ? `${item.quantity} · ` : ''}

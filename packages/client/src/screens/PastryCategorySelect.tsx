@@ -3,7 +3,7 @@ import Tile from '../components/Tile.js';
 import ScreenHeader from '../components/ScreenHeader.js';
 
 interface PastryCategorySelectProps {
-  buyer: number;
+  buyerLabel: string;
   categories: CatalogCategory[];
   orderingAllowed: boolean;
   onSelect: (category: CatalogCategory) => void;
@@ -11,14 +11,14 @@ interface PastryCategorySelectProps {
   onBack: () => void;
 }
 
-export default function PastryCategorySelect({ buyer, categories, orderingAllowed, onSelect, onViewOrders, onBack }: PastryCategorySelectProps) {
+export default function PastryCategorySelect({ buyerLabel, categories, orderingAllowed, onSelect, onViewOrders, onBack }: PastryCategorySelectProps) {
   return (
     <div className="screen">
       <ScreenHeader
         title="🥐 Objednat pečivo"
         onBack={onBack}
         backLabel="Zpět na kategorie"
-        crumbs={[{ label: 'Kupující', value: `#${buyer}` }]}
+        crumbs={[{ label: 'Kupující', value: buyerLabel }]}
       />
       <div className="screen-body">
         {!orderingAllowed && (

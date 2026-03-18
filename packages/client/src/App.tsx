@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
+import { REPEAT_ORDER_MS, noDeliveryDaysSet, isOrderingAllowed, type Apartment, type CatalogCategory, type CatalogItem } from '@zahumny/shared';
 import { postRecord } from './api.js';
 import { useHealth } from './hooks/useHealth.js';
 import { useCatalog } from './hooks/useCatalog.js';
@@ -21,19 +21,26 @@ type Screen = 'buyer' | 'category' | 'pastry-category' | 'item' | 'confirm' | 'o
 interface AppState {
   screen: Screen;
   buyer: number | null;
+  buyerLabel: string | null;
   category: CatalogCategory | null;
   item: CatalogItem | null;
 }
 
 interface LastOrder {
   buyer: number;
+  buyerLabel: string;
   category: CatalogCategory;
   item: CatalogItem;
+}
+
+function formatBuyerLabel(label: string): string {
+  return /^\d+$/.test(label) ? `#${label}` : label;
 }
 
 const INITIAL_STATE: AppState = {
   screen: 'buyer',
   buyer: null,
+  buyerLabel: null,
   category: null,
   item: null,
 };
@@ -73,8 +80,14 @@ export default function App() {
 
   const { secondsLeft, dismiss: dismissWarning } = useInactivityReset(state.screen !== 'buyer', reset, settings.inactivityTimeoutMs);
 
-  const handleBuyerSelect = useCallback((buyer: number) => {
-    setState((s) => ({ ...s, buyer, screen: 'category' }));
+  useEffect(() => {
+    if (state.screen !== 'buyer') return;
+    const id = setInterval(reload, 15_000);
+    return () => clearInterval(id);
+  }, [state.screen, reload]);
+
+  const handleBuyerSelect = useCallback((apt: Apartment) => {
+    setState((s) => ({ ...s, buyer: apt.id, buyerLabel: formatBuyerLabel(apt.label), screen: 'category' }));
   }, []);
 
   const handleCategorySelect = useCallback((category: CatalogCategory) => {
@@ -110,6 +123,7 @@ export default function App() {
     setState({
       screen: 'confirm',
       buyer: lastOrder.buyer,
+      buyerLabel: lastOrder.buyerLabel,
       category: lastOrder.category,
       item: lastOrder.item,
     });
@@ -137,6 +151,7 @@ export default function App() {
       setLastSuccess(`Přidáno: ${label}`);
       setLastOrder({
         buyer: state.buyer!,
+        buyerLabel: state.buyerLabel!,
         category: state.category!,
         item: state.item!,
       });
@@ -153,7 +168,7 @@ export default function App() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg === 'insufficient_balance') {
-        setConfirmError(`Kupující #${state.buyer} nemá žádný „${state.item!.name}" k odebrání.`);
+        setConfirmError(`Kupující ${state.buyerLabel} nemá žádný „${state.item!.name}" k odebrání.`);
       } else {
         console.error('Record error:', err);
         setConfirmError('Připojení selhalo. Zkuste to znovu.');
@@ -202,9 +217,9 @@ export default function App() {
         />
       )}
 
-      {state.screen === 'category' && state.buyer !== null && (
+      {state.screen === 'category' && state.buyer !== null && state.buyerLabel !== null && (
         <CategorySelect
-          buyer={state.buyer}
+          buyerLabel={state.buyerLabel}
           catalog={catalog}
           onSelect={handleCategorySelect}
           onOverview={() => setState((s) => ({ ...s, screen: 'overview' }))}
@@ -213,9 +228,9 @@ export default function App() {
         />
       )}
 
-      {state.screen === 'pastry-category' && state.buyer !== null && (
+      {state.screen === 'pastry-category' && state.buyer !== null && state.buyerLabel !== null && (
         <PastryCategorySelect
-          buyer={state.buyer}
+          buyerLabel={state.buyerLabel}
           categories={pastryCategories}
           orderingAllowed={pastryOrderingAllowed}
           onSelect={handleCategorySelect}
@@ -224,9 +239,9 @@ export default function App() {
         />
       )}
 
-      {state.screen === 'item' && state.buyer !== null && state.category !== null && (
+      {state.screen === 'item' && state.buyer !== null && state.buyerLabel !== null && state.category !== null && (
         <ItemSelect
-          buyer={state.buyer}
+          buyerLabel={state.buyerLabel}
           category={state.category}
           onSelect={handleItemSelect}
           onBack={handleBackToCategory}
@@ -234,9 +249,10 @@ export default function App() {
         />
       )}
 
-      {state.screen === 'confirm' && state.buyer !== null && state.category !== null && state.item !== null && (
+      {state.screen === 'confirm' && state.buyer !== null && state.buyerLabel !== null && state.category !== null && state.item !== null && (
         <Confirm
           buyer={state.buyer}
+          buyerLabel={state.buyerLabel}
           category={state.category}
           item={state.item}
           isPastry={state.category.pastry}
