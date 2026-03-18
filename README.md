@@ -1,25 +1,26 @@
 # KioskKit
 
-Touchscreen kiosk app for recording shared-resource consumption in an apartment building. Residents tap their apartment number, select an item, and the record is stored locally in SQLite.
-
-Built with React (client), Hono (server), and SQLite (data store). Designed to run locked-down on a Raspberry Pi with a touchscreen.
+Touchscreen kiosk platform for shared-resource tracking in apartment buildings. Turborepo monorepo with React, Hono, SQLite, and Astro.
 
 ## Architecture
 
 ```
 packages/
-├── client/     # React SPA (Vite)
-├── server/     # Hono + better-sqlite3 (port 3001)
-└── shared/     # Types, constants, price utils
+├── shared/          # Types, constants, price utils
+├── kiosk-client/    # Pi touchscreen SPA — React + Vite
+├── kiosk-server/    # Pi backend — Hono + SQLite (port 3001)
+├── web-client/      # Tenant web app — React + Vite
+├── web-server/      # Web backend — Hono + Postgres
+└── landing/         # Marketing site + demo — Astro
 
-system/         # Raspberry Pi OS-level kiosk configuration
+system/              # Raspberry Pi OS-level kiosk configuration
 ├── setup.sh
 ├── deploy.sh
-├── services/   # systemd units
-└── config/     # nftables, chromium policies, udev rules, etc.
+├── services/        # systemd units
+└── config/          # nftables, chromium policies, udev rules, etc.
 ```
 
-All data lives in SQLite. The client works offline using a local submit queue that flushes when connectivity returns.
+Build orchestration via Turborepo. All packages use TypeScript strict mode.
 
 ### Data model
 

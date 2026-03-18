@@ -53,9 +53,9 @@ export function createApp(store: Store) {
   });
 
   // Serve static client files in production
-  app.use('/*', serveStatic({ root: './packages/client/dist' }));
+  app.use('/*', serveStatic({ root: './packages/kiosk-client/dist' }));
   // SPA fallback
-  app.use('/*', serveStatic({ root: './packages/client/dist', path: 'index.html' }));
+  app.use('/*', serveStatic({ root: './packages/kiosk-client/dist', path: 'index.html' }));
 
   return app;
 }

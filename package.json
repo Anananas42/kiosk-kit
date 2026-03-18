@@ -1,21 +1,23 @@
 {
   "name": "kioskkit",
   "private": true,
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "dev": "concurrently -n server,client \"pnpm --filter @kioskkit/server dev\" \"pnpm --filter @kioskkit/client dev\"",
-    "build": "pnpm --filter @kioskkit/shared build && pnpm --filter @kioskkit/server build && pnpm --filter @kioskkit/client build",
-    "start": "node packages/server/dist/index.js",
-    "typecheck": "pnpm -r typecheck",
-    "test": "vitest run"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "test": "vitest run",
+    "start:kiosk": "node packages/kiosk-server/dist/index.js"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
-      "esbuild"
+      "esbuild",
+      "sharp"
     ]
   },
   "devDependencies": {
-    "concurrently": "^9.1.2",
+    "turbo": "^2.5.0",
     "typescript": "^5.7.3",
     "vitest": "^4.1.0"
   }
