@@ -1,10 +1,16 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
 
 describe("App", () => {
-  it("renders", () => {
+  it("renders sign-in when not authenticated", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ user: null })),
+    );
     render(<App />);
-    expect(screen.getByText("KioskKit Web")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Sign in with Google")).toBeInTheDocument();
+    });
+    vi.restoreAllMocks();
   });
 });
