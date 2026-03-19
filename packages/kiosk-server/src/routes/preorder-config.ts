@@ -1,3 +1,4 @@
+import { DEFAULT_PREORDER_CONFIG } from "@kioskkit/shared";
 import { Hono } from "hono";
 import type { Store } from "../db/store.js";
 
@@ -6,9 +7,7 @@ export function preorderConfigRoute(store: Store) {
 
   app.get("/", (c) => {
     const config = store.getPreorderConfig();
-    return c.json(
-      config ?? { orderingDays: Array(7).fill(true), deliveryDays: Array(7).fill(true) },
-    );
+    return c.json(config ?? DEFAULT_PREORDER_CONFIG);
   });
 
   return app;

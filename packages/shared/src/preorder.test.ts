@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getCurrentWeekday,
-  getDeliveryDate,
-  isOrderingAllowed,
-  noDeliveryDaysSet,
-} from "./preorder.js";
+import { getDeliveryDate, isOrderingAllowed, noDeliveryDaysSet } from "./preorder.js";
 
 describe("getDeliveryDate", () => {
   it("before 11:00 Prague → next day", () => {
@@ -75,13 +70,5 @@ describe("isOrderingAllowed", () => {
   it("returns false when all days disabled", () => {
     const days = Array(7).fill(false);
     expect(isOrderingAllowed(days)).toBe(false);
-  });
-});
-
-describe("getCurrentWeekday", () => {
-  it("returns a number 0-6", () => {
-    const day = getCurrentWeekday();
-    expect(day).toBeGreaterThanOrEqual(0);
-    expect(day).toBeLessThanOrEqual(6);
   });
 });

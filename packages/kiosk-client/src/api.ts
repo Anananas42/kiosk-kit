@@ -10,30 +10,25 @@ import type {
   RecordResponse,
 } from "@kioskkit/shared";
 
-export async function fetchCatalog(): Promise<CatalogCategory[]> {
-  const res = await fetch("/api/catalog");
+async function fetchJson<T>(url: string, errorKey: string): Promise<T> {
+  const res = await fetch(url);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    if (body.error === "catalog_invalid") {
+    if (body.error === errorKey) {
       const details = (body.details as string[])?.join("\n• ") ?? "";
       throw new Error(`${body.message}\n\n• ${details}`);
     }
-    throw new Error(`Catalog fetch failed: HTTP ${res.status}`);
+    throw new Error(`${url} fetch failed: HTTP ${res.status}`);
   }
   return res.json();
 }
 
+export async function fetchCatalog(): Promise<CatalogCategory[]> {
+  return fetchJson("/api/catalog", "catalog_invalid");
+}
+
 export async function fetchBuyers(): Promise<BuyersResponse> {
-  const res = await fetch("/api/buyers");
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    if (body.error === "buyers_invalid") {
-      const details = (body.details as string[])?.join("\n• ") ?? "";
-      throw new Error(`${body.message}\n\n• ${details}`);
-    }
-    throw new Error(`Buyers fetch failed: HTTP ${res.status}`);
-  }
-  return res.json();
+  return fetchJson("/api/buyers", "buyers_invalid");
 }
 
 export async function fetchHealth(): Promise<HealthResponse> {

@@ -1,4 +1,4 @@
-import { TZ } from "./constants.js";
+import { TZ } from "./config.js";
 
 /**
  * Calculate preorder delivery date from an order timestamp.
@@ -61,7 +61,7 @@ export function getDeliveryDateLabel(noDeliveryDays?: Set<number>, locale: strin
 /**
  * Get the current weekday index (0=Sunday) in the configured timezone.
  */
-export function getCurrentWeekday(): number {
+function getCurrentWeekday(): number {
   const now = new Date();
   const localDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: TZ,

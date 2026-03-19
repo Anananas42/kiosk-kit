@@ -1,14 +1,8 @@
-import type { Buyer, CatalogCategory, CatalogItem } from "@kioskkit/shared";
+import type { Buyer } from "@kioskkit/shared";
 import ScreenHeader from "../components/ScreenHeader.js";
 import Tile from "../components/Tile.js";
 import { useT } from "../i18n/useT.js";
-
-interface LastOrder {
-  buyer: number;
-  buyerLabel: string;
-  category: CatalogCategory;
-  item: CatalogItem;
-}
+import type { LastOrder } from "../types.js";
 
 interface BuyerSelectProps {
   buyers: Buyer[];

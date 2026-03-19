@@ -23,6 +23,7 @@ import ConsumptionOverview from "./screens/ConsumptionOverview.js";
 import ItemSelect from "./screens/ItemSelect.js";
 import PreorderCategorySelect from "./screens/PreorderCategorySelect.js";
 import PreorderOrdersOverview from "./screens/PreorderOrdersOverview.js";
+import type { LastOrder } from "./types.js";
 import { enqueueRecord, startFlushTimer } from "./utils/submitQueue.js";
 
 type Screen =
@@ -40,13 +41,6 @@ interface AppState {
   buyerLabel: string | null;
   category: CatalogCategory | null;
   item: CatalogItem | null;
-}
-
-interface LastOrder {
-  buyer: number;
-  buyerLabel: string;
-  category: CatalogCategory;
-  item: CatalogItem;
 }
 
 function formatBuyerLabel(label: string): string {

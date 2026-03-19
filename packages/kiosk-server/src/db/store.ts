@@ -216,8 +216,8 @@ export class Store {
       .all() as Array<{ weekday: number; ordering: number; delivery: number }>;
     if (rows.length === 0) return null;
 
-    const orderingDays = Array(7).fill(true) as boolean[];
-    const deliveryDays = Array(7).fill(true) as boolean[];
+    const orderingDays = Array<boolean>(7).fill(true);
+    const deliveryDays = Array<boolean>(7).fill(true);
     for (const row of rows) {
       orderingDays[row.weekday] = row.ordering === 1;
       deliveryDays[row.weekday] = row.delivery === 1;

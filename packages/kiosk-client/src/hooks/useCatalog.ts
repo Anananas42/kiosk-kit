@@ -3,17 +3,13 @@ import {
   CATALOG_RELOAD_INTERVAL_MS,
   type CatalogCategory,
   DEFAULT_KIOSK_SETTINGS,
+  DEFAULT_PREORDER_CONFIG,
   type KioskSettings,
   type PreorderConfig,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useState } from "react";
 import { fetchBuyers, fetchCatalog, fetchPreorderConfig, fetchSettings } from "../api.js";
 import { cacheGet, cacheSet } from "../utils/cache.js";
-
-const DEFAULT_PREORDER_CONFIG: PreorderConfig = {
-  orderingDays: Array(7).fill(true),
-  deliveryDays: Array(7).fill(true),
-};
 
 export function useCatalog() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>(

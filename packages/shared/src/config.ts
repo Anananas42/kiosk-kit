@@ -6,6 +6,14 @@
 // and wake-touch grab hold (1.5s).
 // ---------------------------------------------------------------------------
 
+// --- Timezone ---
+
+export const TZ: string =
+  (typeof globalThis !== "undefined" && "process" in globalThis
+    ? (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process
+        .env.KIOSK_TZ
+    : undefined) ?? "Europe/Prague";
+
 // --- Display & idle ---
 
 // Dark overlay appears after this much inactivity (CSS fade-in: 1s)
@@ -40,7 +48,13 @@ export const SUBMIT_FLUSH_INTERVAL_MS = 30_000;
 
 // --- Default kiosk settings ---
 
-import type { KioskSettings } from "./types.js";
+import type { KioskSettings, PreorderConfig } from "./types.js";
+
+export const DEFAULT_PREORDER_CONFIG: PreorderConfig = {
+  orderingDays: Array(7).fill(true),
+  deliveryDays: Array(7).fill(true),
+};
+
 export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   idleDimMs: IDLE_DIM_MS,
   inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,

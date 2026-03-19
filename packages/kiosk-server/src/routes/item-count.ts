@@ -11,11 +11,11 @@ export function itemCountRoute(store: Store) {
     const itemId = c.req.query("itemId") ?? "";
 
     if (!buyer || !item) {
-      return c.json({ count: 0 } satisfies ItemCountResponse);
+      return c.json({ error: "Missing required query params: buyer, item" }, 400);
     }
 
     const total = store.getItemBalance(buyer, item, itemId || undefined);
-    return c.json({ count: Math.max(0, total) } satisfies ItemCountResponse);
+    return c.json({ count: total } satisfies ItemCountResponse);
   });
 
   return app;

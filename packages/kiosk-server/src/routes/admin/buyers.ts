@@ -14,8 +14,11 @@ export function adminBuyersRoute(store: Store) {
     }
     try {
       store.createBuyer(id, label.trim());
-    } catch {
-      return c.json({ error: "Buyer already exists" }, 409);
+    } catch (err) {
+      if (err instanceof Error && /UNIQUE constraint/i.test(err.message)) {
+        return c.json({ error: "Buyer already exists" }, 409);
+      }
+      throw err;
     }
     return c.json({ ok: true }, 201);
   });

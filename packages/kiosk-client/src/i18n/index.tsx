@@ -3,7 +3,6 @@ import { I18nContext, type TFunction } from "./context.js";
 import cs from "./cs.json";
 import en from "./en.json";
 
-export { I18nContext, type TFunction } from "./context.js";
 export { useT } from "./useT.js";
 
 const locales: Record<string, Record<string, string>> = { cs, en };
