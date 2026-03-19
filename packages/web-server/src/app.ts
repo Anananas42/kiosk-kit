@@ -1,10 +1,12 @@
 import type { Google } from "arctic";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
 import { healthRoute } from "./routes/health.js";
+import { meRoute } from "./routes/me.js";
 
 export function createApp(db: Db, google?: Google) {
   const app = new Hono();
@@ -22,8 +24,19 @@ export function createApp(db: Db, google?: Google) {
     app.route("/api/auth", authRoutes(db, google));
   }
 
-  // Auth middleware for protected API routes (exclude health + auth)
+  app.route("/api/me", meRoute(db));
+
+  // Auth middleware for protected API routes (exclude health + auth + me)
   app.use("/api/*", authMiddleware(db));
+
+  // Serve web-client static assets
+  app.use(
+    "/assets/*",
+    serveStatic({ root: "../web-client/dist" }),
+  );
+
+  // SPA fallback: serve index.html for all non-API routes
+  app.get("*", serveStatic({ root: "../web-client/dist", path: "index.html" }));
 
   return app;
 }
