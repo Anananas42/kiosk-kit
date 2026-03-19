@@ -1,4 +1,4 @@
-app = "kioskkit-web"
+app = "kiosk-kit"
 primary_region = "fra"
 
 [build]
