@@ -5,6 +5,7 @@ WORKDIR /app
 
 # --- deps ---
 FROM base AS deps
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/web-server/package.json packages/web-server/
 COPY packages/web-client/package.json packages/web-client/
@@ -17,7 +18,7 @@ COPY turbo.json tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY packages/web-server packages/web-server
 COPY packages/web-client packages/web-client
-RUN pnpm turbo build --filter=web-server --filter=web-client
+RUN pnpm turbo build --filter=@kioskkit/web-server --filter=@kioskkit/web-client
 
 # --- runtime ---
 FROM base AS runtime
