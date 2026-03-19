@@ -24,7 +24,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: rharkor/caching-for-turbo@v2
+      - uses: rharkor/caching-for-turbo@v2.3.11
 
       - name: Lint, typecheck, test, build
         run: pnpm turbo lint typecheck test build
