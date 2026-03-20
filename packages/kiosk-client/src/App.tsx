@@ -24,7 +24,6 @@ import ItemSelect from "./screens/ItemSelect.js";
 import PreorderCategorySelect from "./screens/PreorderCategorySelect.js";
 import PreorderOrdersOverview from "./screens/PreorderOrdersOverview.js";
 import type { LastOrder } from "./types.js";
-import { enqueueRecord, startFlushTimer } from "./utils/submitQueue.js";
 
 type Screen =
   | "buyer"
@@ -116,10 +115,6 @@ function AppInner({
   const noDeliveryDays = noDeliveryDaysSet(preorderConfig.deliveryDays);
 
   useEffect(() => {
-    startFlushTimer();
-  }, []);
-
-  useEffect(() => {
     if (!lastOrder) return;
     clearTimeout(repeatTimer.current);
     repeatTimer.current = setTimeout(() => setLastOrder(null), REPEAT_ORDER_MS);
@@ -206,25 +201,25 @@ function AppInner({
         price: state.item!.price,
       };
 
-      if (operation === "+") {
-        enqueueRecord(recordData);
-        const label = isPreorder ? `${quantity}\u00d7 ${state.item!.name}` : state.item!.name;
-        setLastSuccess(t("app.added", { label }));
-        setLastOrder({
-          buyer: state.buyer!,
-          buyerLabel: state.buyerLabel!,
-          category: state.category!,
-          item: state.item!,
-        });
-        reset();
-        return;
-      }
-
       setConfirmError(null);
       setIsSending(true);
       try {
         await postRecord(recordData);
-        setLastSuccess(t("app.removed", { label: state.item!.name }));
+        const label =
+          operation === "+"
+            ? isPreorder
+              ? `${quantity}\u00d7 ${state.item!.name}`
+              : state.item!.name
+            : state.item!.name;
+        setLastSuccess(t(operation === "+" ? "app.added" : "app.removed", { label }));
+        if (operation === "+") {
+          setLastOrder({
+            buyer: state.buyer!,
+            buyerLabel: state.buyerLabel!,
+            category: state.category!,
+            item: state.item!,
+          });
+        }
         reset();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "";

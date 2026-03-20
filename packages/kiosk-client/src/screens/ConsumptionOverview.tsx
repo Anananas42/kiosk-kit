@@ -1,4 +1,4 @@
-import { type EvidenceRow, formatCurrency, parsePrice } from "@kioskkit/shared";
+import { formatCurrency, parsePrice, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
 import { fetchOverview } from "../api.js";
 import ScreenHeader from "../components/ScreenHeader.js";
@@ -13,7 +13,7 @@ interface AggregatedItem {
   unitPrice: number;
 }
 
-function aggregateItems(records: EvidenceRow[], buyer: number): Record<string, AggregatedItem> {
+function aggregateItems(records: RecordRow[], buyer: number): Record<string, AggregatedItem> {
   const map: Record<string, AggregatedItem> = {};
 
   for (const r of records) {
@@ -59,7 +59,7 @@ export default function ConsumptionOverview({
   currency,
 }: ConsumptionOverviewProps) {
   const t = useT();
-  const [records, setRecords] = useState<EvidenceRow[] | null>(null);
+  const [records, setRecords] = useState<RecordRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fmt = (amount: number) => formatCurrency(amount, locale, currency);

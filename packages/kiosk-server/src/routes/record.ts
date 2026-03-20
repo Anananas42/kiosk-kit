@@ -37,7 +37,7 @@ export function recordRoute(store: Store) {
       };
 
       store.insertRecord(entry);
-      return c.json({ ok: true, queued: false });
+      return c.json({ ok: true });
     });
   });
 

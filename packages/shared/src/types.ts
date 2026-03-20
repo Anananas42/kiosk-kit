@@ -37,10 +37,10 @@ export interface RecordEntry extends RecordRequest {
   price: string;
 }
 
-export interface EvidenceRow {
+export interface RecordRow {
   timestamp: string;
   buyer: number;
-  /** Signed count read from Evidence "Operace" column. */
+  /** Signed count: positive = add, negative = remove */
   count: number;
   category: string;
   item: string;
@@ -51,17 +51,15 @@ export interface EvidenceRow {
 
 export interface HealthResponse {
   online: boolean;
-  queued: number;
 }
 
 export interface RecordResponse {
   ok?: boolean;
-  queued?: boolean;
   error?: string;
 }
 
 export interface OverviewResponse {
-  records: EvidenceRow[];
+  records: RecordRow[];
 }
 
 export interface BuyersResponse {

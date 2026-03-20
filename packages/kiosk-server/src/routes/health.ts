@@ -5,7 +5,7 @@ export function healthRoute() {
   const app = new Hono();
 
   app.get("/", (c) => {
-    const response: HealthResponse = { online: true, queued: 0 };
+    const response: HealthResponse = { online: true };
     return c.json(response);
   });
 

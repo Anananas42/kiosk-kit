@@ -43,9 +43,6 @@ export const HEALTH_CHECK_INTERVAL_MS = 15_000;
 // How often the client reloads catalog data from the server
 export const CATALOG_RELOAD_INTERVAL_MS = 5 * 60_000;
 
-// Client-side submit queue flush interval (offline-first record submission)
-export const SUBMIT_FLUSH_INTERVAL_MS = 30_000;
-
 // --- Default kiosk settings ---
 
 import type { KioskSettings, PreorderConfig } from "./types.js";

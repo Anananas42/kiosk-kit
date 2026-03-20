@@ -34,9 +34,7 @@ export function App() {
       </p>
       <button
         style={styles.button}
-        onClick={() =>
-          fetch("/api/auth/logout", { method: "POST" }).then(() => setUser(null))
-        }
+        onClick={() => fetch("/api/auth/logout", { method: "POST" }).then(() => setUser(null))}
       >
         Sign out
       </button>

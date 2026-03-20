@@ -9,19 +9,14 @@ import {
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useState } from "react";
 import { fetchBuyers, fetchCatalog, fetchPreorderConfig, fetchSettings } from "../api.js";
-import { cacheGet, cacheSet } from "../utils/cache.js";
 
 export function useCatalog() {
-  const [catalog, setCatalog] = useState<CatalogCategory[]>(
-    () => cacheGet<CatalogCategory[]>("catalog") ?? [],
-  );
-  const [buyers, setBuyers] = useState<Buyer[]>(() => cacheGet<Buyer[]>("buyers") ?? []);
+  const [catalog, setCatalog] = useState<CatalogCategory[]>(() => []);
+  const [buyers, setBuyers] = useState<Buyer[]>(() => []);
   const [preorderConfig, setPreorderConfig] = useState<PreorderConfig>(
-    () => cacheGet<PreorderConfig>("preorderConfig") ?? DEFAULT_PREORDER_CONFIG,
+    () => DEFAULT_PREORDER_CONFIG,
   );
-  const [settings, setSettings] = useState<KioskSettings>(
-    () => cacheGet<KioskSettings>("settings") ?? DEFAULT_KIOSK_SETTINGS,
-  );
+  const [settings, setSettings] = useState<KioskSettings>(() => DEFAULT_KIOSK_SETTINGS);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [buyerError, setBuyerError] = useState<string | null>(null);
 
@@ -29,7 +24,6 @@ export function useCatalog() {
     fetchCatalog()
       .then((data) => {
         setCatalog(data);
-        cacheSet("catalog", data);
         setCatalogError(null);
       })
       .catch((err) => {
@@ -39,7 +33,6 @@ export function useCatalog() {
     fetchBuyers()
       .then((data) => {
         setBuyers(data.buyers);
-        cacheSet("buyers", data.buyers);
         setBuyerError(null);
       })
       .catch((err) => {
@@ -49,7 +42,6 @@ export function useCatalog() {
     fetchPreorderConfig()
       .then((data) => {
         setPreorderConfig(data);
-        cacheSet("preorderConfig", data);
       })
       .catch((err) => {
         console.error("Preorder config load error:", err);
@@ -57,7 +49,6 @@ export function useCatalog() {
     fetchSettings()
       .then((data) => {
         setSettings(data);
-        cacheSet("settings", data);
       })
       .catch((err) => {
         console.error("Settings load error:", err);

@@ -1,5 +1,5 @@
-import type { Google } from "arctic";
 import { serveStatic } from "@hono/node-server/serve-static";
+import type { Google } from "arctic";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
@@ -30,10 +30,7 @@ export function createApp(db: Db, google?: Google) {
   app.use("/api/*", authMiddleware(db));
 
   // Serve web-client static assets
-  app.use(
-    "/assets/*",
-    serveStatic({ root: "../web-client/dist" }),
-  );
+  app.use("/assets/*", serveStatic({ root: "../web-client/dist" }));
 
   // SPA fallback: serve index.html for all non-API routes
   app.get("*", serveStatic({ root: "../web-client/dist", path: "index.html" }));

@@ -1,4 +1,4 @@
-import { type EvidenceRow, formatDate, getDeliveryDate } from "@kioskkit/shared";
+import { formatDate, getDeliveryDate, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
 import { fetchOverview } from "../api.js";
 import ScreenHeader from "../components/ScreenHeader.js";
@@ -10,7 +10,7 @@ interface PreorderItem {
 }
 
 function aggregatePreorderOrders(
-  records: EvidenceRow[],
+  records: RecordRow[],
   buyer: number,
   preorderNames: Set<string>,
   noDeliveryDays?: Set<number>,
@@ -47,7 +47,7 @@ export default function PreorderOrdersOverview({
   locale,
 }: PreorderOrdersOverviewProps) {
   const t = useT();
-  const [records, setRecords] = useState<EvidenceRow[] | null>(null);
+  const [records, setRecords] = useState<RecordRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

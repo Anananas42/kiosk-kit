@@ -2,10 +2,10 @@ import type {
   Buyer,
   CatalogCategory,
   CatalogItem,
-  EvidenceRow,
   KioskSettings,
   PreorderConfig,
   RecordEntry,
+  RecordRow,
 } from "@kioskkit/shared";
 import type Database from "better-sqlite3";
 
@@ -125,22 +125,22 @@ export class Store {
 
   // ── Records ─────────────────────────────────────────────────────────────
 
-  getRecords(): EvidenceRow[] {
+  getRecords(): RecordRow[] {
     return this.db
       .prepare(
         `SELECT timestamp, buyer, count, category, item, item_id AS itemId, quantity, price
          FROM records ORDER BY timestamp DESC`,
       )
-      .all() as EvidenceRow[];
+      .all() as RecordRow[];
   }
 
-  getRecordsByBuyer(buyer: number): EvidenceRow[] {
+  getRecordsByBuyer(buyer: number): RecordRow[] {
     return this.db
       .prepare(
         `SELECT timestamp, buyer, count, category, item, item_id AS itemId, quantity, price
          FROM records WHERE buyer = ? ORDER BY timestamp DESC`,
       )
-      .all(buyer) as EvidenceRow[];
+      .all(buyer) as RecordRow[];
   }
 
   getItemBalance(buyer: number, item: string, itemId?: string): number {
