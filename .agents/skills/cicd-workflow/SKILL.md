@@ -23,7 +23,7 @@ If no PR exists, proceed with the full workflow below.
 1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why.
 2. **Pull latest main** — always `git checkout main && git pull` before creating a new branch, so you branch from the latest state.
 3. **Branch from Linear** — use the Linear-generated branch name (e.g. `pazderkaadam/kio-5-devices-schema-crud-api`) so the branch auto-links to the issue.
-4. **Conventional commits** on the feature branch.
+4. **Conventional commits** on the feature branch. Include the Linear task ID in parentheses, e.g. `feat(KIO-5): add devices schema`.
 5. **Push & open a PR** using the GitHub App token (see below). Use the `/fill-pr-template` skill to generate the description from `.github/pull_request_template.md`.
 
 ## Frontend screenshot verification
