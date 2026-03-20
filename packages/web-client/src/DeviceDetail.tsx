@@ -1,22 +1,21 @@
+import type { KioskSettings } from "@kioskkit/shared";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import type { Buyer, CatalogCategory, KioskSettings } from "@kioskkit/shared";
 import {
-  type ConsumptionRow,
   createBuyer,
   createCategory,
   createItem,
+  type Device,
   deleteBuyer,
   deleteCategory,
   deleteItem,
   fetchBuyers,
   fetchCatalog,
   fetchConsumption,
+  fetchDevice,
   fetchDeviceStatus,
   fetchSettings,
   updateBuyer,
-  updateCategory,
-  updateItem,
   updateSettings,
 } from "./api.js";
 
@@ -32,9 +31,13 @@ export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<Tab>("catalog");
   const [online, setOnline] = useState<boolean | null>(null);
+  const [device, setDevice] = useState<Device | null>(null);
 
   useEffect(() => {
     if (!id) return;
+    fetchDevice(id)
+      .then(setDevice)
+      .catch(() => {});
     fetchDeviceStatus(id).then(setOnline);
   }, [id]);
 
@@ -43,15 +46,17 @@ export function DeviceDetail() {
   return (
     <div>
       <Link to="/">&larr; Back to devices</Link>
-      <h2>Device: {id.slice(0, 8)}...</h2>
+      <h2>{device?.name ?? "Loading..."}</h2>
 
       {online === null ? (
         <p>Checking device status...</p>
-      ) : !online ? (
+      ) : online ? (
+        <p style={{ color: "green", fontWeight: "bold" }}>Online</p>
+      ) : (
         <p style={{ color: "red", fontWeight: "bold" }}>
           Device is offline. Management is unavailable.
         </p>
-      ) : null}
+      )}
 
       <nav style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
         {TABS.map((t) => (
@@ -217,9 +222,20 @@ function CatalogSection({ deviceId }: { deviceId: string }) {
             <p>No categories.</p>
           ) : (
             catalog.map((cat) => (
-              <div key={cat.id} style={{ marginBottom: "1rem", paddingLeft: "0.5rem", borderLeft: "2px solid #ddd" }}>
+              <div
+                key={cat.id}
+                style={{
+                  marginBottom: "1rem",
+                  paddingLeft: "0.5rem",
+                  borderLeft: "2px solid #ddd",
+                }}
+              >
                 <strong>{cat.name}</strong> {cat.preorder ? "(preorder)" : ""}
-                <button type="button" style={{ marginLeft: "0.5rem" }} onClick={() => handleDeleteCategory(Number(cat.id), cat.name)}>
+                <button
+                  type="button"
+                  style={{ marginLeft: "0.5rem" }}
+                  onClick={() => handleDeleteCategory(Number(cat.id), cat.name)}
+                >
                   Delete
                 </button>
                 {cat.items.length > 0 && (
@@ -227,7 +243,11 @@ function CatalogSection({ deviceId }: { deviceId: string }) {
                     {cat.items.map((item) => (
                       <li key={item.id}>
                         {item.name} - {item.quantity} @ {item.price}
-                        <button type="button" style={{ marginLeft: "0.5rem" }} onClick={() => handleDeleteItem(Number(item.id), item.name)}>
+                        <button
+                          type="button"
+                          style={{ marginLeft: "0.5rem" }}
+                          onClick={() => handleDeleteItem(Number(item.id), item.name)}
+                        >
                           Delete
                         </button>
                       </li>
@@ -240,25 +260,64 @@ function CatalogSection({ deviceId }: { deviceId: string }) {
 
           <h4>Add Category</h4>
           <form onSubmit={handleAddCategory} style={{ marginBottom: "1rem" }}>
-            <input placeholder="Name" value={catName} onChange={(e) => setCatName(e.target.value)} required style={{ marginRight: "0.5rem" }} />
+            <input
+              placeholder="Name"
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              required
+              style={{ marginRight: "0.5rem" }}
+            />
             <label style={{ marginRight: "0.5rem" }}>
-              <input type="checkbox" checked={catPreorder} onChange={(e) => setCatPreorder(e.target.checked)} /> Preorder
+              <input
+                type="checkbox"
+                checked={catPreorder}
+                onChange={(e) => setCatPreorder(e.target.checked)}
+              />{" "}
+              Preorder
             </label>
             <button type="submit">Add</button>
           </form>
 
           <h4>Add Item</h4>
           <form onSubmit={handleAddItem}>
-            <select value={itemCatId} onChange={(e) => setItemCatId(e.target.value)} required style={{ marginRight: "0.5rem" }}>
+            <select
+              value={itemCatId}
+              onChange={(e) => setItemCatId(e.target.value)}
+              required
+              style={{ marginRight: "0.5rem" }}
+            >
               <option value="">Select category</option>
               {catalog.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
               ))}
             </select>
-            <input placeholder="Name" value={itemName} onChange={(e) => setItemName(e.target.value)} required style={{ marginRight: "0.5rem" }} />
-            <input placeholder="Quantity" value={itemQty} onChange={(e) => setItemQty(e.target.value)} style={{ marginRight: "0.5rem", width: "5rem" }} />
-            <input placeholder="Price" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} style={{ marginRight: "0.5rem", width: "5rem" }} />
-            <input placeholder="DPH Rate" value={itemDph} onChange={(e) => setItemDph(e.target.value)} style={{ marginRight: "0.5rem", width: "5rem" }} />
+            <input
+              placeholder="Name"
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              required
+              style={{ marginRight: "0.5rem" }}
+            />
+            <input
+              placeholder="Quantity"
+              value={itemQty}
+              onChange={(e) => setItemQty(e.target.value)}
+              style={{ marginRight: "0.5rem", width: "5rem" }}
+            />
+            <input
+              placeholder="Price"
+              value={itemPrice}
+              onChange={(e) => setItemPrice(e.target.value)}
+              style={{ marginRight: "0.5rem", width: "5rem" }}
+            />
+            <input
+              placeholder="DPH Rate"
+              value={itemDph}
+              onChange={(e) => setItemDph(e.target.value)}
+              style={{ marginRight: "0.5rem", width: "5rem" }}
+            />
             <button type="submit">Add</button>
           </form>
         </>
@@ -329,10 +388,30 @@ function BuyersSection({ deviceId }: { deviceId: string }) {
           ) : (
             <ul style={{ listStyle: "none", padding: 0 }}>
               {buyers.map((b) => (
-                <li key={b.id} style={{ padding: "0.25rem 0", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span>#{b.id} - {b.label}</span>
-                  <button type="button" onClick={() => { setEditId(b.id); setEditLabel(b.label); }}>Edit</button>
-                  <button type="button" onClick={() => handleDelete(b.id, b.label)}>Delete</button>
+                <li
+                  key={b.id}
+                  style={{
+                    padding: "0.25rem 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <span>
+                    #{b.id} - {b.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditId(b.id);
+                      setEditLabel(b.label);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => handleDelete(b.id, b.label)}>
+                    Delete
+                  </button>
                 </li>
               ))}
             </ul>
@@ -341,16 +420,41 @@ function BuyersSection({ deviceId }: { deviceId: string }) {
           {editId !== null && (
             <form onSubmit={handleEdit} style={{ marginBottom: "1rem" }}>
               <strong>Edit buyer #{editId}: </strong>
-              <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} required style={{ marginRight: "0.5rem" }} />
+              <input
+                value={editLabel}
+                onChange={(e) => setEditLabel(e.target.value)}
+                required
+                style={{ marginRight: "0.5rem" }}
+              />
               <button type="submit">Save</button>
-              <button type="button" onClick={() => setEditId(null)} style={{ marginLeft: "0.5rem" }}>Cancel</button>
+              <button
+                type="button"
+                onClick={() => setEditId(null)}
+                style={{ marginLeft: "0.5rem" }}
+              >
+                Cancel
+              </button>
             </form>
           )}
 
           <h4>Add Buyer</h4>
           <form onSubmit={handleAdd}>
-            <input placeholder="ID (number)" value={newId} onChange={(e) => setNewId(e.target.value)} required type="number" min="1" style={{ marginRight: "0.5rem", width: "5rem" }} />
-            <input placeholder="Label" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} required style={{ marginRight: "0.5rem" }} />
+            <input
+              placeholder="ID (number)"
+              value={newId}
+              onChange={(e) => setNewId(e.target.value)}
+              required
+              type="number"
+              min="1"
+              style={{ marginRight: "0.5rem", width: "5rem" }}
+            />
+            <input
+              placeholder="Label"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              required
+              style={{ marginRight: "0.5rem" }}
+            />
             <button type="submit">Add</button>
           </form>
         </>
@@ -369,8 +473,8 @@ function ConsumptionSection({ deviceId }: { deviceId: string }) {
       <h3>Consumption Report</h3>
       <StatusMsg loading={loading} error={error} />
 
-      {rows && (
-        rows.length === 0 ? (
+      {rows &&
+        (rows.length === 0 ? (
           <p>No consumption data.</p>
         ) : (
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
@@ -399,13 +503,16 @@ function ConsumptionSection({ deviceId }: { deviceId: string }) {
               ))}
             </tbody>
           </table>
-        )
-      )}
+        ))}
     </div>
   );
 }
 
-const thStyle = { textAlign: "left" as const, borderBottom: "1px solid #ccc", padding: "0.25rem 0.5rem" };
+const thStyle = {
+  textAlign: "left" as const,
+  borderBottom: "1px solid #ccc",
+  padding: "0.25rem 0.5rem",
+};
 const tdStyle = { borderBottom: "1px solid #eee", padding: "0.25rem 0.5rem" };
 
 // ── Settings ────────────────────────────────────────────────────────
@@ -443,31 +550,64 @@ function SettingsSection({ deviceId }: { deviceId: string }) {
       {draft && (
         <form onSubmit={handleSubmit}>
           <div style={fieldStyle}>
-            <label>Idle Dim (ms): </label>
-            <input type="number" value={draft.idleDimMs} onChange={(e) => set("idleDimMs", Number(e.target.value))} />
-          </div>
-          <div style={fieldStyle}>
-            <label>Inactivity Timeout (ms): </label>
-            <input type="number" value={draft.inactivityTimeoutMs} onChange={(e) => set("inactivityTimeoutMs", Number(e.target.value))} />
-          </div>
-          <div style={fieldStyle}>
             <label>
-              <input type="checkbox" checked={draft.maintenance} onChange={(e) => set("maintenance", e.target.checked)} /> Maintenance Mode
+              Idle Dim (ms):{" "}
+              <input
+                type="number"
+                value={draft.idleDimMs}
+                onChange={(e) => set("idleDimMs", Number(e.target.value))}
+              />
             </label>
           </div>
           <div style={fieldStyle}>
-            <label>Locale: </label>
-            <input value={draft.locale} onChange={(e) => set("locale", e.target.value)} style={{ width: "4rem" }} />
+            <label>
+              Inactivity Timeout (ms):{" "}
+              <input
+                type="number"
+                value={draft.inactivityTimeoutMs}
+                onChange={(e) => set("inactivityTimeoutMs", Number(e.target.value))}
+              />
+            </label>
           </div>
           <div style={fieldStyle}>
-            <label>Currency: </label>
-            <input value={draft.currency} onChange={(e) => set("currency", e.target.value)} style={{ width: "4rem" }} />
+            <label>
+              <input
+                type="checkbox"
+                checked={draft.maintenance}
+                onChange={(e) => set("maintenance", e.target.checked)}
+              />{" "}
+              Maintenance Mode
+            </label>
           </div>
           <div style={fieldStyle}>
-            <label>Buyer Noun: </label>
-            <input value={draft.buyerNoun} onChange={(e) => set("buyerNoun", e.target.value)} />
+            <label>
+              Locale:{" "}
+              <input
+                value={draft.locale}
+                onChange={(e) => set("locale", e.target.value)}
+                style={{ width: "4rem" }}
+              />
+            </label>
           </div>
-          <button type="submit" style={{ marginTop: "0.5rem" }}>Save Settings</button>
+          <div style={fieldStyle}>
+            <label>
+              Currency:{" "}
+              <input
+                value={draft.currency}
+                onChange={(e) => set("currency", e.target.value)}
+                style={{ width: "4rem" }}
+              />
+            </label>
+          </div>
+          <div style={fieldStyle}>
+            <label>
+              Buyer Noun:{" "}
+              <input value={draft.buyerNoun} onChange={(e) => set("buyerNoun", e.target.value)} />
+            </label>
+          </div>
+          <button type="submit" style={{ marginTop: "0.5rem" }}>
+            Save Settings
+          </button>
         </form>
       )}
     </div>

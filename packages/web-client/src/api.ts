@@ -38,6 +38,12 @@ export async function createDevice(
   return res.json();
 }
 
+export async function fetchDevice(id: string): Promise<Device> {
+  const res = await fetch(`/api/devices/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch device");
+  return res.json();
+}
+
 export async function deleteDevice(id: string): Promise<void> {
   const res = await fetch(`/api/devices/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete device");
@@ -90,8 +96,7 @@ async function proxyMutate(
 }
 
 // Read endpoints
-export const fetchCatalog = (id: string) =>
-  proxyGet<CatalogCategory[]>(id, "catalog");
+export const fetchCatalog = (id: string) => proxyGet<CatalogCategory[]>(id, "catalog");
 
 export const fetchBuyers = (id: string) =>
   proxyGet<{ buyers: Buyer[] }>(id, "buyers").then((d) => d.buyers);
@@ -99,8 +104,7 @@ export const fetchBuyers = (id: string) =>
 export const fetchConsumption = (id: string) =>
   proxyGet<{ rows: ConsumptionRow[] }>(id, "reports/consumption").then((d) => d.rows);
 
-export const fetchSettings = (id: string) =>
-  proxyGet<KioskSettings>(id, "settings");
+export const fetchSettings = (id: string) => proxyGet<KioskSettings>(id, "settings");
 
 // Admin endpoints
 export const createBuyer = (id: string, buyerId: number, label: string) =>
@@ -112,12 +116,8 @@ export const updateBuyer = (id: string, buyerId: number, label: string) =>
 export const deleteBuyer = (id: string, buyerId: number) =>
   proxyMutate(id, "admin/buyers", "DELETE", { id: buyerId });
 
-export const createCategory = (
-  id: string,
-  name: string,
-  preorder: boolean,
-  sortOrder: number,
-) => proxyMutate(id, "admin/catalog/categories", "POST", { name, preorder, sortOrder });
+export const createCategory = (id: string, name: string, preorder: boolean, sortOrder: number) =>
+  proxyMutate(id, "admin/catalog/categories", "POST", { name, preorder, sortOrder });
 
 export const updateCategory = (
   id: string,
