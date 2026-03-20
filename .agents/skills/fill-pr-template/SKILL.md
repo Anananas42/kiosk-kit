@@ -19,6 +19,16 @@ description: Fill PR description from .github template with concise, copy-pastea
 5. If some detail is unknown, use `TODO:` with a short note instead of guessing.
 6. Output only the final Markdown in a fenced block.
 
+## Screenshots
+
+If the branch contains a `screenshots/` directory:
+1. List all `.png` files in it.
+2. Build the **Screenshots** section with Markdown image links using raw GitHub URLs:
+   ```
+   ![description](https://raw.githubusercontent.com/Anananas42/kiosk-kit/<branch>/screenshots/<path>/<file>.png)
+   ```
+3. If no screenshots exist and the diff touches frontend packages (`packages/web-client`, `packages/landing`, `packages/kiosk-client`), add `TODO: take screenshots with \`pnpm screenshot\`` under the Screenshots heading.
+
 ## Output rules
 
 - Be brief and to the point.

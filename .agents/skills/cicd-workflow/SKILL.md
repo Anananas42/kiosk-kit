@@ -20,10 +20,47 @@ If no PR exists, proceed with the full workflow below.
 
 ## Workflow
 
-1. **Linear task first** — create or refine a Linear issue before writing code. Clarify scope upfront.
-2. **Branch from Linear** — use the Linear-generated branch name (e.g. `pazderkaadam/kio-5-devices-schema-crud-api`) so the branch auto-links to the issue.
-3. **Conventional commits** on the feature branch.
-4. **Push & open a PR** using the GitHub App token (see below). Use the `/fill-pr-template` skill to generate the description from `.github/pull_request_template.md`.
+1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why.
+2. **Pull latest main** — always `git checkout main && git pull` before creating a new branch, so you branch from the latest state.
+3. **Branch from Linear** — use the Linear-generated branch name (e.g. `pazderkaadam/kio-5-devices-schema-crud-api`) so the branch auto-links to the issue.
+4. **Conventional commits** on the feature branch.
+5. **Push & open a PR** using the GitHub App token (see below). Use the `/fill-pr-template` skill to generate the description from `.github/pull_request_template.md`.
+
+## Frontend screenshot verification
+
+If your changes touch frontend code (files in `packages/web-client`, `packages/landing`, or `packages/kiosk-client`), take screenshots before opening the PR.
+
+### 1. Take screenshots
+
+Use the screenshot script to capture the affected pages:
+
+```bash
+pnpm screenshot @kioskkit/web-client
+```
+
+The script starts the dev server automatically, takes a viewport screenshot, and saves it to `.screenshots/`. Use `--full` for full-page captures. To screenshot a specific route, start the dev server first, then pass the URL:
+
+```bash
+pnpm screenshot http://localhost:5173/devices/123
+```
+
+Take screenshots of every page/view you changed.
+
+### 2. Verify your work
+
+Read the screenshot files to visually confirm the output matches what you intended. If something looks wrong, fix the code and re-screenshot before proceeding.
+
+### 3. Add screenshots to the PR
+
+Commit the screenshots to a `screenshots/<branch-name>/` directory on your branch and push. Then reference them in the PR body's **Screenshots** section using raw GitHub URLs:
+
+```markdown
+![description](https://raw.githubusercontent.com/Anananas42/kiosk-kit/<branch>/screenshots/<branch-name>/<filename>.png)
+```
+
+The `/fill-pr-template` skill should include these in the **Screenshots** section of the PR description.
+
+After the PR is merged or closed, the `screenshots/` directory can be cleaned up.
 
 ## GitHub App authentication
 
