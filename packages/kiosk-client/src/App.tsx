@@ -105,7 +105,7 @@ function AppInner({
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [lastSuccess, setLastSuccess] = useState<string | null>(null);
   const [lastOrder, setLastOrder] = useState<LastOrder | null>(null);
-  const repeatTimer = useRef<ReturnType<typeof setTimeout>>();
+  const repeatTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const isOffline = useHealth();
   const dimmed = useIdleDim(settings.idleDimMs);
