@@ -38,7 +38,7 @@ export function App() {
         </header>
         <main style={{ width: "100%", maxWidth: 600 }}>
           <Routes>
-            <Route path="/" element={<DeviceList />} />
+            <Route path="/" element={<DeviceList user={user} />} />
             <Route path="/devices/:id" element={<DeviceDetail />} />
           </Routes>
         </main>
