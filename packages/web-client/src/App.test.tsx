@@ -13,4 +13,19 @@ describe("App", () => {
     });
     vi.restoreAllMocks();
   });
+
+  it("renders device list when authenticated", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ user: { id: "1", name: "Test", email: "t@t.com", role: "customer" } }),
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify([])));
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText("No devices registered.")).toBeInTheDocument();
+    });
+    vi.restoreAllMocks();
+  });
 });
