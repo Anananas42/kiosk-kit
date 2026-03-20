@@ -1,7 +1,6 @@
 import type {
   BuyersResponse,
   CatalogCategory,
-
   ItemCountResponse,
   KioskSettings,
   OverviewResponse,
