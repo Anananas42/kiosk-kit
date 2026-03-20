@@ -49,10 +49,6 @@ export interface RecordRow {
   price: string;
 }
 
-export interface HealthResponse {
-  online: boolean;
-}
-
 export interface RecordResponse {
   ok?: boolean;
   error?: string;

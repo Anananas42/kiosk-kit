@@ -8,7 +8,7 @@ export function useHealth() {
   useEffect(() => {
     const check = () => {
       fetchHealth()
-        .then((data) => setIsOffline(!data.online))
+        .then(() => setIsOffline(false))
         .catch(() => setIsOffline(true));
     };
     check();

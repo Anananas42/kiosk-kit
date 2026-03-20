@@ -1,7 +1,7 @@
 import type {
   BuyersResponse,
   CatalogCategory,
-  HealthResponse,
+
   ItemCountResponse,
   KioskSettings,
   OverviewResponse,
@@ -31,9 +31,9 @@ export async function fetchBuyers(): Promise<BuyersResponse> {
   return fetchJson("/api/buyers", "buyers_invalid");
 }
 
-export async function fetchHealth(): Promise<HealthResponse> {
+export async function fetchHealth(): Promise<void> {
   const res = await fetch("/api/health");
-  return res.json();
+  if (!res.ok) throw new Error(`Health check failed: HTTP ${res.status}`);
 }
 
 export async function fetchOverview(): Promise<OverviewResponse> {
