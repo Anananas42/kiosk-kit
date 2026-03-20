@@ -7,12 +7,7 @@ import type { AuthEnv } from "../middleware/auth.js";
 const PROXY_TIMEOUT_MS = 10_000;
 const HEALTH_TIMEOUT_MS = 5_000;
 
-async function getAccessibleDevice(
-  db: Db,
-  deviceId: string,
-  userId: string,
-  role: string,
-) {
+async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
   const conditions =
     role === "admin"
       ? eq(devices.id, deviceId)

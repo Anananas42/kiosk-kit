@@ -103,7 +103,11 @@ describe("device proxy", () => {
     const body = JSON.stringify({ items: [] });
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response(body, { status: 200, headers: { "content-type": "application/json" } })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(body, { status: 200, headers: { "content-type": "application/json" } }),
+        ),
     );
 
     const res = await app.request("/devices/device-1/kiosk/catalog");
@@ -138,7 +142,11 @@ describe("device proxy", () => {
     const body = JSON.stringify({ items: [] });
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response(body, { status: 200, headers: { "content-type": "application/json" } })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(body, { status: 200, headers: { "content-type": "application/json" } }),
+        ),
     );
 
     const res = await app.request("/devices/device-1/kiosk/catalog");
