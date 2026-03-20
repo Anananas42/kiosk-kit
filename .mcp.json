@@ -2,11 +2,18 @@
   "mcpServers": {
     "postgres": {
       "command": "npx",
-      "args": ["-y", "@crystaldba/postgres-mcp", "${DATABASE_URL}"]
+      "args": [
+        "-y",
+        "@crystaldba/postgres-mcp",
+        "${DATABASE_URL}"
+      ]
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"]
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
     }
   }
 }

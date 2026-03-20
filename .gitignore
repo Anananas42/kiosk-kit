@@ -6,3 +6,4 @@ data/
 .turbo/
 .venv/
 docker-compose.override.yml
+.screenshots/
