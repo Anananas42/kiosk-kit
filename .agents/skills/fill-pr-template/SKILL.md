@@ -21,13 +21,7 @@ description: Fill PR description from .github template with concise, copy-pastea
 
 ## Screenshots
 
-If the branch contains a `screenshots/` directory:
-1. List all `.png` files in it.
-2. Build the **Screenshots** section with Markdown image links using raw GitHub URLs:
-   ```
-   ![description](https://raw.githubusercontent.com/Anananas42/kiosk-kit/<branch>/screenshots/<path>/<file>.png)
-   ```
-3. If no screenshots exist and the diff touches frontend packages (`packages/web-client`, `packages/landing`, `packages/kiosk-client`), add `TODO: take screenshots with \`pnpm screenshot\`` under the Screenshots heading.
+If the diff touches frontend packages (`packages/web-client`, `packages/landing`, `packages/kiosk-client`), add `TODO: take screenshots with \`pnpm screenshot\` and upload as PR comments` under the Screenshots heading. Screenshots are uploaded as PR comments after the PR is created — they are never committed to the repo.
 
 ## Output rules
 

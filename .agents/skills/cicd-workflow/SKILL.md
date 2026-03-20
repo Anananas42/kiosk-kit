@@ -52,15 +52,17 @@ Read the screenshot files to visually confirm the output matches what you intend
 
 ### 3. Add screenshots to the PR
 
-Commit the screenshots to a `screenshots/<branch-name>/` directory on your branch and push. Then reference them in the PR body's **Screenshots** section using raw GitHub URLs:
+Do **not** commit screenshots to the repo. Instead, upload them as images in a PR comment so the repo stays clean:
 
-```markdown
-![description](https://raw.githubusercontent.com/Anananas42/kiosk-kit/<branch>/screenshots/<branch-name>/<filename>.png)
+```bash
+# Post each screenshot as a separate PR comment
+for img in .screenshots/*.png; do
+  GH_TOKEN="${GH_TOKEN}" gh pr comment <pr-number> \
+    --body "### Screenshot: $(basename "$img")"$'\n'"$(cat "$img" | base64 -w0 | sed 's|.*|![screenshot](data:image/png;base64,&)|')"
+done
 ```
 
-The `/fill-pr-template` skill should include these in the **Screenshots** section of the PR description.
-
-After the PR is merged or closed, the `screenshots/` directory can be cleaned up.
+If base64 data URIs don't render on GitHub, upload the images manually via the GitHub web UI and paste the resulting URLs into the PR body's **Screenshots** section. The `/fill-pr-template` skill should leave a `TODO` placeholder for screenshots when frontend code was changed.
 
 ## GitHub App authentication
 
@@ -126,16 +128,22 @@ git push "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git
 
 This counts as 1 fix attempt.
 
-### 3. Check reviews
+### 3. Check reviews and comments
 
-If `reviewDecision` is `CHANGES_REQUESTED`:
+Check both formal reviews and PR comments — reviewers may leave feedback in either place:
 
 ```bash
+# Formal review comments (inline code comments)
 GH_TOKEN="${GH_TOKEN}" gh api repos/Anananas42/kiosk-kit/pulls/<number>/comments
+# General PR comments (conversation thread)
+GH_TOKEN="${GH_TOKEN}" gh api repos/Anananas42/kiosk-kit/issues/<number>/comments
 ```
+
+Act on feedback if `reviewDecision` is `CHANGES_REQUESTED` **or** if there are unaddressed comments:
 
 - **Actionable feedback** — fix the issue, push, and reply to each addressed comment with a summary of what was changed.
 - **Unclear feedback** — reply to the PR comment asking for clarification, then continue polling.
+- **Questions or concerns** (not requesting code changes) — reply with an explanation, no code change needed.
 
 Addressing review feedback counts as 1 fix attempt.
 
