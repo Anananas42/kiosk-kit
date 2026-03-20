@@ -2,7 +2,7 @@
 
 ## The Product
 
-KioskKit replaces the whiteboard next to your guest fridge. It's a touchscreen tablet — guests tap what they took, you see what they owe. That's it.
+KioskKit replaces the whiteboard in your common area. It's a touchscreen tablet — guests tap what they took, you see what they owe. That's it.
 
 This is a **hardware product**. The landing page should treat it as such — not a SaaS marketing page, but a product listing. Like stumbling onto a product on Amazon or Alza. Familiar, shoppable, immediately clear that this is something you can buy.
 

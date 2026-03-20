@@ -2,13 +2,13 @@
 
 ## What It Is
 
-A self-service kiosk for small pensions and guesthouses. Touchscreen tablet (Raspberry Pi + screen) mounted in a common area near a fridge or self-service shelf. Guests walk up, grab a drink, tap it on the screen. Owner sees everything logged. No staff needed.
+A self-service kiosk for small pensions and guesthouses. Touchscreen tablet (Raspberry Pi + screen) mounted in a common area — next to the fridge, the tap, the snack shelf, wherever guests help themselves. Guests grab what they want, tap it on the screen. Owner sees everything logged. No staff needed.
 
 Also supports **advance ordering** — in the current deployment, guests order fresh pastries in the evening, the owner sends the order to a local bakery, pastries arrive next morning with per-day distribution sheets generated automatically for printing. This is a concrete instance of a generic pre-ordering capability (configurable schedules, quantity pickers, aggregated order views) that could be generalized for other use cases.
 
-**Honor-based system.** No payment terminal, no vending machine. Fits the trust-based culture of small pensions with 10–20 guests.
+**Honor-based system.** No payment terminal, no vending machine. Fits the trust-based culture of small pensions with 10–20 guests. The kiosk tracks whatever the owner puts out — drinks, snacks, ice cream, draft beer, spirits from a doser, anything.
 
-Replaces: a whiteboard. That's the pitch. Photo of whiteboard → photo of kiosk. Every pension owner gets it instantly.
+Replaces: a whiteboard or a paper tally sheet. That's the pitch. Photo of the old system → photo of the kiosk. Every pension owner gets it instantly.
 
 ---
 
