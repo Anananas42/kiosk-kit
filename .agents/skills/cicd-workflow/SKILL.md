@@ -21,11 +21,11 @@ Generate a short-lived installation token (expires in 1 hour):
 GH_TOKEN=$(./scripts/github-app-token.sh)
 ```
 
-Use it for **both** pushing the branch and creating the PR:
+Use it for **both** pushing the branch and creating the PR. Never modify the `origin` remote — push directly to the HTTPS URL instead:
 
 ```bash
-git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git"
-git push -u origin HEAD
+BRANCH=$(git branch --show-current)
+git push "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" "HEAD:refs/heads/${BRANCH}"
 GH_TOKEN="${GH_TOKEN}" gh pr create --title "..." --body "..."
 ```
 
