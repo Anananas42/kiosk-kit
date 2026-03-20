@@ -7,11 +7,17 @@ import type { AuthEnv } from "../middleware/auth.js";
 const PROXY_TIMEOUT_MS = 10_000;
 const HEALTH_TIMEOUT_MS = 5_000;
 
-async function getOwnedDevice(db: Db, deviceId: string, userId: string) {
-  const [device] = await db
-    .select()
-    .from(devices)
-    .where(and(eq(devices.id, deviceId), eq(devices.userId, userId)));
+async function getAccessibleDevice(
+  db: Db,
+  deviceId: string,
+  userId: string,
+  role: string,
+) {
+  const conditions =
+    role === "admin"
+      ? eq(devices.id, deviceId)
+      : and(eq(devices.id, deviceId), eq(devices.userId, userId));
+  const [device] = await db.select().from(devices).where(conditions);
   return device ?? null;
 }
 
@@ -21,7 +27,7 @@ export function deviceProxyRoutes(db: Db) {
   // Health check: GET /api/devices/:id/status
   app.get("/:id/status", async (c) => {
     const user = c.get("user");
-    const device = await getOwnedDevice(db, c.req.param("id"), user.id);
+    const device = await getAccessibleDevice(db, c.req.param("id"), user.id, user.role);
     if (!device) return c.json({ error: "Not found" }, 404);
 
     try {
@@ -37,7 +43,7 @@ export function deviceProxyRoutes(db: Db) {
   // Proxy: /api/devices/:id/kiosk/* → http://{tailscale_ip}:3001/api/*
   app.all("/:id/kiosk/*", async (c) => {
     const user = c.get("user");
-    const device = await getOwnedDevice(db, c.req.param("id"), user.id);
+    const device = await getAccessibleDevice(db, c.req.param("id"), user.id, user.role);
     if (!device) return c.json({ error: "Not found" }, 404);
 
     const kioskPath = c.req.path.replace(/^.*?\/kiosk\//, "");
