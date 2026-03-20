@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -6,6 +6,16 @@ export const users = pgTable("users", {
   name: text("name"),
   googleId: text("google_id").notNull().unique(),
   stripeCustomerId: text("stripe_customer_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const devices = pgTable("devices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  tailscaleIp: text("tailscale_ip").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
