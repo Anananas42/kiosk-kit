@@ -7,6 +7,9 @@ _What can go wrong when the PR is merged and deployed to production/dev_
 **How to manually test the behavior:**
 _A step-by-step guide for others on how to manually test the code/behavior_
 
+**Screenshots:**
+_If this PR includes frontend changes, add before/after screenshots or a screenshot of the final result._
+
 **Tests:**
 
 - [ ] Unit tests added for new/modified business logic
