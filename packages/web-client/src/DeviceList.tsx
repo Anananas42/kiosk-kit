@@ -1,8 +1,16 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { createDevice, type Device, deleteDevice, fetchDeviceStatus, fetchDevices } from "./api.js";
+import {
+  createDevice,
+  type Device,
+  deleteDevice,
+  fetchDeviceStatus,
+  fetchDevices,
+  type User,
+} from "./api.js";
 
-export function DeviceList() {
+export function DeviceList({ user }: { user: User }) {
+  const isAdmin = user.role === "admin";
   const [devices, setDevices] = useState<Device[]>([]);
   const [statuses, setStatuses] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
@@ -10,6 +18,7 @@ export function DeviceList() {
 
   const [name, setName] = useState("");
   const [tailscaleIp, setTailscaleIp] = useState("");
+  const [userId, setUserId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
   const loadDevices = () => {
@@ -33,10 +42,11 @@ export function DeviceList() {
   const handleAdd = (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    createDevice(name, tailscaleIp)
+    createDevice(name, tailscaleIp, userId)
       .then(() => {
         setName("");
         setTailscaleIp("");
+        setUserId("");
         loadDevices();
       })
       .catch((err) => setFormError(err.message));
@@ -56,24 +66,33 @@ export function DeviceList() {
     <div>
       <h2>Devices</h2>
 
-      <form onSubmit={handleAdd} style={{ marginBottom: "1rem" }}>
-        <input
-          placeholder="Device name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          style={{ marginRight: "0.5rem" }}
-        />
-        <input
-          placeholder="Tailscale IP"
-          value={tailscaleIp}
-          onChange={(e) => setTailscaleIp(e.target.value)}
-          required
-          style={{ marginRight: "0.5rem" }}
-        />
-        <button type="submit">Add device</button>
-        {formError && <span style={{ color: "red", marginLeft: "0.5rem" }}>{formError}</span>}
-      </form>
+      {isAdmin && (
+        <form onSubmit={handleAdd} style={{ marginBottom: "1rem" }}>
+          <input
+            placeholder="Device name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={{ marginRight: "0.5rem" }}
+          />
+          <input
+            placeholder="Tailscale IP"
+            value={tailscaleIp}
+            onChange={(e) => setTailscaleIp(e.target.value)}
+            required
+            style={{ marginRight: "0.5rem" }}
+          />
+          <input
+            placeholder="Assign to user ID"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            required
+            style={{ marginRight: "0.5rem" }}
+          />
+          <button type="submit">Add device</button>
+          {formError && <span style={{ color: "red", marginLeft: "0.5rem" }}>{formError}</span>}
+        </form>
+      )}
 
       {devices.length === 0 ? (
         <p>No devices registered.</p>
@@ -103,10 +122,12 @@ export function DeviceList() {
               <Link to={`/devices/${d.id}`} style={{ flex: 1 }}>
                 {d.name}
               </Link>
-              <span style={{ color: "#888" }}>{d.tailscaleIp}</span>
-              <button type="button" onClick={() => handleDelete(d.id, d.name)}>
-                Delete
-              </button>
+              {isAdmin && d.tailscaleIp && <span style={{ color: "#888" }}>{d.tailscaleIp}</span>}
+              {isAdmin && (
+                <button type="button" onClick={() => handleDelete(d.id, d.name)}>
+                  Delete
+                </button>
+              )}
             </li>
           ))}
         </ul>
