@@ -35,10 +35,6 @@ The design should be quietly impressive. Like how Apple presents AirTag — mund
 
 - **Hero is the main event.** Full-width, immersive, takes up the viewport. Dark background. Large serif headline, human subtitle, kiosk UI mockup showing the actual product interface.
 - **Below the hero is compact and scannable.** Alternating dark/light sections.
-  - How it works — three steps in a row
-  - Why it works — compact feature grid
-  - Pricing — visible, not hidden (device ~400 EUR, subscription 9.90 EUR/mo, backup ~300 EUR)
-  - Personal note — "Built because I got tired of scribbled notes at my own family pension."
   - Footer — minimal
 
 ## Audience
