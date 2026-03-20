@@ -2,6 +2,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Store } from "./db/store.js";
+import { mountDocs } from "./docs.js";
 import { adminBuyersRoute } from "./routes/admin/buyers.js";
 import { adminCatalogRoute } from "./routes/admin/catalog.js";
 import { adminPreorderConfigRoute } from "./routes/admin/preorder-config.js";
@@ -41,6 +42,8 @@ export function createApp(store: Store) {
   app.route("/api/admin/preorder-config", adminPreorderConfigRoute(store));
 
   app.route("/api/reports", reportsRoute(store));
+
+  mountDocs(app);
 
   // Prevent caching of HTML (index.html) so deploys take effect immediately.
   // Hashed JS/CSS assets are fine to cache — they have unique filenames.
