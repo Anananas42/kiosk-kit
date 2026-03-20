@@ -231,6 +231,20 @@ Working production deployment at a family pension. Full source in this repo (for
 - The only remaining attack vector is someone compromising your backend and using it to reach the devices.
 - Read-only root filesystem recommended for SD card longevity and power-loss corruption protection, not for security.
 
+### NFC Identification (Future)
+
+Optional USB NFC reader (~$10–15, e.g. ACR122U) replaces the on-screen name picker. Guests tap a card or wristband, kiosk identifies them instantly, flow skips straight to the catalog. NFC tags cost ~$0.30–0.50 each (wristbands ~$1–2 — nicer for hospitality).
+
+- **Without NFC (default):** current tap-your-name flow. Fine for small deployments (~10–20 users).
+- **With NFC:** idle screen shows "Tap your card" → identifies user → catalog. No name grid, no scrolling. Scales to hundreds of users without UI degradation.
+- Tags store only a UID — all mapping lives in SQLite on the Pi.
+- Pairing happens in the dashboard: "Hold a new tag to the reader" → assign to a buyer.
+- Operator enables NFC per kiosk in settings — not a separate product, just a mode.
+- **Trust model shift:** identity is verified (can't tap someone else's name), consumption is still honor-based (can't prevent someone from not logging). This is a meaningful upgrade — solves the most common objection without requiring vending machine complexity.
+- **Product packaging:** base kit is Pi + screen. NFC upgrade is reader + 20 tags/wristbands — natural upsell.
+- USB NFC readers are well-supported on Linux — the Pi reads the UID via `/dev/` or a lightweight daemon, passes it to kiosk-server.
+- udev rules need an exception for the NFC reader (currently all USB storage is blocked, but HID/smartcard devices are a different class).
+
 ---
 
 ## Why This Gap Exists
