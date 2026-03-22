@@ -1,17 +1,11 @@
-import { useEffect, useState } from "react";
-
-type User = { id: string; name: string; email: string };
+import { BrowserRouter, Route, Routes } from "react-router";
+import { logout } from "./api.js";
+import { DeviceDetail } from "./DeviceDetail.js";
+import { DeviceList } from "./DeviceList.js";
+import { useAuth } from "./useAuth.js";
 
 export function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/me")
-      .then((r) => r.json())
-      .then((data) => setUser(data.user))
-      .finally(() => setLoading(false));
-  }, []);
+  const { user, setUser, loading } = useAuth();
 
   if (loading) return <div style={styles.container}>Loading...</div>;
 
@@ -27,18 +21,29 @@ export function App() {
   }
 
   return (
-    <div style={styles.container}>
-      <h1>KioskKit</h1>
-      <p>
-        Signed in as <strong>{user.name}</strong> ({user.email})
-      </p>
-      <button
-        style={styles.button}
-        onClick={() => fetch("/api/auth/logout", { method: "POST" }).then(() => setUser(null))}
-      >
-        Sign out
-      </button>
-    </div>
+    <BrowserRouter>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <h1 style={{ margin: 0 }}>KioskKit</h1>
+          <span>
+            {user.name} ({user.email}){" "}
+            <button
+              type="button"
+              style={styles.button}
+              onClick={() => logout().then(() => setUser(null))}
+            >
+              Sign out
+            </button>
+          </span>
+        </header>
+        <main style={{ width: "100%", maxWidth: 600 }}>
+          <Routes>
+            <Route path="/" element={<DeviceList user={user} />} />
+            <Route path="/devices/:id" element={<DeviceDetail />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 
@@ -47,15 +52,23 @@ const styles = {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    justifyContent: "center",
     minHeight: "100vh",
     fontFamily: "system-ui, sans-serif",
+    padding: "1rem",
+    gap: "1rem",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between" as const,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 600,
     gap: "1rem",
   },
   button: {
-    padding: "0.75rem 1.5rem",
-    fontSize: "1rem",
-    borderRadius: "0.5rem",
+    padding: "0.5rem 1rem",
+    fontSize: "0.875rem",
+    borderRadius: "0.375rem",
     border: "1px solid #ccc",
     background: "#fff",
     cursor: "pointer",
