@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
+import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { devicesRoutes } from "./routes/devices.js";
 import { healthRoute } from "./routes/health.js";
 import { meRoute } from "./routes/me.js";
@@ -30,6 +31,7 @@ export function createApp(db: Db, google?: Google) {
   // Auth middleware for protected API routes (exclude health + auth + me)
   app.use("/api/*", authMiddleware(db));
 
+  app.route("/api/devices", deviceProxyRoutes(db));
   app.route("/api/devices", devicesRoutes(db));
 
   // Serve web-client static assets
