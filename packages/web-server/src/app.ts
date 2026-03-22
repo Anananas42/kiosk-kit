@@ -3,6 +3,7 @@ import type { Google } from "arctic";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
+import { mountDocs } from "./docs.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
@@ -27,6 +28,8 @@ export function createApp(db: Db, google?: Google) {
   }
 
   app.route("/api/me", meRoute(db));
+
+  mountDocs(app);
 
   // Auth middleware for protected API routes (exclude health + auth + me)
   app.use("/api/*", authMiddleware(db));
