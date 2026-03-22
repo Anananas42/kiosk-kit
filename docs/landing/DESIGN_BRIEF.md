@@ -12,9 +12,9 @@ Quietly impressive craft. The polish of Stripe or Linear, but applied to a produ
 
 ### Color & Theme
 
-- **Primarily dark** — deep navy or dark slate as the dominant surface. Not pure black.
+- **Primarily dark** — deep navy or slate as the dominant surface. Not pure black.
 - **Interlaced with lighter sections** for rhythm and contrast.
-- One confident accent color (teal-green) for CTAs and interactive elements.
+- One confident accent color for CTAs and interactive elements.
 - The product image area can have a cleaner, well-lit feel to make the hardware stand out.
 
 ### Typography
@@ -34,40 +34,6 @@ Quietly impressive craft. The polish of Stripe or Linear, but applied to a produ
 - Not cold, techy, or developer-oriented.
 - Not playful or whimsical.
 - Not spread out with big gaps and thin content.
-
-## Layout
-
-### Hero — Product Listing
-
-The hero is a product page. Two columns:
-
-- **Left (~55%):** Large, well-lit product image of the physical kiosk device (touchscreen in its case, slightly angled). Below: thumbnail images showing different angles and contexts (mounted, on counter, screen close-up).
-- **Right (~45%):** The "buy box":
-  - Breadcrumb: Home > Products > KioskKit
-  - Product title and short tagline
-  - Review stars / "Early access" badge
-  - Price block: crossed-out original price with a discounted price in large bold text
-  - Screen size selector (7" / 10")
-  - Large "Add to cart" CTA button (full width, prominent)
-  - "or try the interactive demo" subtle link below
-  - Trust badges: Free shipping, Plug & play, Open source
-  - Key spec bullets
-
-### Pricing Strategy
-
-The **device price** is front and center in the hero buy box. The subscription is NOT shown upfront. The user first understands the hardware value proposition and enters the product discovery/configurator flow via the cart CTA. The subscription (remote dashboard, backups, updates) is introduced later in the flow when the user has seen the dashboard features and it becomes a justified, reasonable add-on — not a surprise fee.
-
-### Below the Fold
-
-Alternating dark/lighter sections, dense and scannable:
-
-1. **How it works** — 3-column steps (pick room, tap item, check dashboard)
-2. **What's in the box** — clean checklist with setup note
-3. **Not just drinks** — bakery ordering use case, adaptable workflows
-4. **Built to survive** — 2x3 feature grid (offline-first, locked down, remote dashboard, crash recovery, auto backups, multi-language)
-5. **Open source** — quieter section, self-host option, GitHub link
-6. **FAQ** — wifi down? device breaks? self-host?
-7. **Minimal footer**
 
 ## Audience
 
