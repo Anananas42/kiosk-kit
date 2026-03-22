@@ -10,6 +10,7 @@ const MeResponseSchema = z.object({
       id: z.string(),
       name: z.string(),
       email: z.string(),
+      role: z.string(),
     })
     .nullable(),
 });
@@ -43,7 +44,12 @@ export function meRoute(db: Db) {
       if (!result) return c.json({ user: null });
 
       return c.json({
-        user: { id: result.user.id, name: result.user.name, email: result.user.email },
+        user: {
+          id: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
+          role: result.user.role,
+        },
       });
     },
   );

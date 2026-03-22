@@ -27,6 +27,12 @@ export function authMiddleware(db: Db) {
   });
 }
 
+export const requireAdmin = createMiddleware<AuthEnv>(async (c, next) => {
+  const user = c.get("user");
+  if (user.role !== "admin") return c.json({ error: "Forbidden" }, 403);
+  await next();
+});
+
 function getCookie(c: { req: { header: (name: string) => string | undefined } }, name: string) {
   const header = c.req.header("cookie");
   if (!header) return undefined;

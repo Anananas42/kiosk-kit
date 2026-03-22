@@ -19,6 +19,10 @@ description: Fill PR description from .github template with concise, copy-pastea
 5. If some detail is unknown, use `TODO:` with a short note instead of guessing.
 6. Output only the final Markdown in a fenced block.
 
+## Screenshots
+
+If the diff touches frontend packages (`packages/web-client`, `packages/landing`, `packages/kiosk-client`), add `TODO: take screenshots with \`pnpm screenshot\` and upload as PR comments` under the Screenshots heading. Screenshots are uploaded as PR comments after the PR is created — they are never committed to the repo.
+
 ## Output rules
 
 - Be brief and to the point.
