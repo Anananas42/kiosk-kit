@@ -26,7 +26,7 @@ if [ -f /mnt/secrets/claude-credentials.json ]; then
 fi
 
 echo "==> Installing dependencies..."
-pnpm install --frozen-lockfile
+CI=true pnpm install --frozen-lockfile
 
 echo "==> Waiting for postgres..."
 for i in $(seq 1 30); do
@@ -59,6 +59,10 @@ echo "==> Ready."
 # If AGENT_TASK is set, run claude non-interactively
 if [ -n "${AGENT_TASK:-}" ]; then
   claude --dangerously-skip-permissions -p "$AGENT_TASK"
+  if [ -n "${AGENT_NO_LOOP:-}" ]; then
+    echo "==> --no-loop set, skipping PR watch loop."
+    exit 0
+  fi
 else
   # Interactive mode — no watch loop after exit
   exec claude --dangerously-skip-permissions
