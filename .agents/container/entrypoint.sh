@@ -58,7 +58,7 @@ echo "==> Ready."
 
 # If AGENT_TASK is set, run claude non-interactively
 if [ -n "${AGENT_TASK:-}" ]; then
-  claude --dangerously-skip-permissions -p "$AGENT_TASK"
+  claude --dangerously-skip-permissions --verbose -p "$AGENT_TASK"
   if [ -n "${AGENT_NO_LOOP:-}" ]; then
     echo "==> --no-loop set, skipping PR watch loop."
     exit 0
@@ -169,7 +169,7 @@ $REVIEW_ACTION"
       exit 1
     fi
 
-    claude --dangerously-skip-permissions -p "$NEEDS_ACTION"
+    claude --dangerously-skip-permissions --verbose -p "$NEEDS_ACTION"
   else
     # All clear — reset attempt counter
     ATTEMPT_COUNT=0
