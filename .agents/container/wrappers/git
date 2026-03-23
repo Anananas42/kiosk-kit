@@ -24,4 +24,27 @@ if [ -n "$NEW_BRANCH" ] && [ "$NEW_BRANCH" != "main" ]; then
   fi
 fi
 
+# --- Block commit and push on main ---
+CURRENT_BRANCH=$("$REAL_GIT" branch --show-current 2>/dev/null || true)
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  if [ "${1:-}" = "commit" ]; then
+    echo "ERROR: Cannot commit directly on main." >&2
+    echo "  You must create a feature branch first." >&2
+    echo "  Re-read the cicd-workflow skill in CLAUDE.md and follow the full workflow:" >&2
+    echo "    1. git checkout -b kio-<id>/<description>" >&2
+    echo "    2. Make changes and commit on the feature branch" >&2
+    echo "    3. Push and open a PR" >&2
+    exit 1
+  fi
+  if [ "${1:-}" = "push" ]; then
+    echo "ERROR: Cannot push directly to main." >&2
+    echo "  You must create a feature branch and open a PR." >&2
+    echo "  Re-read the cicd-workflow skill in CLAUDE.md and follow the full workflow:" >&2
+    echo "    1. git checkout -b kio-<id>/<description>" >&2
+    echo "    2. Make changes and commit on the feature branch" >&2
+    echo "    3. Push and open a PR" >&2
+    exit 1
+  fi
+fi
+
 exec "$REAL_GIT" "$@"
