@@ -24,7 +24,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Run database migrations
-        run: pnpm --filter @kioskkit/web-server db:migrate
+        run: |
+          MIGRATION_URL=$(echo "$DATABASE_URL" | sed 's/-pooler//')
+          DATABASE_URL="$MIGRATION_URL" pnpm --filter @kioskkit/web-server db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
