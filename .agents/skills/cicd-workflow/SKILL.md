@@ -22,7 +22,7 @@ If no PR exists, proceed with the full workflow below.
 
 1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why.
 2. **Pull latest main** — always `git checkout main && git pull` before creating a new branch, so you branch from the latest state.
-3. **Branch from Linear** — use the Linear-generated branch name (e.g. `pazderkaadam/kio-5-devices-schema-crud-api`) so the branch auto-links to the issue.
+3. **Branch naming** — use the format `kio-<id>/<description>` (e.g. `kio-5/devices-schema-crud-api`). The Linear task ID prefix auto-links to the issue.
 4. **Conventional commits** on the feature branch. Include the Linear task ID in parentheses, e.g. `feat(KIO-5): add devices schema`.
 5. **Push & open a PR** using the GitHub App token (see below). Use the `/fill-pr-template` skill to generate the description from `.github/pull_request_template.md`.
 
@@ -71,7 +71,7 @@ If base64 data URIs don't render on GitHub, upload the images manually via the G
 Generate a short-lived installation token (expires in 1 hour):
 
 ```bash
-GH_TOKEN=$(./scripts/github-app-token.sh)
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
 ```
 
 Use it for **both** pushing the branch and creating the PR. Never modify the `origin` remote — push directly to the HTTPS URL instead:
@@ -85,7 +85,7 @@ GH_TOKEN="${GH_TOKEN}" gh pr create --title "..." --body "..."
 **Token refresh**: the app token expires after 1 hour. Before any `gh` or `git push` command in the watch loop, regenerate it:
 
 ```bash
-GH_TOKEN=$(./scripts/github-app-token.sh)
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
 ```
 
 ## Auto-merge
@@ -103,7 +103,7 @@ After creating the PR (or resuming an existing one), poll every 2 minutes. Each 
 ### 1. Refresh token and check PR state
 
 ```bash
-GH_TOKEN=$(./scripts/github-app-token.sh)
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
 PR_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json state,reviewDecision,mergeStateStatus)
 ```
 
@@ -122,7 +122,7 @@ GH_TOKEN="${GH_TOKEN}" gh pr checks
 ```bash
 GH_TOKEN="${GH_TOKEN}" gh run view <run-id> --log-failed
 # ... fix the issue, commit ...
-GH_TOKEN=$(./scripts/github-app-token.sh)
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
 git push "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" "HEAD:refs/heads/${BRANCH}"
 ```
 

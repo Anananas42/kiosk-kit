@@ -13,13 +13,13 @@ services:
 
   agent:
     build:
-      context: .
-      dockerfile: Dockerfile.agent
+      context: ../..
+      dockerfile: .agents/container/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - .:/mnt/repo:ro
+      - ../..:/mnt/repo:ro
       - ${HOME}/.config/github-apps/kiosk-kit-agent.pem:/mnt/secrets/kiosk-kit-agent.pem:ro
       - ${HOME}/.claude/.credentials.json:/home/agent/.claude/.credentials.json:ro
       - agent-node-modules:/workspace/node_modules

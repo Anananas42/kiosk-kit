@@ -23,8 +23,13 @@ RUN useradd -m -s /bin/bash agent
 RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/agent/.cache/node/corepack \
   && chown -R agent:agent /workspace /home/agent/.local /home/agent/.cache
 
+# CLI wrappers (enforce naming conventions for git/gh)
+COPY .agents/container/wrappers /opt/wrappers
+RUN chmod +x /opt/wrappers/*
+ENV PATH="/opt/wrappers:$PATH"
+
 # Entrypoint
-COPY scripts/agent-entrypoint.sh /entrypoint.sh
+COPY .agents/container/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER agent

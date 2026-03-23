@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generates a short-lived GitHub App installation token.
-# Usage: ./scripts/github-app-token.sh
+# Usage: ./.agents/scripts/github-app-token.sh
 
 set -euo pipefail
 

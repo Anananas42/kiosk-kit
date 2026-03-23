@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Wrapper around git to enforce branch naming conventions.
+# Placed on PATH before the real git binary inside the agent container.
+
+set -euo pipefail
+
+REAL_GIT=$(which -a git | grep -v "$(dirname "$0")" | head -1)
+
+# --- Enforce branch naming on checkout -b / switch -c ---
+NEW_BRANCH=""
+if [ "${1:-}" = "checkout" ] && [ "${2:-}" = "-b" ]; then
+  NEW_BRANCH="${3:-}"
+elif [ "${1:-}" = "switch" ] && [ "${2:-}" = "-c" ]; then
+  NEW_BRANCH="${3:-}"
+fi
+
+if [ -n "$NEW_BRANCH" ] && [ "$NEW_BRANCH" != "main" ]; then
+  # Must match: kio-N/description
+  if ! echo "$NEW_BRANCH" | grep -qE '^kio-[0-9]+/[a-z0-9-]+$'; then
+    echo "ERROR: Branch name must match: kio-<number>/<description>" >&2
+    echo "  Example: kio-15/add-user-auth" >&2
+    echo "  Got: $NEW_BRANCH" >&2
+    exit 1
+  fi
+fi
+
+exec "$REAL_GIT" "$@"

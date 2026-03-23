@@ -17,13 +17,13 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 
 ```bash
 # Interactive claude session in a container
-./scripts/agent-run.sh
+./.agents/scripts/run.sh
 
 # Non-interactive with a task description
-./scripts/agent-run.sh "Implement feature X per Linear issue KIO-15"
+./.agents/scripts/run.sh "Implement feature X per Linear issue KIO-15"
 
-# Rebuild the image first (after Dockerfile.agent changes or to update Claude Code)
-./scripts/agent-run.sh --build
+# Rebuild the image first (after Dockerfile changes or to update Claude Code)
+./.agents/scripts/run.sh --build
 ```
 
 ## What the container provides
@@ -34,17 +34,17 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | pnpm | 10.32.1 (from corepack) |
 | Claude Code | Pre-installed, runs with `--dangerously-skip-permissions` |
 | Git identity | `kiosk-kit-agent[bot]`, no GPG signing, HTTPS remote |
-| GitHub CLI | `gh`, authenticated via app token from `scripts/github-app-token.sh` |
+| GitHub CLI | `gh`, authenticated via app token from `.agents/scripts/github-app-token.sh` |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
 | Repo | Full copy from host bind mount (read-only source), writable workspace |
 
 ## How it works
 
 1. Host repo is bind-mounted read-only at `/mnt/repo`
-2. Entrypoint (`scripts/agent-entrypoint.sh`) copies it to `/workspace`
+2. Entrypoint (`.agents/container/entrypoint.sh`) copies it to `/workspace`
 3. Git is configured with bot identity and HTTPS origin (no SSH, no GPG)
 4. GitHub App PEM is copied from `/mnt/secrets/` to `~/.config/github-apps/`
-5. `pnpm install --frozen-lockfile` runs
+5. `pnpm install --frozen-lockfile` runs (cached across runs via named volumes)
 6. Postgres health check passes, then `db:push` applies the schema
 7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `.agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
@@ -60,14 +60,14 @@ When a task is provided via `AGENT_TASK`, the container does not exit after clau
 4. If PR is merged or closed → container exits cleanly
 5. After 5 consecutive failed fix attempts → posts a comment asking for human help and exits
 
-Interactive sessions (`./scripts/agent-run.sh` with no task) skip the watch loop.
+Interactive sessions (`./.agents/scripts/run.sh` with no task) skip the watch loop.
 
 ## Git authentication inside the container
 
 The container does **not** have SSH keys. All git push operations use the GitHub App token:
 
 ```bash
-GH_TOKEN=$(./scripts/github-app-token.sh)
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
 BRANCH=$(git branch --show-current)
 git push "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" "HEAD:refs/heads/${BRANCH}"
 ```
@@ -79,18 +79,15 @@ This is the same flow as the `cicd-workflow` skill. The token expires after 1 ho
 The container is the intended runtime for the `cicd-workflow` skill. A typical autonomous task:
 
 ```bash
-./scripts/agent-run.sh "Pick up Linear issue KIO-15. Use /cicd-workflow to implement, open a PR, and watch CI."
+./.agents/scripts/run.sh "Pick up Linear issue KIO-15. Use /cicd-workflow to implement, open a PR, and watch CI."
 ```
 
 The agent will branch, implement, push via app token, create a PR, and enter the watch loop — all inside the container.
 
-## Customization
-
-Create `docker-compose.agent.override.yml` (gitignored) for local tweaks like extra env vars or volume mounts.
-
 ## Key files
 
-- `Dockerfile.agent` — container image definition
-- `docker-compose.agent.yml` — compose services (agent + postgres)
-- `scripts/agent-entrypoint.sh` — container startup logic
-- `scripts/agent-run.sh` — host-side launcher
+- `.agents/container/Dockerfile` — container image definition
+- `.agents/container/docker-compose.yml` — compose services (agent + postgres)
+- `.agents/container/entrypoint.sh` — container startup logic
+- `.agents/scripts/run.sh` — host-side launcher
+- `.agents/scripts/github-app-token.sh` — GitHub App token generator
