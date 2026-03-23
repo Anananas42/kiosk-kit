@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-REAL_GIT=$(which -a git | grep -v "$(dirname "$0")" | head -1)
+REAL_GIT=/usr/bin/git
 
 # --- Enforce branch naming on checkout -b / switch -c ---
 NEW_BRANCH=""
