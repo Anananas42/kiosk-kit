@@ -2,9 +2,8 @@
 set -euo pipefail
 
 echo "==> Copying repo to /workspace..."
-cp -a /mnt/repo/. /workspace/
-# Remove host worktrees and node_modules (will reinstall)
-rm -rf /workspace/.claude/worktrees /workspace/node_modules
+# Root node_modules is a named volume — exclude only it (not per-package ones)
+rsync -a --exclude /node_modules --exclude .claude/worktrees /mnt/repo/ /workspace/
 
 echo "==> Configuring git..."
 git config user.name "kiosk-kit-agent[bot]"

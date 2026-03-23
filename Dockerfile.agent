@@ -2,7 +2,7 @@ FROM node:24-slim
 
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl jq openssl ca-certificates gnupg \
+    git curl jq openssl ca-certificates gnupg rsync \
     python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
@@ -18,9 +18,15 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 RUN corepack enable pnpm \
   && npm install -g @anthropic-ai/claude-code
 
+# Non-root user (claude refuses --dangerously-skip-permissions as root)
+RUN useradd -m -s /bin/bash agent
+RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/agent/.cache/node/corepack \
+  && chown -R agent:agent /workspace /home/agent/.local /home/agent/.cache
+
 # Entrypoint
 COPY scripts/agent-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+USER agent
 WORKDIR /workspace
 ENTRYPOINT ["/entrypoint.sh"]
