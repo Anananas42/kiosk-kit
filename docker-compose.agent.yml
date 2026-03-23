@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: kioskkit
+      POSTGRES_USER: kioskkit
+      POSTGRES_PASSWORD: kioskkit
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kioskkit"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/mnt/repo:ro
+      - ${HOME}/.config/github-apps/kiosk-kit-agent.pem:/mnt/secrets/kiosk-kit-agent.pem:ro
+      - ${HOME}/.claude/.credentials.json:/root/.claude/.credentials.json:ro
+    environment:
+      DATABASE_URL: postgresql://kioskkit:kioskkit@postgres:5432/kioskkit
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      STITCH_API_KEY: ${STITCH_API_KEY:-}
+      AGENT_TASK: ${AGENT_TASK:-}
+    stdin_open: true
+    tty: true

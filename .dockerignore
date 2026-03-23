@@ -4,3 +4,6 @@ dist
 .turbo
 data
 .env
+.claude/worktrees
+.screenshots
+ansible/.venv

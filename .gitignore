@@ -7,3 +7,4 @@ data/
 .venv/
 docker-compose.override.yml
 .screenshots/
+docker-compose.agent.override.yml
