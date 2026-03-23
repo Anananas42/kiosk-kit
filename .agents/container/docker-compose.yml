@@ -28,6 +28,7 @@ services:
     environment:
       DATABASE_URL: postgresql://kioskkit:kioskkit@postgres:5432/kioskkit
       STITCH_API_KEY: ${STITCH_API_KEY:-}
+      NEON_API_KEY: ${NEON_API_KEY:-}
       AGENT_TASK: ${AGENT_TASK:-}
     stdin_open: true
     tty: true
