@@ -48,6 +48,19 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 6. Postgres health check passes, then `db:push` applies the schema
 7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `.agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
+9. After claude finishes a non-interactive task, the **PR watch loop** takes over (see below)
+
+## PR watch loop
+
+When a task is provided via `AGENT_TASK`, the container does not exit after claude finishes. Instead, the entrypoint enters a polling loop:
+
+1. Polls the PR for the current branch every 20 seconds
+2. Checks CI status and review comments
+3. If CI is failing or reviews need attention → re-invokes claude with full context (logs, comments)
+4. If PR is merged or closed → container exits cleanly
+5. After 5 consecutive failed fix attempts → posts a comment asking for human help and exits
+
+Interactive sessions (`./scripts/agent-run.sh` with no task) skip the watch loop.
 
 ## Git authentication inside the container
 
