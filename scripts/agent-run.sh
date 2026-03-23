@@ -22,8 +22,8 @@ done
 
 # Validate prerequisites
 CLAUDE_CREDS="$HOME/.claude/.credentials.json"
-if [ ! -f "$CLAUDE_CREDS" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  echo "Error: No Claude credentials found. Log in with 'claude' first, or set ANTHROPIC_API_KEY." >&2
+if [ ! -f "$CLAUDE_CREDS" ]; then
+  echo "Error: No Claude credentials found at $CLAUDE_CREDS. Log in with 'claude' first." >&2
   exit 1
 fi
 

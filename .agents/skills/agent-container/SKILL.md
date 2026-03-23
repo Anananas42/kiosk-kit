@@ -9,7 +9,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 
 ## Prerequisites
 
-- Claude Code subscription (credentials at `~/.claude/.credentials.json`) — or `ANTHROPIC_API_KEY` as an alternative
+- Claude Code subscription (credentials at `~/.claude/.credentials.json`)
 - GitHub App PEM file at `~/.config/github-apps/kiosk-kit-agent.pem`
 - Docker running
 
@@ -46,7 +46,8 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 4. GitHub App PEM is copied from `/mnt/secrets/` to `~/.config/github-apps/`
 5. `pnpm install --frozen-lockfile` runs
 6. Postgres health check passes, then `db:push` applies the schema
-7. Claude starts with the provided task or in interactive mode
+7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `.agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
+8. Claude starts with the provided task or in interactive mode
 
 ## Git authentication inside the container
 

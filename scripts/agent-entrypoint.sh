@@ -35,6 +35,21 @@ done
 echo "==> Pushing database schema..."
 pnpm --filter @kioskkit/web-server db:push
 
+echo "==> Generating CLAUDE.md with all agent skills..."
+{
+  echo "# Agent Skills"
+  echo ""
+  echo "You are running inside an isolated agent container. The following skills are available."
+  echo "Read and follow them carefully."
+  echo ""
+  for skill in .agents/skills/*/SKILL.md; do
+    echo "---"
+    echo ""
+    cat "$skill"
+    echo ""
+  done
+} > /workspace/CLAUDE.md
+
 echo "==> Ready."
 
 # If AGENT_TASK is set, run claude non-interactively

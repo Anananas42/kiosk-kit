@@ -24,7 +24,6 @@ services:
       - ${HOME}/.claude/.credentials.json:/root/.claude/.credentials.json:ro
     environment:
       DATABASE_URL: postgresql://kioskkit:kioskkit@postgres:5432/kioskkit
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       STITCH_API_KEY: ${STITCH_API_KEY:-}
       AGENT_TASK: ${AGENT_TASK:-}
     stdin_open: true
