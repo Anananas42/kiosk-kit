@@ -56,9 +56,57 @@ echo "==> Generating CLAUDE.md with all agent skills..."
 
 echo "==> Ready."
 
+# --- Session log tailer ---
+# Claude Code writes all activity to a JSONL session file but prints nothing
+# to stdout during tool use. This background process tails the session file
+# and prints formatted one-line summaries so `docker logs` shows progress.
+CLAUDE_SESSIONS_DIR="$HOME/.claude/projects/-workspace"
+start_log_tailer() {
+  (
+    # Wait for the session file to appear
+    while [ ! -d "$CLAUDE_SESSIONS_DIR" ] || [ -z "$(ls "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null)" ]; do
+      sleep 1
+    done
+    SESSION_FILE=$(ls -t "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null | head -1)
+    tail -f "$SESSION_FILE" 2>/dev/null | jq --unbuffered -r '
+      .message as $m |
+      .timestamp as $ts |
+      ($ts | ltrimstr("2026-") | split(".")[0]) as $t |
+      if $m.role == "assistant" then
+        ($m.content // [] | map(
+          if .type == "text" and (.text | length) > 0 then
+            "[\($t)] assistant: \(.text | gsub("\n"; " ") | if length > 200 then .[:200] + "..." else . end)"
+          elif .type == "tool_use" then
+            "[\($t)] tool: \(.name) \(.input.description // .input.command // .input.pattern // .input.file_path // "" | gsub("\n"; " ") | if length > 100 then .[:100] + "..." else . end)"
+          else empty
+          end
+        ) | .[])
+      elif $m.role == "user" then
+        ($m.content // [] | map(
+          if .type == "tool_result" and .is_error == true then
+            "[\($t)] ERROR: \(.content | gsub("\n"; " ") | if length > 200 then .[:200] + "..." else . end)"
+          else empty
+          end
+        ) | .[])
+      else empty
+      end
+    ' 2>/dev/null
+  ) &
+  LOG_TAILER_PID=$!
+}
+
+stop_log_tailer() {
+  if [ -n "${LOG_TAILER_PID:-}" ]; then
+    kill "$LOG_TAILER_PID" 2>/dev/null || true
+    wait "$LOG_TAILER_PID" 2>/dev/null || true
+  fi
+}
+
 # If AGENT_TASK is set, run claude non-interactively
 if [ -n "${AGENT_TASK:-}" ]; then
-  claude --dangerously-skip-permissions --verbose -p "$AGENT_TASK"
+  start_log_tailer
+  trap stop_log_tailer EXIT
+  claude --dangerously-skip-permissions -p "$AGENT_TASK"
   if [ -n "${AGENT_NO_LOOP:-}" ]; then
     echo "==> --no-loop set, skipping PR watch loop."
     exit 0
@@ -169,7 +217,8 @@ $REVIEW_ACTION"
       exit 1
     fi
 
-    claude --dangerously-skip-permissions --verbose -p "$NEEDS_ACTION"
+    start_log_tailer
+    claude --dangerously-skip-permissions -p "$NEEDS_ACTION"
   else
     # All clear — reset attempt counter
     ATTEMPT_COUNT=0
