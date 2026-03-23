@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-REAL_GH=$(which -a gh | grep -v "$(dirname "$0")" | head -1)
+REAL_GH=/usr/bin/gh
 
 # --- Enforce PR title convention ---
 # Must match: type(KIO-N): description

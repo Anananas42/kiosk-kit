@@ -21,7 +21,7 @@ services:
     volumes:
       - ../..:/mnt/repo:ro
       - ${HOME}/.config/github-apps/kiosk-kit-agent.pem:/mnt/secrets/kiosk-kit-agent.pem:ro
-      - ${HOME}/.claude/.credentials.json:/home/agent/.claude/.credentials.json:ro
+      - ${HOME}/.claude/.credentials.json:/mnt/secrets/claude-credentials.json:ro
       - agent-node-modules:/workspace/node_modules
       - agent-pnpm-store:/home/agent/.local/share/pnpm/store
       - agent-corepack:/home/agent/.cache/node/corepack
