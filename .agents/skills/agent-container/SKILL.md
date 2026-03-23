@@ -11,6 +11,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 
 - Claude Code subscription (credentials at `~/.claude/.credentials.json`)
 - GitHub App PEM file at `~/.config/github-apps/kiosk-kit-agent.pem`
+- `.env` file with API keys (see Secrets section)
 - Docker running
 
 ## Launching an agent
@@ -21,6 +22,9 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 
 # Non-interactive with a task description
 ./.agents/scripts/run.sh "Implement feature X per Linear issue KIO-15"
+
+# Skip the PR watch loop (for testing)
+./.agents/scripts/run.sh --no-loop "List your MCP servers"
 
 # Rebuild the image first (after Dockerfile changes or to update Claude Code)
 ./.agents/scripts/run.sh --build
@@ -35,20 +39,38 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | Claude Code | Pre-installed, runs with `--dangerously-skip-permissions` |
 | Git identity | `kiosk-kit-agent[bot]`, no GPG signing, HTTPS remote |
 | GitHub CLI | `gh`, authenticated via app token from `.agents/scripts/github-app-token.sh` |
+| Playwright | Chromium pre-installed for screenshot verification |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
 | Repo | Full copy from host bind mount (read-only source), writable workspace |
+| MCP servers | context7, stitch, Linear, Neon, postgres — all available |
+
+## Secrets
+
+The container loads secrets from two sources:
+
+**`.env` file** (gitignored, at repo root):
+```
+DATABASE_URL=postgresql://kioskkit:kioskkit@localhost:5433/kioskkit
+LINEAR_API_KEY=lin_api_...
+NEON_API_KEY=napi_...
+STITCH_API_KEY=...
+```
+
+**Mounted files:**
+- `~/.config/github-apps/kiosk-kit-agent.pem` — GitHub App private key
+- `~/.claude/.credentials.json` — Claude Code subscription credentials
 
 ## How it works
 
 1. Host repo is bind-mounted read-only at `/mnt/repo`
-2. Entrypoint (`.agents/container/entrypoint.sh`) copies it to `/workspace`
+2. Entrypoint (`.agents/container/entrypoint.sh`) copies it to `/workspace` via rsync
 3. Git is configured with bot identity and HTTPS origin (no SSH, no GPG)
-4. GitHub App PEM is copied from `/mnt/secrets/` to `~/.config/github-apps/`
+4. GitHub App PEM and Claude credentials are copied from `/mnt/secrets/`
 5. `pnpm install --frozen-lockfile` runs (cached across runs via named volumes)
 6. Postgres health check passes, then `db:push` applies the schema
 7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `.agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
-9. After claude finishes a non-interactive task, the **PR watch loop** takes over (see below)
+9. After claude finishes a non-interactive task, the **PR watch loop** takes over (unless `--no-loop`)
 
 ## PR watch loop
 
@@ -60,7 +82,7 @@ When a task is provided via `AGENT_TASK`, the container does not exit after clau
 4. If PR is merged or closed → container exits cleanly
 5. After 5 consecutive failed fix attempts → posts a comment asking for human help and exits
 
-Interactive sessions (`./.agents/scripts/run.sh` with no task) skip the watch loop.
+Use `--no-loop` to skip the watch loop (useful for testing). Interactive sessions also skip it.
 
 ## Git authentication inside the container
 
@@ -89,5 +111,8 @@ The agent will branch, implement, push via app token, create a PR, and enter the
 - `.agents/container/Dockerfile` — container image definition
 - `.agents/container/docker-compose.yml` — compose services (agent + postgres)
 - `.agents/container/entrypoint.sh` — container startup logic
+- `.agents/container/wrappers/` — git/gh wrappers enforcing naming conventions
 - `.agents/scripts/run.sh` — host-side launcher
 - `.agents/scripts/github-app-token.sh` — GitHub App token generator
+- `.agents/scripts/screenshot.mjs` — Playwright screenshot tool
+- `.mcp.json` — MCP server configuration (loaded by Claude Code)
