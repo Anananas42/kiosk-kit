@@ -19,13 +19,18 @@ if [ -f /mnt/secrets/kiosk-kit-agent.pem ]; then
   chmod 600 "$HOME/.config/github-apps/kiosk-kit-agent.pem"
 fi
 
+# Copy Claude credentials (mounted read-only, need writable .claude dir)
+if [ -f /mnt/secrets/claude-credentials.json ]; then
+  mkdir -p "$HOME/.claude"
+  cp /mnt/secrets/claude-credentials.json "$HOME/.claude/.credentials.json"
+fi
+
 echo "==> Installing dependencies..."
 pnpm install --frozen-lockfile
 
 echo "==> Waiting for postgres..."
 for i in $(seq 1 30); do
-  if pg_isready -h postgres -U kioskkit -q 2>/dev/null || \
-     node -e "const c=require('net').connect(5432,'postgres');c.on('connect',()=>{c.destroy();process.exit(0)});c.on('error',()=>process.exit(1))" 2>/dev/null; then
+  if node -e "const c=require('net').connect(5432,'postgres');c.on('connect',()=>{c.destroy();process.exit(0)});c.on('error',()=>process.exit(1))" 2>/dev/null; then
     break
   fi
   sleep 1

@@ -18,6 +18,10 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 RUN corepack enable pnpm \
   && npm install -g @anthropic-ai/claude-code
 
+# Playwright browser + system dependencies (for screenshot verification)
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN npx playwright install --with-deps chromium
+
 # Non-root user (claude refuses --dangerously-skip-permissions as root)
 RUN useradd -m -s /bin/bash agent
 RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/agent/.cache/node/corepack \
