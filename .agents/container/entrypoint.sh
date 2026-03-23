@@ -77,7 +77,7 @@ if [ "$BRANCH" = "main" ]; then
 fi
 
 while true; do
-  GH_TOKEN=$(./scripts/github-app-token.sh)
+  GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
 
   # Check PR state
   PR_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number,state,reviewDecision,title 2>/dev/null || echo "")
