@@ -1,16 +1,9 @@
-import { Admin, CustomRoutes, Resource } from "react-admin";
-import { Route } from "react-router";
+import { Admin, Resource } from "react-admin";
 import { authProvider } from "./authProvider.js";
 import { dataProvider } from "./dataProvider.js";
-
-function Dashboard() {
-  return (
-    <div style={{ padding: "1rem" }}>
-      <h1>Admin Dashboard</h1>
-      <p>Welcome to the KioskKit admin panel.</p>
-    </div>
-  );
-}
+import { Dashboard } from "./Dashboard.js";
+import { DeviceList, DeviceCreate, DeviceEdit } from "./resources/devices.js";
+import { UserList, UserShow } from "./resources/users.js";
 
 export function App() {
   return (
@@ -19,9 +12,18 @@ export function App() {
       dataProvider={dataProvider}
       dashboard={Dashboard}
     >
-      <CustomRoutes>
-        <Route path="/" element={<Dashboard />} />
-      </CustomRoutes>
+      <Resource
+        name="devices"
+        list={DeviceList}
+        create={DeviceCreate}
+        edit={DeviceEdit}
+      />
+      <Resource
+        name="users"
+        list={UserList}
+        show={UserShow}
+        recordRepresentation="name"
+      />
     </Admin>
   );
 }
