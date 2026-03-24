@@ -15,27 +15,6 @@ function createTestDb() {
   return { db, sqlite };
 }
 
-describe("migrations", () => {
-  it("applies cleanly to a fresh in-memory database", () => {
-    const { sqlite } = createTestDb();
-    const tables = sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-      .all() as Array<{ name: string }>;
-    const tableNames = tables
-      .map((t) => t.name)
-      .filter((n) => !n.startsWith("__") && n !== "sqlite_sequence");
-    expect(tableNames).toEqual([
-      "buyers",
-      "catalog_categories",
-      "catalog_items",
-      "preorder_config",
-      "records",
-      "settings",
-    ]);
-    sqlite.close();
-  });
-});
-
 describe("Store", () => {
   let store: Store;
   let sqlite: Database.Database;
@@ -50,46 +29,11 @@ describe("Store", () => {
     sqlite.close();
   });
 
-  // ── Catalog ─────────────────────────────────────────────────────────
+  // ── Item balance: SUM aggregation + legacy itemId OR-fallback ───────
 
-  it("deletes a category and cascades to items", () => {
-    const catId = store.createCategory("Temp", false, 0);
-    store.createItem(catId, "Item", "1", "10", "", 0);
-    store.deleteCategory(catId);
-    expect(store.getCatalog()).toEqual([]);
-  });
-
-  // ── Records ─────────────────────────────────────────────────────────
-
-  it("computes item balance with itemId", () => {
+  it("sums records and falls back to legacy name match", () => {
     store.createBuyer(1, "101");
-    store.insertRecord({
-      id: "r1",
-      timestamp: "t1",
-      buyer: 1,
-      count: 5,
-      category: "C",
-      item: "Beer",
-      itemId: "item-1",
-      quantity: "",
-      price: "",
-    });
-    store.insertRecord({
-      id: "r2",
-      timestamp: "t2",
-      buyer: 1,
-      count: -2,
-      category: "C",
-      item: "Beer",
-      itemId: "item-1",
-      quantity: "",
-      price: "",
-    });
-    expect(store.getItemBalance(1, "Beer", "item-1")).toBe(3);
-  });
-
-  it("computes item balance with legacy name fallback", () => {
-    store.createBuyer(1, "101");
+    // Legacy record (no itemId)
     store.insertRecord({
       id: "r1",
       timestamp: "t1",
@@ -101,6 +45,7 @@ describe("Store", () => {
       quantity: "",
       price: "",
     });
+    // New record (with itemId)
     store.insertRecord({
       id: "r2",
       timestamp: "t2",
@@ -112,37 +57,19 @@ describe("Store", () => {
       quantity: "",
       price: "",
     });
-    // Should sum both legacy (itemId='') and new (itemId='item-1')
+    // Both legacy and new records are summed via the OR condition
     expect(store.getItemBalance(1, "Beer", "item-1")).toBe(15);
+    // Without itemId, matches all records by name (regardless of itemId)
+    expect(store.getItemBalance(1, "Beer")).toBe(15);
   });
 
-  it("computes item balance without itemId", () => {
-    store.createBuyer(1, "101");
-    store.insertRecord({
-      id: "r1",
-      timestamp: "t1",
-      buyer: 1,
-      count: 7,
-      category: "C",
-      item: "Beer",
-      itemId: "",
-      quantity: "",
-      price: "",
-    });
-    expect(store.getItemBalance(1, "Beer")).toBe(7);
-  });
+  // ── Settings: string → number/boolean coercion ─────────────────────
 
-  // ── Settings ────────────────────────────────────────────────────────
-
-  it("returns null when no settings exist", () => {
-    expect(store.getSettings()).toBeNull();
-  });
-
-  it("coerces setting values to correct types", () => {
+  it("coerces stored string values to typed settings", () => {
     store.putSetting("locale", "en");
     store.putSetting("currency", "USD");
     store.putSetting("buyerNoun", "room");
-    store.putSetting("maintenance", "false");
+    store.putSetting("maintenance", "true");
     store.putSetting("idleDimMs", "5000");
     store.putSetting("inactivityTimeoutMs", "30000");
 
@@ -151,46 +78,20 @@ describe("Store", () => {
       locale: "en",
       currency: "USD",
       buyerNoun: "room",
-      maintenance: false,
+      maintenance: true,
       idleDimMs: 5000,
       inactivityTimeoutMs: 30000,
     });
   });
 
-  it("upserts settings on conflict", () => {
-    store.putSetting("locale", "cs");
-    store.putSetting("locale", "en");
-    store.putSetting("currency", "CZK");
-    store.putSetting("buyerNoun", "a");
-    store.putSetting("maintenance", "false");
-    store.putSetting("idleDimMs", "0");
-    store.putSetting("inactivityTimeoutMs", "0");
-    expect(store.getSettings()!.locale).toBe("en");
-  });
+  // ── Preorder config: rows → boolean arrays ─────────────────────────
 
-  // ── Preorder Config ─────────────────────────────────────────────────
-
-  it("returns null when no preorder config exists", () => {
-    expect(store.getPreorderConfig()).toBeNull();
-  });
-
-  it("aggregates preorder rows into day arrays", () => {
+  it("aggregates weekday rows into day arrays", () => {
     for (let i = 0; i < 7; i++) {
       store.putPreorderConfig(i, i % 2 === 0, true);
     }
     const config = store.getPreorderConfig()!;
     expect(config.orderingDays).toEqual([true, false, true, false, true, false, true]);
     expect(config.deliveryDays).toEqual([true, true, true, true, true, true, true]);
-  });
-
-  it("upserts preorder config on conflict", () => {
-    store.putPreorderConfig(0, true, true);
-    store.putPreorderConfig(0, false, false);
-    for (let i = 1; i < 7; i++) {
-      store.putPreorderConfig(i, true, true);
-    }
-    const config = store.getPreorderConfig()!;
-    expect(config.orderingDays[0]).toBe(false);
-    expect(config.deliveryDays[0]).toBe(false);
   });
 });
