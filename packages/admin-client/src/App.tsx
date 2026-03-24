@@ -1,6 +1,6 @@
 import { Admin, Resource } from "react-admin";
 import { authProvider } from "./authProvider.js";
-import { dataProvider } from "./dataProvider.js";
+import { dataProvider } from "./dataProvider/index.js";
 import { Dashboard } from "./Dashboard.js";
 import { DeviceList, DeviceCreate, DeviceEdit } from "./resources/devices.js";
 import { UserList, UserShow } from "./resources/users.js";
