@@ -76,13 +76,19 @@ STITCH_API_KEY=...
 
 When a task is provided via `AGENT_TASK`, the container does not exit after claude finishes. Instead, the entrypoint enters a polling loop:
 
-1. Polls the PR for the current branch every 20 seconds
+1. Polls the PR for the current branch every 30 seconds
 2. Checks CI status and review comments
 3. If CI is failing or reviews need attention → re-invokes claude with full context (logs, comments)
 4. If PR is merged or closed → container exits cleanly
 5. After 5 consecutive failed fix attempts → posts a comment asking for human help and exits
 
 Use `--no-loop` to skip the watch loop (useful for testing). Interactive sessions also skip it.
+
+## Important: Do not wait for CI
+
+After creating a PR, do NOT sleep, poll, or wait for CI status checks. Exit promptly. The PR watch loop in the entrypoint handles CI failures automatically — it will re-invoke you with the failure logs if anything breaks.
+
+Similarly, do not poll for PR reviews or approval. Just create the PR, enable auto-merge, and exit.
 
 ## Git authentication inside the container
 
