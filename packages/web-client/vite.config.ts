@@ -20,6 +20,9 @@ export default defineConfig({
               target: kioskAdminDevUrl,
               rewrite: (p: string) => p.replace(/^\/api\/devices\/.+\/kiosk\/admin/, "/admin"),
             },
+            "/admin": {
+              target: kioskAdminDevUrl,
+            },
           }
         : {}),
       "/api": "http://localhost:3002",
