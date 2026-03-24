@@ -41,11 +41,21 @@ export function createApp(db: Db, google?: Google) {
 
   app.route("/api/devices", deviceProxyRoutes(db));
 
-  // Serve web-client static assets
-  app.use("/assets/*", serveStatic({ root: "../web-client/dist" }));
+  // Host-based static serving: admin.* → admin-client, everything else → web-client
+  const adminAssets = serveStatic({ root: "../admin-client/dist" });
+  const webAssets = serveStatic({ root: "../web-client/dist" });
+  const adminFallback = serveStatic({ root: "../admin-client/dist", path: "index.html" });
+  const webFallback = serveStatic({ root: "../web-client/dist", path: "index.html" });
 
-  // SPA fallback: serve index.html for all non-API routes
-  app.get("*", serveStatic({ root: "../web-client/dist", path: "index.html" }));
+  app.use("/assets/*", (c, next) => {
+    const host = c.req.header("host") ?? "";
+    return host.startsWith("admin.") ? adminAssets(c, next) : webAssets(c, next);
+  });
+
+  app.get("*", (c, next) => {
+    const host = c.req.header("host") ?? "";
+    return host.startsWith("admin.") ? adminFallback(c, next) : webFallback(c, next);
+  });
 
   return app;
 }
