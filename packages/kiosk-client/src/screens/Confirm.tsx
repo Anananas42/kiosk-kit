@@ -1,7 +1,7 @@
 import type { CatalogItem } from "@kioskkit/shared";
 import { formatCurrency, getDeliveryDateLabel, parsePrice } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { fetchItemCount } from "../api.js";
+import { trpc } from "../trpc.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import Tile from "../components/Tile.js";
 import { useT } from "../i18n/useT.js";
@@ -48,7 +48,8 @@ export default function Confirm({
 
   useEffect(() => {
     if (!isPreorder) return;
-    fetchItemCount(buyer, item.name, item.id)
+    trpc["records.itemCount"]
+      .query({ buyer, item: item.name, itemId: item.id })
       .then((data) => setExistingQty(data.count))
       .catch(() => {});
   }, [isPreorder, buyer, item.name, item.id]);

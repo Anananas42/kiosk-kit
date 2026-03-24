@@ -1,6 +1,6 @@
 import { formatCurrency, parsePrice, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { fetchOverview } from "../api.js";
+import { trpc } from "../trpc.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import { useT } from "../i18n/useT.js";
 
@@ -65,7 +65,8 @@ export default function ConsumptionOverview({
   const fmt = (amount: number) => formatCurrency(amount, locale, currency);
 
   useEffect(() => {
-    fetchOverview()
+    trpc["records.list"]
+      .query()
       .then((data) => setRecords(data.records))
       .catch(() => setError(t("overview.loadError")));
   }, [t]);

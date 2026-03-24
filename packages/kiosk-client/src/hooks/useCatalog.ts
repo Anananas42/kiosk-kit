@@ -8,7 +8,6 @@ import {
   type PreorderConfig,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useState } from "react";
-import { fetchBuyers, fetchPreorderConfig, fetchSettings } from "../api.js";
 import { trpc } from "../trpc.js";
 
 export function useCatalog() {
@@ -32,7 +31,8 @@ export function useCatalog() {
         console.error("Catalog load error:", err);
         setCatalogError(err instanceof Error ? err.message : "Failed to load catalog.");
       });
-    fetchBuyers()
+    trpc["buyers.list"]
+      .query()
       .then((data) => {
         setBuyers(data.buyers);
         setBuyerError(null);
@@ -41,14 +41,16 @@ export function useCatalog() {
         console.error("Buyers load error:", err);
         setBuyerError(err instanceof Error ? err.message : "Failed to load buyers.");
       });
-    fetchPreorderConfig()
+    trpc["preorderConfig.get"]
+      .query()
       .then((data) => {
         setPreorderConfig(data);
       })
       .catch((err) => {
         console.error("Preorder config load error:", err);
       });
-    fetchSettings()
+    trpc["settings.get"]
+      .query()
       .then((data) => {
         setSettings(data);
       })

@@ -7,7 +7,7 @@ import {
   REPEAT_ORDER_MS,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { postRecord } from "./api.js";
+import { trpc } from "./trpc.js";
 import OfflineBanner from "./components/OfflineBanner.js";
 import SuccessFlash from "./components/SuccessFlash.js";
 import { useCatalog } from "./hooks/useCatalog.js";
@@ -204,7 +204,7 @@ function AppInner({
       setConfirmError(null);
       setIsSending(true);
       try {
-        await postRecord(recordData);
+        await trpc["records.submit"].mutate(recordData);
         const label =
           operation === "+"
             ? isPreorder
