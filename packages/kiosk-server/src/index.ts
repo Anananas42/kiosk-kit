@@ -17,7 +17,7 @@ const db = new Database(join(DATA_DIR, "kioskkit.db"), {
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
-runMigrations(db);
+runMigrations(db, join(DATA_DIR, "kioskkit.db"));
 
 const store = new Store(db);
 const app = createApp(store);

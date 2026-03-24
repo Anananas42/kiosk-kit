@@ -12,7 +12,8 @@ const db = new Database(join(DATA_DIR, "kioskkit.db"));
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
-runMigrations(db);
+const dbPath = join(DATA_DIR, "kioskkit.db");
+runMigrations(db, dbPath);
 console.log("[seed] Migrations applied.");
 
 const store = new Store(db);
