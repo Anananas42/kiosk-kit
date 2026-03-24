@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { createGoogleOAuth } from "./auth/google.js";

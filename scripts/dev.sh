@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Load environment variables from root .env
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
 PROFILE="${1:-all}"
 
 needs_postgres() {
