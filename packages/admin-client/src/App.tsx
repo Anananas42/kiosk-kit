@@ -11,6 +11,8 @@ export function App() {
       authProvider={authProvider}
       dataProvider={dataProvider}
       dashboard={Dashboard}
+      loginPage={false}
+      requireAuth
     >
       <Resource
         name="devices"

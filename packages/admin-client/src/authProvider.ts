@@ -8,13 +8,14 @@ export const authProvider: AuthProvider = {
 
   logout: async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    window.location.href = "/api/auth/google";
   },
 
   checkAuth: async () => {
     const { user } = await trpc.me.query();
     if (!user) {
-      throw new Error("Not authenticated");
+      window.location.href = "/api/auth/google";
+      return new Promise<never>(() => {});
     }
   },
 

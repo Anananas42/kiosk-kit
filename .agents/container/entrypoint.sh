@@ -70,17 +70,25 @@ echo "==> Ready."
 # to stdout during tool use. This background process tails the session file
 # and prints formatted one-line summaries so `docker logs` shows progress.
 CLAUDE_SESSIONS_DIR="$HOME/.claude/projects/-workspace"
+LOG_TAILER_PID=""
 start_log_tailer() {
+  # Kill previous tailer so we always follow the newest session file
+  stop_log_tailer
+
   (
-    # Wait for the session file to appear
-    while [ ! -d "$CLAUDE_SESSIONS_DIR" ] || [ -z "$(ls "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null)" ]; do
+    # Wait for a new session file to appear (newer than any existing ones)
+    BEFORE=$(ls -t "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null | head -1 || echo "")
+    while true; do
+      NEWEST=$(ls -t "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null | head -1 || echo "")
+      if [ -n "$NEWEST" ] && [ "$NEWEST" != "$BEFORE" ]; then
+        break
+      fi
       sleep 1
     done
-    SESSION_FILE=$(ls -t "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null | head -1)
-    tail -f "$SESSION_FILE" 2>/dev/null | jq --unbuffered -r '
+    tail -f "$NEWEST" 2>/dev/null | jq --unbuffered -r '
       .message as $m |
       .timestamp as $ts |
-      ($ts | ltrimstr("2026-") | split(".")[0]) as $t |
+      ($ts | sub("^[0-9]{4}-"; "") | split(".")[0]) as $t |
       if $m.role == "assistant" then
         ($m.content // [] | map(
           if .type == "text" and (.text | length) > 0 then

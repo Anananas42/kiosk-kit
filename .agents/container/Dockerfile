@@ -26,6 +26,9 @@ RUN npx playwright install --with-deps chromium
 # Non-root user (claude refuses --dangerously-skip-permissions as root)
 RUN useradd -m -s /bin/bash agent
 
+# Playwright needs write access for browser profile dirs at runtime
+RUN chown -R agent:agent /opt/playwright
+
 # Install gh-attach for screenshot uploads to PR comments
 # Can't use `gh extension install` at build time (needs auth), so clone directly
 RUN git clone --depth 1 https://github.com/atani/gh-attach.git /home/agent/.local/share/gh/extensions/gh-attach \
