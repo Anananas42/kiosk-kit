@@ -27,6 +27,18 @@ RUN useradd -m -s /bin/bash agent
 RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/agent/.cache/node/corepack \
   && chown -R agent:agent /workspace /home/agent/.local /home/agent/.cache
 
+# Pre-install dependencies at build time (layer cached until lockfile changes)
+COPY --chown=agent:agent pnpm-lock.yaml pnpm-workspace.yaml package.json /workspace/
+COPY --chown=agent:agent packages/kiosk-client/package.json /workspace/packages/kiosk-client/
+COPY --chown=agent:agent packages/kiosk-server/package.json /workspace/packages/kiosk-server/
+COPY --chown=agent:agent packages/landing/package.json /workspace/packages/landing/
+COPY --chown=agent:agent packages/shared/package.json /workspace/packages/shared/
+COPY --chown=agent:agent packages/web-client/package.json /workspace/packages/web-client/
+COPY --chown=agent:agent packages/web-server/package.json /workspace/packages/web-server/
+USER agent
+RUN pnpm install --frozen-lockfile
+USER root
+
 # CLI wrappers (enforce naming conventions for git/gh)
 COPY .agents/container/wrappers /opt/wrappers
 RUN chmod +x /opt/wrappers/*
