@@ -24,7 +24,7 @@ Establish the correct patterns, conventions, and architecture from the very firs
 
 ## Workflow
 
-1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why.
+1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why. **Update the issue status to "In Progress"** immediately when you start working on it, using the Linear MCP.
 2. **Pull latest main** — always `git checkout main && git pull` before creating a new branch, so you branch from the latest state.
 3. **Branch naming** — use the format `kio-<id>/<description>` (e.g. `kio-5/devices-schema-crud-api`). The Linear task ID prefix auto-links to the issue.
 4. **Conventional commits** on the feature branch. Include the Linear task ID in parentheses, e.g. `feat(KIO-5): add devices schema`.
