@@ -11,6 +11,16 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
+export const UserListItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  role: UserRoleSchema,
+  createdAt: z.coerce.string(),
+});
+
+export type UserListItem = z.infer<typeof UserListItemSchema>;
+
 export const MeOutputSchema = z.object({
   user: UserSchema.nullable(),
 });
