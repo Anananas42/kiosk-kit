@@ -1,15 +1,27 @@
-import { DeviceCreateInputSchema, DeviceSchema, DeviceUpdateInputSchema } from "@kioskkit/shared";
+import {
+  type Device,
+  DeviceCreateInputSchema,
+  DeviceSchema,
+  DeviceUpdateInputSchema,
+} from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { devices } from "../../db/schema.js";
+import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
+
+const isDev = process.env.NODE_ENV === "development";
 
 export const devicesRouter = router({
   "devices.get": authedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .output(DeviceSchema)
     .query(async ({ ctx, input }) => {
+      if (isDev && input.id === LOCAL_DEVICE_ID) {
+        return makeLocalDevice(ctx.user.id);
+      }
+
       const conditions =
         ctx.user.role === "admin"
           ? eq(devices.id, input.id)
@@ -33,17 +45,21 @@ export const devicesRouter = router({
   "devices.list": authedProcedure.output(z.array(DeviceSchema)).query(async ({ ctx }) => {
     const query = ctx.db.select().from(devices);
     const result =
-      ctx.user.role === "admin"
-        ? await query
-        : await query.where(eq(devices.userId, ctx.user.id));
+      ctx.user.role === "admin" ? await query : await query.where(eq(devices.userId, ctx.user.id));
 
-    return result.map((d) => ({
+    const list: Device[] = result.map((d) => ({
       id: d.id,
       userId: d.userId,
       name: d.name,
       tailscaleIp: ctx.user.role === "admin" ? d.tailscaleIp : undefined,
       createdAt: d.createdAt.toISOString(),
     }));
+
+    if (isDev) {
+      list.push(makeLocalDevice(ctx.user.id));
+    }
+
+    return list;
   }),
 
   "devices.create": adminProcedure
@@ -104,10 +120,7 @@ export const devicesRouter = router({
   "devices.delete": adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const [deleted] = await ctx.db
-        .delete(devices)
-        .where(eq(devices.id, input.id))
-        .returning();
+      const [deleted] = await ctx.db.delete(devices).where(eq(devices.id, input.id)).returning();
 
       if (!deleted) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
