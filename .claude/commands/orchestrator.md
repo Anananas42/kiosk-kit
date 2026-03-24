@@ -54,9 +54,14 @@ docker compose -p "agent-<slug>" logs --tail 100 agent
 gh pr list --head "kio-<id>/<description>"
 ```
 
-## Creating Linear issues
+## Linear task conventions
 
-Before dispatching, create a Linear issue for the task if one doesn't exist yet. Use the Linear MCP tools. Every PR must link to a Linear issue.
+Every PR must link to a Linear issue. Create one before dispatching if it doesn't exist. Use the Linear MCP tools.
+
+- **One issue = one PR.** Size tasks so an agent can complete them in a single session.
+- **Group related issues into a project** when 2+ tasks share a goal. Set blocking relationships between dependent tasks.
+- **Titles are short, verb-led.** Keep under ~60 characters. Detail goes in the description.
+- **Descriptions are self-contained** — context (why), requirements (what), acceptance criteria (how to verify). The agent task brief is derived from this; if the description is vague, the agent will flounder.
 
 ## Stuck agent recovery
 
