@@ -7,7 +7,6 @@ import {
   REPEAT_ORDER_MS,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { trpc } from "./trpc.js";
 import OfflineBanner from "./components/OfflineBanner.js";
 import SuccessFlash from "./components/SuccessFlash.js";
 import { useCatalog } from "./hooks/useCatalog.js";
@@ -23,6 +22,7 @@ import ConsumptionOverview from "./screens/ConsumptionOverview.js";
 import ItemSelect from "./screens/ItemSelect.js";
 import PreorderCategorySelect from "./screens/PreorderCategorySelect.js";
 import PreorderOrdersOverview from "./screens/PreorderOrdersOverview.js";
+import { trpc } from "./trpc.js";
 import type { LastOrder } from "./types.js";
 
 type Screen =
@@ -107,7 +107,9 @@ function AppInner({
   const repeatTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const isOffline = useHealth();
-  const dimmed = useIdleDim(settings.idleDimMs);
+  const idleDimMs = import.meta.env.DEV ? 600_000 : settings.idleDimMs;
+  const inactivityMs = import.meta.env.DEV ? 600_000 : settings.inactivityTimeoutMs;
+  const dimmed = useIdleDim(idleDimMs);
 
   const preorderCategories = catalog.filter((cat) => cat.preorder);
   const preorderNames = new Set(preorderCategories.map((cat) => cat.name));
@@ -130,7 +132,7 @@ function AppInner({
   const { secondsLeft, dismiss: dismissWarning } = useInactivityReset(
     state.screen !== "buyer",
     reset,
-    settings.inactivityTimeoutMs,
+    inactivityMs,
   );
 
   useEffect(() => {
