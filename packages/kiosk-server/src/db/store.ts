@@ -7,53 +7,55 @@ import type {
   RecordEntry,
   RecordRow,
 } from "@kioskkit/shared";
-import type Database from "better-sqlite3";
-
-// ── Buyers ──────────────────────────────────────────────────────────────────
+import { and, eq, or, sql } from "drizzle-orm";
+import type { Db } from "./index.js";
+import {
+  buyers,
+  catalogCategories,
+  catalogItems,
+  preorderConfig,
+  records,
+  settings,
+} from "./schema.js";
 
 export class Store {
-  constructor(private db: Database.Database) {}
+  constructor(private db: Db) {}
 
   // ── Buyers ────────────────────────────────────────────────────────────
 
   getBuyers(): Buyer[] {
-    return this.db.prepare("SELECT id, label FROM buyers ORDER BY id").all() as Buyer[];
+    return this.db.select().from(buyers).orderBy(buyers.id).all();
   }
 
   createBuyer(id: number, label: string): void {
-    this.db.prepare("INSERT INTO buyers (id, label) VALUES (?, ?)").run(id, label);
+    this.db.insert(buyers).values({ id, label }).run();
   }
 
   updateBuyer(id: number, label: string): void {
-    this.db.prepare("UPDATE buyers SET label = ? WHERE id = ?").run(label, id);
+    this.db.update(buyers).set({ label }).where(eq(buyers.id, id)).run();
   }
 
   deleteBuyer(id: number): void {
-    this.db.prepare("DELETE FROM buyers WHERE id = ?").run(id);
+    this.db.delete(buyers).where(eq(buyers.id, id)).run();
   }
 
   // ── Catalog ─────────────────────────────────────────────────────────────
 
   getCatalog(): CatalogCategory[] {
     const cats = this.db
-      .prepare(
-        "SELECT id, name, preorder, sort_order FROM catalog_categories ORDER BY sort_order, id",
-      )
-      .all() as Array<{ id: number; name: string; preorder: number; sort_order: number }>;
-
-    const itemStmt = this.db.prepare(
-      "SELECT id, name, quantity, price, dph_rate, sort_order FROM catalog_items WHERE category_id = ? ORDER BY sort_order, id",
-    );
+      .select()
+      .from(catalogCategories)
+      .orderBy(catalogCategories.sortOrder, catalogCategories.id)
+      .all();
 
     return cats.map((cat) => {
-      const items = itemStmt.all(cat.id) as Array<{
-        id: number;
-        name: string;
-        quantity: string;
-        price: string;
-        dph_rate: string;
-        sort_order: number;
-      }>;
+      const items = this.db
+        .select()
+        .from(catalogItems)
+        .where(eq(catalogItems.categoryId, cat.id))
+        .orderBy(catalogItems.sortOrder, catalogItems.id)
+        .all();
+
       return {
         id: String(cat.id),
         name: cat.name,
@@ -64,7 +66,7 @@ export class Store {
             name: it.name,
             quantity: it.quantity,
             price: it.price,
-            dphRate: it.dph_rate,
+            dphRate: it.dphRate,
           }),
         ),
       };
@@ -73,19 +75,23 @@ export class Store {
 
   createCategory(name: string, preorder: boolean, sortOrder: number): number {
     const result = this.db
-      .prepare("INSERT INTO catalog_categories (name, preorder, sort_order) VALUES (?, ?, ?)")
-      .run(name, preorder ? 1 : 0, sortOrder);
-    return Number(result.lastInsertRowid);
+      .insert(catalogCategories)
+      .values({ name, preorder: preorder ? 1 : 0, sortOrder })
+      .returning({ id: catalogCategories.id })
+      .get();
+    return result.id;
   }
 
   updateCategory(id: number, name: string, preorder: boolean, sortOrder: number): void {
     this.db
-      .prepare("UPDATE catalog_categories SET name = ?, preorder = ?, sort_order = ? WHERE id = ?")
-      .run(name, preorder ? 1 : 0, sortOrder, id);
+      .update(catalogCategories)
+      .set({ name, preorder: preorder ? 1 : 0, sortOrder })
+      .where(eq(catalogCategories.id, id))
+      .run();
   }
 
   deleteCategory(id: number): void {
-    this.db.prepare("DELETE FROM catalog_categories WHERE id = ?").run(id);
+    this.db.delete(catalogCategories).where(eq(catalogCategories.id, id)).run();
   }
 
   createItem(
@@ -97,11 +103,11 @@ export class Store {
     sortOrder: number,
   ): number {
     const result = this.db
-      .prepare(
-        "INSERT INTO catalog_items (category_id, name, quantity, price, dph_rate, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
-      )
-      .run(categoryId, name, quantity, price, dphRate, sortOrder);
-    return Number(result.lastInsertRowid);
+      .insert(catalogItems)
+      .values({ categoryId, name, quantity, price, dphRate, sortOrder })
+      .returning({ id: catalogItems.id })
+      .get();
+    return result.id;
   }
 
   updateItem(
@@ -113,79 +119,99 @@ export class Store {
     sortOrder: number,
   ): void {
     this.db
-      .prepare(
-        "UPDATE catalog_items SET name = ?, quantity = ?, price = ?, dph_rate = ?, sort_order = ? WHERE id = ?",
-      )
-      .run(name, quantity, price, dphRate, sortOrder, id);
+      .update(catalogItems)
+      .set({ name, quantity, price, dphRate, sortOrder })
+      .where(eq(catalogItems.id, id))
+      .run();
   }
 
   deleteItem(id: number): void {
-    this.db.prepare("DELETE FROM catalog_items WHERE id = ?").run(id);
+    this.db.delete(catalogItems).where(eq(catalogItems.id, id)).run();
   }
 
   // ── Records ─────────────────────────────────────────────────────────────
 
   getRecords(): RecordRow[] {
     return this.db
-      .prepare(
-        `SELECT timestamp, buyer, count, category, item, item_id AS itemId, quantity, price
-         FROM records ORDER BY timestamp DESC`,
-      )
-      .all() as RecordRow[];
+      .select({
+        timestamp: records.timestamp,
+        buyer: records.buyer,
+        count: records.count,
+        category: records.category,
+        item: records.item,
+        itemId: records.itemId,
+        quantity: records.quantity,
+        price: records.price,
+      })
+      .from(records)
+      .orderBy(sql`${records.timestamp} DESC`)
+      .all();
   }
 
   getRecordsByBuyer(buyer: number): RecordRow[] {
     return this.db
-      .prepare(
-        `SELECT timestamp, buyer, count, category, item, item_id AS itemId, quantity, price
-         FROM records WHERE buyer = ? ORDER BY timestamp DESC`,
-      )
-      .all(buyer) as RecordRow[];
+      .select({
+        timestamp: records.timestamp,
+        buyer: records.buyer,
+        count: records.count,
+        category: records.category,
+        item: records.item,
+        itemId: records.itemId,
+        quantity: records.quantity,
+        price: records.price,
+      })
+      .from(records)
+      .where(eq(records.buyer, buyer))
+      .orderBy(sql`${records.timestamp} DESC`)
+      .all();
   }
 
   getItemBalance(buyer: number, item: string, itemId?: string): number {
     if (itemId) {
-      // Match by itemId, plus legacy name-only fallback
       const row = this.db
-        .prepare(
-          `SELECT COALESCE(SUM(count), 0) AS total FROM records
-           WHERE buyer = ? AND (item_id = ? OR (item_id = '' AND item = ?))`,
+        .select({ total: sql<number>`COALESCE(SUM(${records.count}), 0)` })
+        .from(records)
+        .where(
+          and(
+            eq(records.buyer, buyer),
+            or(
+              eq(records.itemId, itemId),
+              and(eq(records.itemId, ""), eq(records.item, item)),
+            ),
+          ),
         )
-        .get(buyer, itemId, item) as { total: number };
-      return row.total;
+        .get();
+      return row?.total ?? 0;
     }
     const row = this.db
-      .prepare("SELECT COALESCE(SUM(count), 0) AS total FROM records WHERE buyer = ? AND item = ?")
-      .get(buyer, item) as { total: number };
-    return row.total;
+      .select({ total: sql<number>`COALESCE(SUM(${records.count}), 0)` })
+      .from(records)
+      .where(and(eq(records.buyer, buyer), eq(records.item, item)))
+      .get();
+    return row?.total ?? 0;
   }
 
   insertRecord(entry: RecordEntry): void {
     this.db
-      .prepare(
-        `INSERT INTO records (id, timestamp, buyer, count, category, item, item_id, quantity, price)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        entry.id,
-        entry.timestamp,
-        entry.buyer,
-        entry.count,
-        entry.category,
-        entry.item,
-        entry.itemId,
-        entry.quantity,
-        entry.price,
-      );
+      .insert(records)
+      .values({
+        id: entry.id,
+        timestamp: entry.timestamp,
+        buyer: entry.buyer,
+        count: entry.count,
+        category: entry.category,
+        item: entry.item,
+        itemId: entry.itemId,
+        quantity: entry.quantity,
+        price: entry.price,
+      })
+      .run();
   }
 
   // ── Settings ────────────────────────────────────────────────────────────
 
   getSettings(): KioskSettings | null {
-    const rows = this.db.prepare("SELECT key, value FROM settings").all() as Array<{
-      key: string;
-      value: string;
-    }>;
+    const rows = this.db.select().from(settings).all();
     if (rows.length === 0) return null;
 
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
@@ -201,19 +227,20 @@ export class Store {
 
   putSetting(key: string, value: string): void {
     this.db
-      .prepare(
-        `INSERT INTO settings (key, value) VALUES (?, ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-      )
-      .run(key, value);
+      .insert(settings)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: settings.key, set: { value } })
+      .run();
   }
 
   // ── Preorder Config ───────────────────────────────────────────────────────
 
   getPreorderConfig(): PreorderConfig | null {
     const rows = this.db
-      .prepare("SELECT weekday, ordering, delivery FROM preorder_config ORDER BY weekday")
-      .all() as Array<{ weekday: number; ordering: number; delivery: number }>;
+      .select()
+      .from(preorderConfig)
+      .orderBy(preorderConfig.weekday)
+      .all();
     if (rows.length === 0) return null;
 
     const orderingDays = Array<boolean>(7).fill(true);
@@ -227,10 +254,12 @@ export class Store {
 
   putPreorderConfig(weekday: number, ordering: boolean, delivery: boolean): void {
     this.db
-      .prepare(
-        `INSERT INTO preorder_config (weekday, ordering, delivery) VALUES (?, ?, ?)
-         ON CONFLICT(weekday) DO UPDATE SET ordering = excluded.ordering, delivery = excluded.delivery`,
-      )
-      .run(weekday, ordering ? 1 : 0, delivery ? 1 : 0);
+      .insert(preorderConfig)
+      .values({ weekday, ordering: ordering ? 1 : 0, delivery: delivery ? 1 : 0 })
+      .onConflictDoUpdate({
+        target: preorderConfig.weekday,
+        set: { ordering: ordering ? 1 : 0, delivery: delivery ? 1 : 0 },
+      })
+      .run();
   }
 }

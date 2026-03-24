@@ -1,18 +1,11 @@
-import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_KIOSK_SETTINGS } from "@kioskkit/shared";
-import Database from "better-sqlite3";
-import { runMigrations } from "./db/migrations.js";
+import { createDb } from "./db/index.js";
 import { Store } from "./db/store.js";
 
 const DATA_DIR = join(process.cwd(), "data");
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
-const db = new Database(join(DATA_DIR, "kioskkit.db"));
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
-
-runMigrations(db);
+const { db, sqlite } = createDb(DATA_DIR);
 console.log("[seed] Migrations applied.");
 
 const store = new Store(db);
@@ -21,7 +14,7 @@ const store = new Store(db);
 const existingBuyers = store.getBuyers();
 if (existingBuyers.length > 0) {
   console.log(`[seed] Database already has ${existingBuyers.length} buyers — skipping seed.`);
-  db.close();
+  sqlite.close();
   process.exit(0);
 }
 
@@ -95,5 +88,5 @@ store.putSetting("idleDimMs", String(settings.idleDimMs));
 store.putSetting("inactivityTimeoutMs", String(settings.inactivityTimeoutMs));
 console.log("[seed] Inserted default settings.");
 
-db.close();
+sqlite.close();
 console.log("[seed] Done.");
