@@ -15,7 +15,8 @@
     "test": "vitest run",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed-test-user": "tsx src/seed-test-user.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",

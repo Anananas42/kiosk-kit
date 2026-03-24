@@ -44,6 +44,10 @@ done
 echo "==> Pushing database schema..."
 pnpm --filter @kioskkit/web-server db:push
 
+echo "==> Seeding test user..."
+TEST_SESSION_TOKEN=$(pnpm --filter @kioskkit/web-server db:seed-test-user 2>/dev/null | tail -1)
+export TEST_SESSION_TOKEN
+
 echo "==> Generating CLAUDE.md with all agent skills..."
 {
   echo "# Agent Skills"
