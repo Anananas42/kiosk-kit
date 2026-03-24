@@ -24,7 +24,7 @@ describe("App", () => {
           user: { id: "1", name: "Test", email: "t@t.com", role: "customer" },
         }),
       )
-      .mockResolvedValueOnce(new Response(JSON.stringify([])));
+      .mockResolvedValueOnce(trpcBatchResponse([]));
     render(<App />);
     await waitFor(() => {
       expect(screen.getByText("No devices registered.")).toBeInTheDocument();

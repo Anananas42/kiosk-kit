@@ -4,11 +4,9 @@ import type { Google } from "arctic";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
-import { mountDocs } from "./docs.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
-import { devicesRoutes } from "./routes/devices.js";
 import { healthRoute } from "./routes/health.js";
 import { createContextFactory } from "./trpc/context.js";
 import { appRouter } from "./trpc/router.js";
@@ -38,13 +36,10 @@ export function createApp(db: Db, google?: Google) {
     }),
   );
 
-  mountDocs(app);
-
-  // Auth middleware for protected API routes (exclude health + auth + me)
+  // Auth middleware for protected API routes (exclude health + auth + trpc)
   app.use("/api/*", authMiddleware(db));
 
   app.route("/api/devices", deviceProxyRoutes(db));
-  app.route("/api/devices", devicesRoutes(db));
 
   // Serve web-client static assets
   app.use("/assets/*", serveStatic({ root: "../web-client/dist" }));
