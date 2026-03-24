@@ -1,7 +1,46 @@
+import { useState } from "react";
+import "./styles.css";
+import { BuyersTab } from "./tabs/BuyersTab.js";
+import { CatalogTab } from "./tabs/CatalogTab.js";
+import { ConsumptionTab } from "./tabs/ConsumptionTab.js";
+import { PreorderTab } from "./tabs/PreorderTab.js";
+import { SettingsTab } from "./tabs/SettingsTab.js";
+
+type Tab = "catalog" | "buyers" | "consumption" | "settings" | "preorder";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "catalog", label: "Catalog" },
+  { key: "buyers", label: "Buyers" },
+  { key: "consumption", label: "Consumption" },
+  { key: "settings", label: "Settings" },
+  { key: "preorder", label: "Preorder Config" },
+];
+
 export default function App() {
+  const [tab, setTab] = useState<Tab>("catalog");
+
   return (
-    <div>
+    <div className="app">
       <h1>Kiosk Admin</h1>
+
+      <nav className="tab-nav">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`tab-btn${tab === t.key ? " active" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "catalog" && <CatalogTab />}
+      {tab === "buyers" && <BuyersTab />}
+      {tab === "consumption" && <ConsumptionTab />}
+      {tab === "settings" && <SettingsTab />}
+      {tab === "preorder" && <PreorderTab />}
     </div>
   );
 }
