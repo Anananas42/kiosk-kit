@@ -1,8 +1,8 @@
 import { formatCurrency, parsePrice, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { trpc } from "../trpc.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import { useT } from "../i18n/useT.js";
+import { trpc } from "../trpc.js";
 
 interface AggregatedItem {
   label: string;
@@ -66,10 +66,10 @@ export default function ConsumptionOverview({
 
   useEffect(() => {
     trpc["records.list"]
-      .query()
+      .query({ buyer })
       .then((data) => setRecords(data.records))
       .catch(() => setError(t("overview.loadError")));
-  }, [t]);
+  }, [t, buyer]);
 
   const byItem = records ? aggregateItems(records, buyer) : {};
   const items = Object.entries(byItem).filter(([, v]) => v.added > 0);
