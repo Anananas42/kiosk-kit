@@ -24,8 +24,14 @@ RUN pnpm turbo build --filter=@kioskkit/web-server --filter=@kioskkit/web-client
 FROM base AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-# Install Tailscale
-RUN curl -fsSL https://tailscale.com/install.sh | sh
+# Install Tailscale via apt repository
+RUN curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg \
+      | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null \
+    && curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list \
+      | tee /etc/apt/sources.list.d/tailscale.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends tailscale \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /app/node_modules node_modules
 COPY --from=deps /app/packages/web-server/node_modules packages/web-server/node_modules
