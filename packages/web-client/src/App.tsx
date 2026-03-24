@@ -36,7 +36,7 @@ export function App() {
             </button>
           </span>
         </header>
-        <main style={{ width: "100%", maxWidth: 600 }}>
+        <main style={{ width: "100%", maxWidth: 900, flex: 1, display: "flex", flexDirection: "column" }}>
           <Routes>
             <Route path="/" element={<DeviceList />} />
             <Route path="/devices/:id" element={<DeviceDetail />} />
