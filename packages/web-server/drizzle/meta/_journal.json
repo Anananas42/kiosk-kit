@@ -15,6 +15,13 @@
       "when": 1774310839141,
       "tag": "0001_nostalgic_network",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774311230421,
+      "tag": "0002_lethal_bedlam",
+      "breakpoints": true
     }
   ]
 }
