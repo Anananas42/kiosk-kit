@@ -6,6 +6,10 @@ if [ -f .env ]; then
   set -a
   source .env
   set +a
+else
+  echo "Warning: No .env file found. Copy .env.example to get started:" >&2
+  echo "  cp .env.example .env" >&2
+  echo "" >&2
 fi
 
 PROFILE="${1:-all}"
@@ -17,6 +21,15 @@ needs_postgres() {
 if needs_postgres; then
   if ! command -v docker &>/dev/null; then
     echo "Error: Docker is required for the '$PROFILE' profile but is not installed." >&2
+    exit 1
+  fi
+
+  if [ -z "${DATABASE_URL:-}" ]; then
+    echo "Error: DATABASE_URL is not set." >&2
+    echo "" >&2
+    echo "Your root .env is missing required variables." >&2
+    echo "Copy .env.example to .env and fill in the values:" >&2
+    echo "  cp .env.example .env" >&2
     exit 1
   fi
 
@@ -34,7 +47,12 @@ if needs_postgres; then
   done
   echo "✓ Postgres ready"
 
-  pnpm --filter @kioskkit/web-server run db:push
+  echo "Pushing database schema..."
+  if ! pnpm --filter @kioskkit/web-server run db:push; then
+    echo "Error: Failed to push database schema." >&2
+    echo "Check your DATABASE_URL in .env and ensure Postgres is accessible." >&2
+    exit 1
+  fi
   echo "✓ Schema pushed"
 fi
 
