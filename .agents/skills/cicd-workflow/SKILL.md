@@ -18,6 +18,10 @@ If an open PR exists:
 
 If no PR exists, proceed with the full workflow below.
 
+## Code quality principle
+
+Establish the correct patterns, conventions, and architecture from the very first PR. Once a codebase starts drifting toward ad-hoc solutions, the cost of correction compounds — each shortcut becomes the template for the next. Treat every task as if it's setting the precedent: choose the lowest-maintenance, most consistent approach even if it takes slightly longer up front. If you're unsure whether a pattern is right, ask — don't ship something "for now" that becomes permanent by inertia.
+
 ## Workflow
 
 1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why.
