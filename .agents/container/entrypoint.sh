@@ -122,7 +122,7 @@ fi
 
 echo "==> Agent task complete. Starting PR watch loop..."
 
-POLL_INTERVAL=20
+POLL_INTERVAL=30
 ATTEMPT_COUNT=0
 MAX_ATTEMPTS=5
 
@@ -131,6 +131,18 @@ BRANCH=$(git branch --show-current)
 if [ "$BRANCH" = "main" ]; then
   echo "==> On main branch, no PR to watch. Exiting."
   exit 0
+fi
+
+# Initialize seen comment counts before entering the loop
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
+if [ -n "$PR_INIT_JSON" ]; then
+  PR_INIT_NUMBER=$(echo "$PR_INIT_JSON" | jq -r '.number')
+  SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+  SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+else
+  SEEN_PR_COMMENTS=0
+  SEEN_ISSUE_COMMENTS=0
 fi
 
 while true; do
@@ -182,7 +194,7 @@ $FAILED_LOGS
 Fix the failing checks, commit, and push."
   fi
 
-  if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$PR_COMMENTS" -gt 0 ] || [ "$ISSUE_COMMENTS" -gt 0 ]; then
+  if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$PR_COMMENTS" -gt "$SEEN_PR_COMMENTS" ] || [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ]; then
     REVIEW_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" 2>/dev/null || echo "[]")
     CONVERSATION_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" 2>/dev/null || echo "[]")
     REVIEW_ACTION="Review feedback on PR #$PR_NUMBER (branch: $BRANCH).
@@ -219,6 +231,10 @@ $REVIEW_ACTION"
 
     start_log_tailer
     claude --dangerously-skip-permissions -p "$NEEDS_ACTION"
+
+    # Update seen comment counts so handled comments don't re-trigger
+    SEEN_PR_COMMENTS=$PR_COMMENTS
+    SEEN_ISSUE_COMMENTS=$ISSUE_COMMENTS
   else
     # All clear — reset attempt counter
     ATTEMPT_COUNT=0
