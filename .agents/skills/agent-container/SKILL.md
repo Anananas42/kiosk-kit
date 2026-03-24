@@ -85,6 +85,21 @@ When a task is provided via `AGENT_TASK`, the container does not exit after clau
 
 Use `--no-loop` to skip the watch loop (useful for testing). Interactive sessions also skip it.
 
+## Testing agent
+
+After CI passes on a PR, the watch loop automatically runs a **testing agent** — a separate `claude` invocation that:
+
+1. Reads `.claude/commands/testing.md` and the PR description (manual test steps)
+2. Starts the relevant dev servers based on changed files
+3. Drives a browser via Playwright MCP to execute each test step
+4. Posts structured pass/fail results as a PR comment
+5. Optionally requests changes if critical failures are found (>50% steps fail)
+
+Key properties:
+- **Runs exactly once per PR** — tracked via a marker file at `/tmp/.testing-done-<PR_NUMBER>`. Once touched, the testing agent is not re-invoked even if the loop continues polling.
+- **Does NOT modify code or push changes** — it is read-only. Any failures it finds must be addressed by the main agent in a subsequent fix cycle.
+- **Crash-safe** — the testing agent invocation uses `|| true`, so a crash does not kill the watch loop. The marker file is touched unconditionally after invocation.
+
 ## Important: Do not wait for CI
 
 After creating a PR, do NOT sleep, poll, or wait for CI status checks. Exit promptly. The PR watch loop in the entrypoint handles CI failures automatically — it will re-invoke you with the failure logs if anything breaks.
