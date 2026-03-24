@@ -44,7 +44,10 @@
         "--headless",
         "--browser",
         "chromium"
-      ]
+      ],
+      "env": {
+        "PLAYWRIGHT_BROWSERS_PATH": "/opt/playwright"
+      }
     }
   }
 }
