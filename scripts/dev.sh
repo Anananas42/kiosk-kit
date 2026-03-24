@@ -33,43 +33,71 @@ if needs_postgres; then
     exit 1
   fi
 
-  echo "Starting Postgres..."
-  docker compose up -d
+  printf "  Postgres ..."
+  if ! docker compose up -d --wait 2>&1 | tail -1 > /dev/null; then
+    echo " FAILED"
+    echo "Error: Could not start Postgres via docker compose." >&2
+    exit 1
+  fi
 
-  echo "Waiting for Postgres to be healthy..."
   SECONDS=0
   until pg_isready -h localhost -p 5433 -q 2>/dev/null; do
     if (( SECONDS >= 30 )); then
+      echo " FAILED"
       echo "Error: Postgres did not become healthy within 30 seconds." >&2
       exit 1
     fi
     sleep 1
   done
-  echo "✓ Postgres ready"
+  echo " ready"
 
-  echo "Pushing database schema..."
-  if ! pnpm --filter @kioskkit/web-server run db:push; then
-    echo "Error: Failed to push database schema." >&2
+  printf "  Schema ..."
+  DB_PUSH_OUTPUT=$(pnpm --filter @kioskkit/web-server run --silent db:push 2>&1) || {
+    echo " FAILED"
+    echo "$DB_PUSH_OUTPUT" >&2
+    echo "" >&2
     echo "Check your DATABASE_URL in .env and ensure Postgres is accessible." >&2
     exit 1
-  fi
-  echo "✓ Schema pushed"
+  }
+  echo " pushed"
 fi
 
-echo "Starting dev servers..."
+export TURBO_NO_UPDATE_NOTIFIER=1
+
+echo ""
+echo "Dev servers ($PROFILE):"
+echo ""
 
 case "$PROFILE" in
   all)
-    exec turbo dev
+    echo "  web-server     → http://localhost:3002"
+    echo "  web-client     → http://localhost:5174"
+    echo "  admin-client   → http://localhost:5175"
+    echo "  kiosk-server   → http://localhost:3001"
+    echo "  kiosk-client   → http://localhost:5173"
+    echo "  kiosk-admin    → http://localhost:5176"
+    echo "  landing        → http://localhost:4321"
+    echo ""
+    exec pnpm exec turbo dev --output-logs=errors-only
     ;;
   web)
-    exec turbo dev --filter=@kioskkit/web-server --filter=@kioskkit/web-client --filter=@kioskkit/admin-client
+    echo "  web-server     → http://localhost:3002"
+    echo "  web-client     → http://localhost:5174"
+    echo "  admin-client   → http://localhost:5175"
+    echo ""
+    exec pnpm exec turbo dev --filter=@kioskkit/web-server --filter=@kioskkit/web-client --filter=@kioskkit/admin-client --output-logs=errors-only
     ;;
   kiosk)
-    exec turbo dev --filter=@kioskkit/kiosk-server --filter=@kioskkit/kiosk-client --filter=@kioskkit/kiosk-admin
+    echo "  kiosk-server   → http://localhost:3001"
+    echo "  kiosk-client   → http://localhost:5173"
+    echo "  kiosk-admin    → http://localhost:5176"
+    echo ""
+    exec pnpm exec turbo dev --filter=@kioskkit/kiosk-server --filter=@kioskkit/kiosk-client --filter=@kioskkit/kiosk-admin --output-logs=errors-only
     ;;
   landing)
-    exec turbo dev --filter=@kioskkit/landing
+    echo "  landing        → http://localhost:4321"
+    echo ""
+    exec pnpm exec turbo dev --filter=@kioskkit/landing --output-logs=errors-only
     ;;
   *)
     echo "Unknown profile: $PROFILE" >&2
