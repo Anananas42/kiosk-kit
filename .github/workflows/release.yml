@@ -11,7 +11,7 @@ jobs:
       && github.event.release.author.type == 'User'
     uses: ./.github/workflows/ci.yml
 
-  deploy-web:
+  deploy-fly-stack:
     needs: ci
     runs-on: ubuntu-latest
     steps:
@@ -64,7 +64,7 @@ jobs:
           publish_dir: packages/landing/dist
 
   update-release:
-    needs: [ci, deploy-web, deploy-landing]
+    needs: [ci, deploy-fly-stack, deploy-landing]
     if: >-
       always()
       && startsWith(github.event.release.tag_name, 'v')
@@ -80,7 +80,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.release.tag_name }}
           CI_RESULT: ${{ needs.ci.result }}
-          WEB_RESULT: ${{ needs.deploy-web.result }}
+          FLY_RESULT: ${{ needs.deploy-fly-stack.result }}
           LANDING_RESULT: ${{ needs.deploy-landing.result }}
         run: |
           status() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
@@ -91,6 +91,6 @@ jobs:
           | Check | Status |
           |-------|--------|
           | CI (lint, typecheck, test, build) | $(status "$CI_RESULT") |
-          | Deploy web-server + admin (Fly.io) | $(status "$WEB_RESULT") |
+          | Deploy web-server + admin (Fly.io) | $(status "$FLY_RESULT") |
           | Deploy landing (GitHub Pages) | $(status "$LANDING_RESULT") |"
           gh release edit "$TAG" --notes "$BODY"
