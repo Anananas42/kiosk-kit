@@ -16,14 +16,15 @@ Touchscreen kiosk platform for honor-system self-service tracking. Buyers (apart
               ┌────────────▼──┐    ┌──────▼───────┐
               │  Raspberry Pi │    │  web-client   │
               │  (per-site)   │    │  (dashboard)  │
-              │               │    └──────────────-┘
-              │  kiosk-server │
-              │  kiosk-client │
-              │  SQLite       │
+              │               │    └───────────────┘
+              │  kiosk-server │         │
+              │  kiosk-client │    embeds kiosk-admin
+              │  kiosk-admin  │    via iframe through
+              │  SQLite       │    web-server proxy
               └───────────────┘
 ```
 
-**The Pi never initiates outbound connections.** It sits on a Tailscale tailnet reachable only by the web-server. All management — catalog changes, buyer config, settings, backups, reports — is driven by the web-server reading from and writing to the Pi's local API over Tailscale. The Pi's only job is serving the touchscreen UI and recording transactions into SQLite.
+**The Pi never initiates outbound connections.** It sits on a Tailscale tailnet reachable only by the web-server. The Pi serves both the touchscreen UI (kiosk-client) and its own admin UI (kiosk-admin). The web-client embeds the kiosk-admin SPA in an iframe, proxied through the web-server over Tailscale. This means the admin UI always matches the kiosk-server version on the device — no version coupling between the cloud and the Pi.
 
 If the internet or web-server goes down, the kiosk keeps working. Managers lose remote access until connectivity returns, but no guest-facing functionality is affected.
 
@@ -33,9 +34,11 @@ If the internet or web-server goes down, the kiosk keeps working. Managers lose 
 packages/
 ├── shared/          # Types, constants, price/preorder utils
 ├── kiosk-client/    # Pi touchscreen SPA — React + Vite
+├── kiosk-admin/     # Pi admin SPA — React + Vite (served at /admin/)
 ├── kiosk-server/    # Pi backend — Hono + SQLite (port 3001)
 ├── web-client/      # Manager dashboard — React + Vite (port 5174)
 ├── web-server/      # Cloud backend — Hono + Postgres (port 3002)
+├── admin-client/    # Platform admin panel — React-Admin (admin.* subdomain)
 └── landing/         # Marketing site + interactive demo — Astro (port 4321)
 
 system/              # Raspberry Pi OS-level kiosk config (configs, services)
@@ -48,51 +51,50 @@ ansible/             # Ansible playbooks for Pi provisioning and deploys
 
 ### shared
 
-Types and utilities shared across packages: `Buyer`, `CatalogCategory`, `RecordEntry`, `KioskSettings`, `PreorderConfig`. Locale-aware price parsing/formatting (`Intl.NumberFormat`), preorder delivery date calculation, record validation.
+Types and utilities shared across packages: Zod schemas, derived TypeScript types, locale-aware price parsing/formatting (`Intl.NumberFormat`), preorder delivery date calculation, record validation, timing constants.
 
 ### kiosk-client
 
 React SPA for the Pi touchscreen. Offline-first — records queue locally and flush when the server is reachable. Screens: buyer select → category select → item select → confirm. Preorder categories get quantity pickers and delivery date display. Dims after 15s idle, resets to home after 60s. All UI strings are i18n-ready (Czech and English included).
 
+### kiosk-admin
+
+React SPA for remote kiosk management, served by kiosk-server at `/admin/`. Provides catalog CRUD, buyer management, consumption reports, settings, and preorder configuration. This UI ships on the Pi itself, so it always matches the kiosk-server version. The web-client embeds it in an iframe via the web-server's Tailscale proxy — managers interact with it through the dashboard without knowing it's served from the device.
+
 ### kiosk-server
 
-Hono API + SQLite running locally on the Pi. Serves the kiosk-client static build to the touchscreen and exposes a local API. This API is consumed by the touchscreen UI directly and by the web-server over Tailscale for remote management.
+Hono API + SQLite running locally on the Pi. Serves both the kiosk-client (touchscreen SPA at `/`) and kiosk-admin (management SPA at `/admin/`). Exposes a tRPC API consumed by both SPAs and by the web-server over Tailscale.
 
-**Touchscreen endpoints** (used by kiosk-client):
+**tRPC procedures** (used by kiosk-client and kiosk-admin):
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/catalog` | GET | Product catalog |
-| `/api/buyers` | GET | Buyer list |
-| `/api/health` | GET | Health check |
-| `/api/record` | POST | Submit a consumption record |
-| `/api/overview` | GET | All records |
-| `/api/item-count` | GET | Balance for buyer+item |
-| `/api/preorder-config` | GET | Ordering/delivery schedule |
-| `/api/settings` | GET | Kiosk settings |
-
-**Management endpoints** (called by web-server over Tailscale):
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/admin/buyers` | POST/PUT/DELETE | CRUD buyers |
-| `/api/admin/catalog` | POST/PUT/DELETE | CRUD categories and items |
-| `/api/admin/settings` | PUT | Update settings |
-| `/api/admin/preorder-config` | PUT | Update preorder config |
-| `/api/reports/consumption` | GET | Aggregated consumption report |
-| `/api/reports/preorders` | GET | Preorders by delivery date |
+| Namespace | Procedures | Purpose |
+|-----------|-----------|---------|
+| `catalog` | `list` | Product catalog |
+| `buyers` | `list` | Buyer list |
+| `records` | `submit`, `list`, `itemCount` | Record consumption |
+| `settings` | `get` | Kiosk settings |
+| `preorderConfig` | `get` | Ordering/delivery schedule |
+| `reports` | `consumption`, `preorders` | Aggregated reports |
+| `admin.buyers` | `create`, `update`, `delete` | Buyer management |
+| `admin.catalog` | `createCategory`, `updateCategory`, `deleteCategory`, `createItem`, `updateItem`, `deleteItem` | Catalog management |
+| `admin.settings` | `get`, `update` | Settings management |
+| `admin.preorderConfig` | `update` | Preorder config |
 
 ### web-server
 
 Cloud backend. Owns the customer-facing concerns: Google SSO auth, tenant accounts, device registry, subscriptions, payment processing. Stores its own data in Postgres (accounts, devices, billing) and S3 (Pi backup snapshots).
 
-For kiosk management, the web-server acts as a proxy — it receives authenticated requests from the web-client, looks up the target device's Tailscale IP, and forwards the request to the Pi's kiosk-server API. No data duplication; the Pi's SQLite is the source of truth for all kiosk data.
+For kiosk management, the web-server acts as a transparent proxy — it receives authenticated requests from the web-client (including iframe requests from the embedded kiosk-admin), looks up the target device's Tailscale IP, and forwards them to the Pi's kiosk-server. No data duplication; the Pi's SQLite is the source of truth for all kiosk data.
 
 Periodically reads each Pi's SQLite database over Tailscale for backup snapshots. Restore = push a snapshot back to the Pi.
 
 ### web-client
 
-Manager dashboard SPA. Login via Google SSO. Shows a device grid (online/offline, last backup). Click a device to manage: edit catalog, configure buyers, view consumption reports, download/restore backups. All management requests go through the web-server, which proxies to the Pi.
+Manager dashboard SPA. Login via Google SSO. Shows a device grid (online/offline, last backup). Click a device to open its management view, which embeds the device's own kiosk-admin SPA in an iframe (proxied through the web-server over Tailscale). The web-client is a thin orchestration shell — auth, device list, status monitoring — while all kiosk management UI lives on the device itself. This eliminates version coupling between the cloud and kiosk software.
+
+### admin-client
+
+Platform admin panel (react-admin) served at the `admin.*` subdomain. For platform operators only — manage all users and devices across the system. Distinct from kiosk-admin which is per-device management for customers.
 
 ### landing
 

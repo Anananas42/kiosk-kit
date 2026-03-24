@@ -48,12 +48,13 @@ Working production deployment at a family pension. Full source in this repo (for
 ### On the Device
 - Local **SQLite** database replaces Google Sheets entirely — all kiosk data (products, prices, transactions) lives here
 - Serves **kiosk UI** on the touchscreen (Chromium, same as now)
+- Serves its own **admin UI** (kiosk-admin) — the management interface lives on the device itself
 - **Tailscale** connects the Pi to your backend (invisible to customer)
 - Periodic **SQLite snapshot** pushed to your backend for backup
 
 ### Your Backend
-- **Proxy layer** — routes authenticated dashboard requests to the correct Pi via Tailscale
-- **Dashboard web app** — the customer-facing UI for managing their kiosk remotely (served by your backend, reads/writes to the Pi in real time)
+- **Proxy layer** — routes authenticated dashboard requests to the correct Pi via Tailscale, including serving the device's admin UI
+- **Dashboard web app** — thin orchestration shell (auth, device list, status). Embeds each device's own admin UI in an iframe via the proxy. No kiosk management logic in the cloud.
 - **Backup storage** — receives and stores periodic SQLite snapshots per device (S3 or equivalent)
 - **Customer database** — accounts, device ownership, subscriptions, backup metadata
 - **Google SSO** — single auth method, no passwords to manage
@@ -61,6 +62,7 @@ Working production deployment at a family pension. Full source in this repo (for
 ### What This Means
 - Pi works fully offline — if your backend or internet goes down, kiosk keeps serving guests
 - Dashboard edits are instant (your backend proxies directly to the Pi, not synced)
+- **No version coupling** — each device serves its own admin UI that matches its API version. You can push updates to devices at your own pace without maintaining backwards compatibility between the cloud frontend and kiosk server.
 - Cloud infrastructure is lightweight — a VPS, an S3 bucket, a small customer DB
 - If customer cancels subscription, their kiosk keeps working locally, they just lose remote dashboard access
 - If your VPS goes down, no kiosk is affected — customers just lose remote access until you fix it
@@ -202,7 +204,8 @@ Working production deployment at a family pension. Full source in this repo (for
 - Your backend: proxy layer routing dashboard requests to the correct Pi
 - Google SSO authentication
 - Customer database: accounts, device ownership, subscriptions
-- Remote dashboard web app (reads/writes to Pi through your backend)
+- **kiosk-admin SPA** — device-hosted management UI (catalog, buyers, reports, settings)
+- **web-client as thin shell** — device list + iframe embedding kiosk-admin through the proxy
 - Backup snapshot mechanism (periodic SQLite dump from Pi to your storage)
 - Restore from backup flow
 
