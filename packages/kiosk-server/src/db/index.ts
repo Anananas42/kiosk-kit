@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import { copyFileSync } from "node:fs";
 import { join } from "node:path";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database, { type Database as SQLiteDatabase } from "better-sqlite3";
+import { type BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema.js";
 
@@ -27,7 +27,7 @@ function backupDatabase(dbPath: string): void {
   }
 }
 
-export function createDb(dataDir: string) {
+export function createDb(dataDir: string): { db: Db; sqlite: SQLiteDatabase } {
   if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
 
   const dbPath = join(dataDir, "kioskkit.db");
@@ -45,4 +45,4 @@ export function createDb(dataDir: string) {
   return { db, sqlite };
 }
 
-export type Db = ReturnType<typeof createDb>["db"];
+export type Db = BetterSQLite3Database<typeof schema>;
