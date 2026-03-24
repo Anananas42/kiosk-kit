@@ -56,17 +56,20 @@ Read the screenshot files to visually confirm the output matches what you intend
 
 ### 3. Add screenshots to the PR
 
-Do **not** commit screenshots to the repo. Instead, upload them as images in a PR comment so the repo stays clean:
+Do **not** commit screenshots to the repo. Instead, upload them to the PR using `gh-attach`, which uploads images to GitHub and returns embeddable markdown URLs:
 
 ```bash
-# Post each screenshot as a separate PR comment
+# Upload screenshots to PR and get embeddable URLs
 for img in .screenshots/*.png; do
-  GH_TOKEN="${GH_TOKEN}" gh pr comment <pr-number> \
-    --body "### Screenshot: $(basename "$img")"$'\n'"$(cat "$img" | base64 -w0 | sed 's|.*|![screenshot](data:image/png;base64,&)|')"
+  GH_TOKEN="${GH_TOKEN}" gh attach <pr-number> "$img"
 done
 ```
 
-If base64 data URIs don't render on GitHub, upload the images manually via the GitHub web UI and paste the resulting URLs into the PR body's **Screenshots** section. The `/fill-pr-template` skill should leave a `TODO` placeholder for screenshots when frontend code was changed.
+The `gh attach` command uploads each image and outputs a markdown image reference that renders in the PR.
+
+The `/fill-pr-template` skill should leave a `TODO` placeholder for screenshots when frontend code was changed.
+
+**Fallback**: If `gh-attach` fails (network issue, auth problem), do NOT fail the PR workflow. Instead, describe the screenshots in text in the PR comment and note that screenshots could not be uploaded. Screenshot upload issues must never block PR creation.
 
 ## GitHub App authentication
 

@@ -25,6 +25,12 @@ RUN npx playwright install --with-deps chromium
 
 # Non-root user (claude refuses --dangerously-skip-permissions as root)
 RUN useradd -m -s /bin/bash agent
+
+# Install gh-attach for screenshot uploads to PR comments
+USER agent
+ENV GH_CONFIG_DIR=/home/agent/.config/gh
+RUN mkdir -p "$GH_CONFIG_DIR" && gh extension install atani/gh-attach
+USER root
 RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/agent/.cache/node/corepack \
   && chown -R agent:agent /workspace /home/agent/.local /home/agent/.cache
 
