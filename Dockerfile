@@ -24,7 +24,7 @@ RUN pnpm turbo build --filter=@kioskkit/web-server --filter=@kioskkit/web-client
 
 # --- runtime ---
 FROM base AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install Tailscale via apt repository
 RUN curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg \
