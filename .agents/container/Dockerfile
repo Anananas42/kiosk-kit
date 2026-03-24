@@ -16,6 +16,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 
 # pnpm + Claude Code
 RUN corepack enable pnpm \
+  && corepack prepare pnpm@latest --activate \
   && npm install -g @anthropic-ai/claude-code
 
 # Playwright browser + system dependencies (for screenshot verification)
@@ -28,16 +29,16 @@ RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/a
   && chown -R agent:agent /workspace /home/agent/.local /home/agent/.cache
 
 # Pre-install dependencies at build time (layer cached until lockfile changes)
-COPY --chown=agent:agent pnpm-lock.yaml pnpm-workspace.yaml package.json /workspace/
-COPY --chown=agent:agent packages/kiosk-client/package.json /workspace/packages/kiosk-client/
-COPY --chown=agent:agent packages/kiosk-server/package.json /workspace/packages/kiosk-server/
-COPY --chown=agent:agent packages/landing/package.json /workspace/packages/landing/
-COPY --chown=agent:agent packages/shared/package.json /workspace/packages/shared/
-COPY --chown=agent:agent packages/web-client/package.json /workspace/packages/web-client/
-COPY --chown=agent:agent packages/web-server/package.json /workspace/packages/web-server/
-USER agent
-RUN pnpm install --frozen-lockfile
-USER root
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json /workspace/
+COPY packages/kiosk-client/package.json /workspace/packages/kiosk-client/
+COPY packages/kiosk-server/package.json /workspace/packages/kiosk-server/
+COPY packages/landing/package.json /workspace/packages/landing/
+COPY packages/shared/package.json /workspace/packages/shared/
+COPY packages/web-client/package.json /workspace/packages/web-client/
+COPY packages/web-server/package.json /workspace/packages/web-server/
+WORKDIR /workspace
+RUN pnpm install --frozen-lockfile --store-dir /home/agent/.local/share/pnpm/store \
+  && chown -R agent:agent /workspace /home/agent
 
 # CLI wrappers (enforce naming conventions for git/gh)
 COPY .agents/container/wrappers /opt/wrappers

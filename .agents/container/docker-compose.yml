@@ -24,7 +24,6 @@ services:
       - ${HOME}/.claude/.credentials.json:/mnt/secrets/claude-credentials.json:ro
       - agent-node-modules:/workspace/node_modules
       - agent-pnpm-store:/home/agent/.local/share/pnpm/store
-      - agent-corepack:/home/agent/.cache/node/corepack
     env_file:
       - ../../.env
     environment:
@@ -40,4 +39,3 @@ volumes:
   agent-pnpm-store:
     external: true
     name: kiosk-kit-agent-pnpm-store
-  agent-corepack:
