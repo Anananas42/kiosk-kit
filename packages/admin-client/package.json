@@ -1,5 +1,5 @@
 {
-  "name": "@kioskkit/kiosk-client",
+  "name": "@kioskkit/admin-client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -13,10 +13,12 @@
     "@trpc/client": "^11.15.0",
     "@trpc/server": "^11.15.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-admin": "^5.6.2",
+    "react-dom": "^19.2.4",
+    "react-router": "^7.13.1"
   },
   "devDependencies": {
-    "@kioskkit/kiosk-server": "workspace:*",
+    "@kioskkit/web-server": "workspace:*",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

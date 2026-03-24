@@ -31,6 +31,7 @@ const PACKAGES = {
   "@kioskkit/landing": { dir: "packages/landing", port: 4321 },
   "@kioskkit/web-client": { dir: "packages/web-client", port: 5173 },
   "@kioskkit/kiosk-client": { dir: "packages/kiosk-client", port: 5174 },
+  "@kioskkit/admin-client": { dir: "packages/admin-client", port: 5175 },
 };
 
 function parseArgs(args) {

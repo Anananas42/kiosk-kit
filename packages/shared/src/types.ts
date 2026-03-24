@@ -1,22 +1,14 @@
+import type { z } from "zod";
+import type { CatalogCategorySchema, CatalogItemSchema } from "./schemas.js";
+
 export interface Buyer {
   id: number;
   label: string;
 }
 
-export interface CatalogItem {
-  id: string;
-  name: string;
-  quantity: string;
-  price: string;
-  dphRate: string;
-}
+export type CatalogItem = z.infer<typeof CatalogItemSchema>;
 
-export interface CatalogCategory {
-  id: string;
-  name: string;
-  preorder: boolean;
-  items: CatalogItem[];
-}
+export type CatalogCategory = z.infer<typeof CatalogCategorySchema>;
 
 export interface RecordRequest {
   buyer: number;
