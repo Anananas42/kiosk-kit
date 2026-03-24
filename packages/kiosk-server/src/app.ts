@@ -1,4 +1,5 @@
 import { serveStatic } from "@hono/node-server/serve-static";
+import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Store } from "./db/store.js";
@@ -8,7 +9,6 @@ import { adminCatalogRoute } from "./routes/admin/catalog.js";
 import { adminPreorderConfigRoute } from "./routes/admin/preorder-config.js";
 import { adminSettingsRoute } from "./routes/admin/settings.js";
 import { buyersRoute } from "./routes/buyers.js";
-import { catalogRoute } from "./routes/catalog.js";
 import { healthRoute } from "./routes/health.js";
 import { itemCountRoute } from "./routes/item-count.js";
 import { overviewRoute } from "./routes/overview.js";
@@ -16,6 +16,7 @@ import { preorderConfigRoute } from "./routes/preorder-config.js";
 import { recordRoute } from "./routes/record.js";
 import { reportsRoute } from "./routes/reports.js";
 import { settingsRoute } from "./routes/settings.js";
+import { appRouter } from "./trpc/router.js";
 
 export function createApp(store: Store) {
   const app = new Hono();
@@ -28,7 +29,16 @@ export function createApp(store: Store) {
   app.use("/api/*", cors());
 
   app.route("/api/health", healthRoute());
-  app.route("/api/catalog", catalogRoute(store));
+
+  app.use(
+    "/api/trpc/*",
+    trpcServer({
+      router: appRouter,
+      endpoint: "/api/trpc",
+      createContext: () => ({ store }),
+    }),
+  );
+
   app.route("/api/buyers", buyersRoute(store));
   app.route("/api/record", recordRoute(store));
   app.route("/api/overview", overviewRoute(store));

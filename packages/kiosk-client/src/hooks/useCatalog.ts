@@ -8,7 +8,8 @@ import {
   type PreorderConfig,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useState } from "react";
-import { fetchBuyers, fetchCatalog, fetchPreorderConfig, fetchSettings } from "../api.js";
+import { fetchBuyers, fetchPreorderConfig, fetchSettings } from "../api.js";
+import { trpc } from "../trpc.js";
 
 export function useCatalog() {
   const [catalog, setCatalog] = useState<CatalogCategory[]>(() => []);
@@ -21,7 +22,8 @@ export function useCatalog() {
   const [buyerError, setBuyerError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    fetchCatalog()
+    trpc["catalog.list"]
+      .query()
       .then((data) => {
         setCatalog(data);
         setCatalogError(null);

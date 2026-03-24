@@ -1,6 +1,5 @@
 import type {
   BuyersResponse,
-  CatalogCategory,
   ItemCountResponse,
   KioskSettings,
   OverviewResponse,
@@ -20,10 +19,6 @@ async function fetchJson<T>(url: string, errorKey: string): Promise<T> {
     throw new Error(`${url} fetch failed: HTTP ${res.status}`);
   }
   return res.json();
-}
-
-export async function fetchCatalog(): Promise<CatalogCategory[]> {
-  return fetchJson("/api/catalog", "catalog_invalid");
 }
 
 export async function fetchBuyers(): Promise<BuyersResponse> {
