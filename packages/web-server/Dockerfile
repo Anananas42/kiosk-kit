@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/web-server/package.json packages/web-server/
 COPY packages/web-client/package.json packages/web-client/
+COPY packages/admin-client/package.json packages/admin-client/
 COPY packages/shared/package.json packages/shared/
 RUN pnpm install --frozen-lockfile
 
@@ -18,7 +19,8 @@ COPY turbo.json tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY packages/web-server packages/web-server
 COPY packages/web-client packages/web-client
-RUN pnpm turbo build --filter=@kioskkit/web-server --filter=@kioskkit/web-client
+COPY packages/admin-client packages/admin-client
+RUN pnpm turbo build --filter=@kioskkit/web-server --filter=@kioskkit/web-client --filter=@kioskkit/admin-client
 
 # --- runtime ---
 FROM base AS runtime
@@ -37,6 +39,7 @@ COPY --from=deps /app/node_modules node_modules
 COPY --from=deps /app/packages/web-server/node_modules packages/web-server/node_modules
 COPY --from=build /app/packages/web-server/dist packages/web-server/dist
 COPY --from=build /app/packages/web-client/dist packages/web-client/dist
+COPY --from=build /app/packages/admin-client/dist packages/admin-client/dist
 COPY packages/web-server/start.sh packages/web-server/start.sh
 RUN chmod +x packages/web-server/start.sh
 
