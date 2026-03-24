@@ -3,19 +3,7 @@ import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Store } from "./db/store.js";
-import { mountDocs } from "./docs.js";
-import { adminBuyersRoute } from "./routes/admin/buyers.js";
-import { adminCatalogRoute } from "./routes/admin/catalog.js";
-import { adminPreorderConfigRoute } from "./routes/admin/preorder-config.js";
-import { adminSettingsRoute } from "./routes/admin/settings.js";
-import { buyersRoute } from "./routes/buyers.js";
 import { healthRoute } from "./routes/health.js";
-import { itemCountRoute } from "./routes/item-count.js";
-import { overviewRoute } from "./routes/overview.js";
-import { preorderConfigRoute } from "./routes/preorder-config.js";
-import { recordRoute } from "./routes/record.js";
-import { reportsRoute } from "./routes/reports.js";
-import { settingsRoute } from "./routes/settings.js";
 import { appRouter } from "./trpc/router.js";
 
 export function createApp(store: Store) {
@@ -38,22 +26,6 @@ export function createApp(store: Store) {
       createContext: () => ({ store }),
     }),
   );
-
-  app.route("/api/buyers", buyersRoute(store));
-  app.route("/api/record", recordRoute(store));
-  app.route("/api/overview", overviewRoute(store));
-  app.route("/api/item-count", itemCountRoute(store));
-  app.route("/api/preorder-config", preorderConfigRoute(store));
-  app.route("/api/settings", settingsRoute(store));
-
-  app.route("/api/admin/buyers", adminBuyersRoute(store));
-  app.route("/api/admin/catalog", adminCatalogRoute(store));
-  app.route("/api/admin/settings", adminSettingsRoute(store));
-  app.route("/api/admin/preorder-config", adminPreorderConfigRoute(store));
-
-  app.route("/api/reports", reportsRoute(store));
-
-  mountDocs(app);
 
   // Prevent caching of HTML (index.html) so deploys take effect immediately.
   // Hashed JS/CSS assets are fine to cache — they have unique filenames.

@@ -1,6 +1,6 @@
 import { formatDate, getDeliveryDate, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { fetchOverview } from "../api.js";
+import { trpc } from "../trpc.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import { useT } from "../i18n/useT.js";
 
@@ -51,7 +51,8 @@ export default function PreorderOrdersOverview({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchOverview()
+    trpc["records.list"]
+      .query()
       .then((data) => setRecords(data.records))
       .catch(() => setError(t("preorder.loadError")));
   }, [t]);
