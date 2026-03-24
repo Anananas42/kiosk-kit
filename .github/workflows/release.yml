@@ -85,6 +85,6 @@ jobs:
           | Check | Status |
           |-------|--------|
           | CI (lint, typecheck, test, build) | $(status "$CI_RESULT") |
-          | Deploy web-server (Fly.io) | $(status "$WEB_RESULT") |
+          | Deploy web-server + admin (Fly.io) | $(status "$WEB_RESULT") |
           | Deploy landing (GitHub Pages) | $(status "$LANDING_RESULT") |"
           gh release edit "$TAG" --notes "$BODY"
