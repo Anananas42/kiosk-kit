@@ -10,7 +10,13 @@
     "lint:fix": "biome check --fix .",
     "test": "vitest run",
     "start:kiosk": "node packages/kiosk-server/dist/index.js",
-    "screenshot": "node .agents/scripts/screenshot.mjs"
+    "screenshot": "node .agents/scripts/screenshot.mjs",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,json}": [
+      "biome check --fix --no-errors-on-unmatched"
+    ]
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -21,6 +27,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "playwright": "^1.58.2",
     "turbo": "^2.5.0",
     "typescript": "^5.9.3",
