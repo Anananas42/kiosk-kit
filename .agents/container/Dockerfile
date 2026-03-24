@@ -27,10 +27,9 @@ RUN npx playwright install --with-deps chromium
 RUN useradd -m -s /bin/bash agent
 
 # Install gh-attach for screenshot uploads to PR comments
-USER agent
-ENV GH_CONFIG_DIR=/home/agent/.config/gh
-RUN mkdir -p "$GH_CONFIG_DIR" && gh extension install atani/gh-attach
-USER root
+# Can't use `gh extension install` at build time (needs auth), so clone directly
+RUN git clone --depth 1 https://github.com/atani/gh-attach.git /home/agent/.local/share/gh/extensions/gh-attach \
+  && chown -R agent:agent /home/agent/.local/share/gh
 RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/agent/.cache/node/corepack \
   && chown -R agent:agent /workspace /home/agent/.local /home/agent/.cache
 
