@@ -29,6 +29,12 @@ importers:
       '@kioskkit/shared':
         specifier: workspace:*
         version: link:../shared
+      '@trpc/client':
+        specifier: ^11.15.0
+        version: 11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3)
+      '@trpc/server':
+        specifier: ^11.15.0
+        version: 11.15.0(typescript@5.9.3)
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -36,6 +42,9 @@ importers:
         specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
     devDependencies:
+      '@kioskkit/kiosk-server':
+        specifier: workspace:*
+        version: link:../kiosk-server
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -60,12 +69,18 @@ importers:
       '@hono/standard-validator':
         specifier: ^0.2.2
         version: 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.8)
+      '@hono/trpc-server':
+        specifier: ^0.4.2
+        version: 0.4.2(@trpc/server@11.15.0(typescript@5.9.3))(hono@4.12.8)
       '@kioskkit/shared':
         specifier: workspace:*
         version: link:../shared
       '@scalar/hono-api-reference':
         specifier: ^0.10.4
         version: 0.10.4(hono@4.12.8)
+      '@trpc/server':
+        specifier: ^11.15.0
+        version: 11.15.0(typescript@5.9.3)
       better-sqlite3:
         specifier: ^11.8.1
         version: 11.10.0
@@ -97,6 +112,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.0
+        version: 4.1.0(@types/node@22.19.15)(jsdom@29.0.1)(vite@8.0.1(@types/node@22.19.15)(esbuild@0.27.4)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/landing:
     dependencies:
