@@ -13,20 +13,8 @@ export async function fetchDevices(): Promise<Device[]> {
   return trpc["devices.list"].query();
 }
 
-export async function createDevice(
-  name: string,
-  tailscaleIp: string,
-  userId: string,
-): Promise<Device> {
-  return trpc["devices.create"].mutate({ name, tailscaleIp, userId });
-}
-
 export async function fetchDevice(id: string): Promise<Device> {
   return trpc["devices.get"].query({ id });
-}
-
-export async function deleteDevice(id: string): Promise<void> {
-  await trpc["devices.delete"].mutate({ id });
 }
 
 export async function fetchDeviceStatus(id: string): Promise<boolean> {
