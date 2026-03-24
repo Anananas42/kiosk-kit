@@ -2,6 +2,8 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+const kioskAdminDevUrl = process.env.KIOSK_ADMIN_DEV_URL;
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -12,6 +14,14 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
+      ...(kioskAdminDevUrl
+        ? {
+            "^/api/devices/.+/kiosk/admin": {
+              target: kioskAdminDevUrl,
+              rewrite: (p: string) => p.replace(/^\/api\/devices\/.+\/kiosk\/admin/, "/admin"),
+            },
+          }
+        : {}),
       "/api": "http://localhost:3002",
     },
   },
