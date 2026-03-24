@@ -217,6 +217,44 @@ while true; do
   # Check CI status
   CI_OUTPUT=$(GH_TOKEN="${GH_TOKEN}" gh pr checks 2>&1 || true)
   CI_FAILING=$(echo "$CI_OUTPUT" | grep -c "fail\|X" || true)
+  CI_PENDING=$(echo "$CI_OUTPUT" | grep -c "pending\|\*" || true)
+
+  # --- Testing agent (runs once after CI passes) ---
+  TESTING_DONE_MARKER="/tmp/.testing-done-${PR_NUMBER}"
+  if [ "$CI_FAILING" -eq 0 ] && [ "$CI_PENDING" -eq 0 ] && [ ! -f "$TESTING_DONE_MARKER" ]; then
+    echo "==> CI passed. Running testing agent for PR #$PR_NUMBER..."
+
+    TESTING_CMD=$(cat .claude/commands/testing.md 2>/dev/null || echo "")
+    if [ -n "$TESTING_CMD" ]; then
+      PR_BODY=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
+      CHANGED_FILES=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json files --jq '.files[].path' 2>/dev/null || echo "")
+
+      start_log_tailer
+      claude --dangerously-skip-permissions -p "$(cat <<TESTING_EOF
+$TESTING_CMD
+
+---
+
+PR number: $PR_NUMBER
+Branch: $BRANCH
+
+## PR Description
+
+$PR_BODY
+
+## Changed Files
+
+$CHANGED_FILES
+TESTING_EOF
+      )" || true
+
+      echo "==> Testing agent finished for PR #$PR_NUMBER."
+    else
+      echo "==> Warning: .claude/commands/testing.md not found. Skipping testing agent."
+    fi
+
+    touch "$TESTING_DONE_MARKER"
+  fi
 
   # Check for new review comments
   PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
