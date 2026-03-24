@@ -6,10 +6,13 @@
   "app.removed": "Odebráno: {label}",
   "app.insufficientBalance": "Kupující {buyer} nemá žádný \"{item}\" k odebrání.",
   "app.connectionFailed": "Připojení selhalo. Zkuste to znovu.",
+  "app.crash.title": "Server nedostupný",
+  "app.crash.message": "Systém se restartuje. Prosím vyčkejte\u2026",
 
   "buyer.title": "🏠 Vyberte {buyerNoun}",
   "buyer.repeat": "🔁 Opakovat {buyer} {item}",
   "buyer.loading": "Načítám\u2026",
+  "buyer.empty": "Žádní kupující nejsou nastaveni. Přidejte je v administraci.",
 
   "category.title": "📋 Vyberte kategorii",
   "category.changeBuyer": "Změnit kupujícího",

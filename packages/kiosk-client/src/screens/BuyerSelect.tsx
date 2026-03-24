@@ -8,6 +8,7 @@ interface BuyerSelectProps {
   buyers: Buyer[];
   onSelect: (buyer: Buyer) => void;
   error: string | null;
+  loading: boolean;
   lastOrder: LastOrder | null;
   onRepeat: () => void;
   buyerNoun: string;
@@ -17,6 +18,7 @@ export default function BuyerSelect({
   buyers,
   onSelect,
   error,
+  loading,
   lastOrder,
   onRepeat,
   buyerNoun,
@@ -40,8 +42,10 @@ export default function BuyerSelect({
             <div className="catalog-error__icon">⚠️</div>
             <div className="catalog-error__message">{error}</div>
           </div>
-        ) : buyers.length === 0 ? (
+        ) : loading ? (
           <div className="empty-state">{t("buyer.loading")}</div>
+        ) : buyers.length === 0 ? (
+          <div className="empty-state">{t("buyer.empty")}</div>
         ) : (
           <div className="tile-grid tile-grid--buyers">
             {buyers.map((b) => (

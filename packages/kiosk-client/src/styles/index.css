@@ -12,9 +12,6 @@
   --color-remove-hover: #b91c1c;
   --color-neutral: #334155;
   --color-neutral-hover: #1e293b;
-  --color-offline-bg: #fff3cd;
-  --color-offline-border: #ffc107;
-  --color-offline-text: #856404;
   --color-header-bg: #1e293b;
   --color-header-text: #f1f5f9;
   --radius: 12px;
@@ -97,21 +94,6 @@ body {
 
 .toast-layer > * {
   pointer-events: auto;
-}
-
-.offline-banner {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  background: var(--color-offline-bg);
-  border: 2px solid var(--color-offline-border);
-  color: var(--color-offline-text);
-  padding: 12px 20px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  z-index: 200;
 }
 
 .success-flash {
@@ -798,6 +780,33 @@ body {
   justify-content: center;
   flex: 1;
   font-size: 1.3rem;
+  color: var(--color-muted);
+}
+
+/* ===== Crash screen ===== */
+.crash-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+.crash-screen__icon {
+  font-size: 4rem;
+}
+
+.crash-screen__title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.crash-screen__message {
+  font-size: 1.2rem;
   color: var(--color-muted);
 }
 
