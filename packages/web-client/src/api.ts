@@ -1,15 +1,7 @@
-import type { User } from "@kioskkit/shared";
+import type { Device, User } from "@kioskkit/shared";
 import { trpc } from "./trpc.js";
 
-export type { User };
-
-export type Device = {
-  id: string;
-  userId: string;
-  name: string;
-  tailscaleIp?: string;
-  createdAt: string;
-};
+export type { Device, User };
 
 export async function fetchMe(): Promise<User | null> {
   const result = await trpc.me.query();
@@ -17,9 +9,7 @@ export async function fetchMe(): Promise<User | null> {
 }
 
 export async function fetchDevices(): Promise<Device[]> {
-  const res = await fetch("/api/devices");
-  if (!res.ok) throw new Error("Failed to fetch devices");
-  return res.json();
+  return trpc["devices.list"].query();
 }
 
 export async function createDevice(
@@ -27,27 +17,15 @@ export async function createDevice(
   tailscaleIp: string,
   userId: string,
 ): Promise<Device> {
-  const res = await fetch("/api/devices", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, tailscale_ip: tailscaleIp, user_id: userId }),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error ?? "Failed to create device");
-  }
-  return res.json();
+  return trpc["devices.create"].mutate({ name, tailscaleIp, userId });
 }
 
 export async function fetchDevice(id: string): Promise<Device> {
-  const res = await fetch(`/api/devices/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch device");
-  return res.json();
+  return trpc["devices.get"].query({ id });
 }
 
 export async function deleteDevice(id: string): Promise<void> {
-  const res = await fetch(`/api/devices/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to delete device");
+  await trpc["devices.delete"].mutate({ id });
 }
 
 export async function fetchDeviceStatus(id: string): Promise<boolean> {
