@@ -37,6 +37,23 @@ export function createApp(store: Store) {
     }
   });
 
+  // Serve kiosk-admin SPA at /admin — must be before kiosk-client catch-all
+  app.use(
+    "/admin/*",
+    serveStatic({
+      root: "./packages/kiosk-admin/dist",
+      rewriteRequestPath: (path) => path.replace(/^\/admin/, ""),
+    }),
+  );
+  app.get("/admin", (c) => c.redirect("/admin/"));
+  app.use(
+    "/admin/*",
+    serveStatic({
+      root: "./packages/kiosk-admin/dist",
+      rewriteRequestPath: () => "/index.html",
+    }),
+  );
+
   // Serve static client files in production
   app.use("/*", serveStatic({ root: "./packages/kiosk-client/dist" }));
   // SPA fallback
