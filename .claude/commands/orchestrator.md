@@ -14,13 +14,12 @@ Establish the correct patterns, conventions, and architecture from the very firs
 
 ## Dispatching a task
 
-Each task gets its own isolated container stack (agent + postgres). Use a unique project name derived from the Linear issue ID or a short slug.
+Each task gets its own isolated container stack (agent + postgres). Use `.agents/scripts/dispatch.sh` which handles the full lifecycle: start, wait for exit, then tear down containers and volumes automatically.
+
+Run it in the background so you can continue planning the next task:
 
 ```bash
-AGENT_TASK="<full task description>" docker compose \
-  -p "agent-<slug>" \
-  -f .agents/container/docker-compose.yml \
-  up -d
+AGENT_TASK="<full task description>" ./.agents/scripts/dispatch.sh "agent-<slug>" &
 ```
 
 The task description you pass as `AGENT_TASK` should be a complete, self-contained brief — the agent has no context beyond the skills baked into its CLAUDE.md. Include:
@@ -45,10 +44,10 @@ You do not need to explain this to the user or monitor it. The agents handle the
 
 ```bash
 # List running agent containers
-docker compose -p "agent-<slug>" ps
+docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml ps
 
 # Tail recent logs
-docker compose -p "agent-<slug>" logs --tail 100 agent
+docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml logs --tail 100 agent
 
 # Check if the PR exists yet
 gh pr list --head "kio-<id>/<description>"
@@ -75,8 +74,9 @@ docker compose -p "agent-<slug>" logs --tail 5 agent
 If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Recovery:
 
 ```bash
-docker compose -p "agent-<slug>" down
+docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml down
 # Re-dispatch with the same AGENT_TASK
+AGENT_TASK="<same task>" ./.agents/scripts/dispatch.sh "agent-<slug>" &
 ```
 
 This is the only scenario where you should proactively monitor. Do not check CI status, PR reviews, or other agent progress — the agents handle that themselves.
