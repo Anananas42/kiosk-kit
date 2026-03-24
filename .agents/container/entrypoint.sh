@@ -130,25 +130,63 @@ echo "==> Agent task complete. Starting PR watch loop..."
 POLL_INTERVAL=30
 ATTEMPT_COUNT=0
 MAX_ATTEMPTS=5
+SEEN_PR_COMMENTS=0
+SEEN_ISSUE_COMMENTS=0
 
 # Find the open PR for the current branch
 BRANCH=$(git branch --show-current)
+
+# If still on main, the agent never created a branch or pushed — re-invoke to finish
 if [ "$BRANCH" = "main" ]; then
-  echo "==> On main branch, no PR to watch. Exiting."
-  exit 0
+  echo "==> Still on main branch. Re-invoking claude to push and create PR..."
+  ATTEMPT_COUNT=$((ATTEMPT_COUNT + 1))
+  if [ "$ATTEMPT_COUNT" -gt "$MAX_ATTEMPTS" ]; then
+    echo "==> Max attempts ($MAX_ATTEMPTS) reached without creating a PR. Exiting."
+    exit 1
+  fi
+  start_log_tailer
+  claude --dangerously-skip-permissions -p "You completed the implementation but never pushed the branch or created a PR. Follow the cicd-workflow skill: create a branch, commit your changes, push, and open a PR. The Linear issue is in AGENT_TASK."
+  # Re-read branch after re-invocation
+  BRANCH=$(git branch --show-current)
+  if [ "$BRANCH" = "main" ]; then
+    echo "==> Still on main after re-invocation. Exiting."
+    exit 1
+  fi
 fi
 
-# Initialize seen comment counts before entering the loop
+# Wait for PR to exist (agent may have pushed but PR creation is async)
+echo "==> Waiting for PR on branch $BRANCH..."
+PR_WAIT_COUNT=0
+PR_WAIT_MAX=10
 GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
-PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
-if [ -n "$PR_INIT_JSON" ]; then
-  PR_INIT_NUMBER=$(echo "$PR_INIT_JSON" | jq -r '.number')
-  SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
-  SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
-else
-  SEEN_PR_COMMENTS=0
-  SEEN_ISSUE_COMMENTS=0
+while [ "$PR_WAIT_COUNT" -lt "$PR_WAIT_MAX" ]; do
+  PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
+  if [ -n "$PR_INIT_JSON" ]; then
+    break
+  fi
+  PR_WAIT_COUNT=$((PR_WAIT_COUNT + 1))
+  echo "==> No PR yet (attempt $PR_WAIT_COUNT/$PR_WAIT_MAX). Waiting ${POLL_INTERVAL}s..."
+  sleep "$POLL_INTERVAL"
+  GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+done
+
+if [ -z "$PR_INIT_JSON" ]; then
+  echo "==> No PR found after $PR_WAIT_MAX attempts. Re-invoking claude to create PR..."
+  start_log_tailer
+  claude --dangerously-skip-permissions -p "You pushed branch $BRANCH but no PR exists yet. Follow the cicd-workflow skill: create a PR using the GitHub App token, link it to the Linear issue, and enable auto-merge."
+  GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+  PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
 fi
+
+if [ -z "$PR_INIT_JSON" ]; then
+  echo "==> Still no PR after re-invocation. Exiting."
+  exit 1
+fi
+
+# Initialize seen comment counts
+PR_INIT_NUMBER=$(echo "$PR_INIT_JSON" | jq -r '.number')
+SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
 
 while true; do
   GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
@@ -156,8 +194,9 @@ while true; do
   # Check PR state
   PR_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number,state,reviewDecision,title 2>/dev/null || echo "")
   if [ -z "$PR_JSON" ]; then
-    echo "==> No PR found for branch $BRANCH. Exiting."
-    exit 0
+    echo "==> No PR found for branch $BRANCH. Waiting..."
+    sleep "$POLL_INTERVAL"
+    continue
   fi
 
   PR_STATE=$(echo "$PR_JSON" | jq -r '.state')
