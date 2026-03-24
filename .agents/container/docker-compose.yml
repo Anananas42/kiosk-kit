@@ -38,4 +38,6 @@ services:
 volumes:
   agent-node-modules:
   agent-pnpm-store:
+    external: true
+    name: kiosk-kit-agent-pnpm-store
   agent-corepack:
