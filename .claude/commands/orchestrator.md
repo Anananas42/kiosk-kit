@@ -61,7 +61,7 @@ Every PR must link to a Linear issue. Create one before dispatching if it doesn'
 - **Group related issues into a project** when 2+ tasks share a goal. Set blocking relationships between dependent tasks.
 - **Titles are short, verb-led.** Keep under ~60 characters. Detail goes in the description.
 - **Descriptions are self-contained** — context (why), requirements (what), acceptance criteria (how to verify). The agent task brief is derived from this; if the description is vague, the agent will flounder.
-- **Don't manage issue status manually.** Linear's GitHub integration tracks status automatically based on branch/PR activity.
+- **Status management**: Agents mark issues "In Progress" via Linear MCP when they start work. After that, Linear's GitHub integration tracks status automatically based on branch/PR activity — don't manage it manually beyond that initial update.
 
 ## Stuck agent recovery
 
