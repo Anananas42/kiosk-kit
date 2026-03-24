@@ -127,6 +127,10 @@ importers:
         version: 5.9.3
 
   packages/shared:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       tsup:
         specifier: ^8.3.6
@@ -140,6 +144,12 @@ importers:
       '@kioskkit/shared':
         specifier: workspace:*
         version: link:../shared
+      '@trpc/client':
+        specifier: ^11.15.0
+        version: 11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3)
+      '@trpc/server':
+        specifier: ^11.15.0
+        version: 11.15.0(typescript@5.9.3)
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -150,6 +160,9 @@ importers:
         specifier: ^7.13.1
         version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     devDependencies:
+      '@kioskkit/web-server':
+        specifier: workspace:*
+        version: link:../web-server
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
@@ -183,12 +196,18 @@ importers:
       '@hono/standard-validator':
         specifier: ^0.2.2
         version: 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.8)
+      '@hono/trpc-server':
+        specifier: ^0.4.2
+        version: 0.4.2(@trpc/server@11.15.0(typescript@5.9.3))(hono@4.12.8)
       '@kioskkit/shared':
         specifier: workspace:*
         version: link:../shared
       '@scalar/hono-api-reference':
         specifier: ^0.10.4
         version: 0.10.4(hono@4.12.8)
+      '@trpc/server':
+        specifier: ^11.15.0
+        version: 11.15.0(typescript@5.9.3)
       arctic:
         specifier: ^3.7.0
         version: 3.7.0
@@ -996,6 +1015,13 @@ packages:
       '@standard-schema/spec': ^1.0.0
       hono: '>=3.9.0'
 
+  '@hono/trpc-server@0.4.2':
+    resolution: {integrity: sha512-3TDrc42CZLgcTFkXQba+y7JlRWRiyw1AqhLqztWyNS2IFT+3bHld0lxKdGBttCtGKHYx0505dM67RMazjhdZqw==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      '@trpc/server': ^10.10.0 || >11.0.0-rc
+      hono: '>=4.0.0'
+
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
     engines: {node: '>=18'}
@@ -1575,6 +1601,19 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+
+  '@trpc/client@11.15.0':
+    resolution: {integrity: sha512-8mdFwCU3sK4W6Wg5LIBl5SonYqE4I6UlwR80qL3e7SSxYWHH+ZeQGlBjbLNL3+VsOxXaAAfUJYRCMsEZgQSFPw==}
+    hasBin: true
+    peerDependencies:
+      '@trpc/server': 11.15.0
+      typescript: '>=5.7.2'
+
+  '@trpc/server@11.15.0':
+    resolution: {integrity: sha512-qLcodARy05fzMSrNG6VYtynsAmUCRaQ7SDm3Ynvryhylp2Zq4KN28qJeMlMqLeJKwZ05KukkcIsVTKzscWX1pQ==}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.7.2'
 
   '@turbo/darwin-64@2.8.18':
     resolution: {integrity: sha512-3QNJ8VR2y1+AZX1HRB2uAvBWHWYpyWMYuDPAPHwhmpC74YweQmPh41dQZ9fkNcgT1eZNgYKf6Q3Hq7i0XK3Ybg==}
@@ -4340,6 +4379,11 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       hono: 4.12.8
 
+  '@hono/trpc-server@0.4.2(@trpc/server@11.15.0(typescript@5.9.3))(hono@4.12.8)':
+    dependencies:
+      '@trpc/server': 11.15.0(typescript@5.9.3)
+      hono: 4.12.8
+
   '@img/colour@1.1.0':
     optional: true
 
@@ -4725,6 +4769,15 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
+
+  '@trpc/client@11.15.0(@trpc/server@11.15.0(typescript@5.9.3))(typescript@5.9.3)':
+    dependencies:
+      '@trpc/server': 11.15.0(typescript@5.9.3)
+      typescript: 5.9.3
+
+  '@trpc/server@11.15.0(typescript@5.9.3)':
+    dependencies:
+      typescript: 5.9.3
 
   '@turbo/darwin-64@2.8.18':
     optional: true

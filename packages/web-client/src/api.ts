@@ -1,4 +1,7 @@
-export type User = { id: string; name: string; email: string; role: "admin" | "customer" };
+import type { User } from "@kioskkit/shared";
+import { trpc } from "./trpc.js";
+
+export type { User };
 
 export type Device = {
   id: string;
@@ -9,10 +12,8 @@ export type Device = {
 };
 
 export async function fetchMe(): Promise<User | null> {
-  const res = await fetch("/api/me");
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.user ?? null;
+  const result = await trpc.me.query();
+  return result.user;
 }
 
 export async function fetchDevices(): Promise<Device[]> {

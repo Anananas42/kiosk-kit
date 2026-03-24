@@ -1,3 +1,4 @@
+import { trpcServer } from "@hono/trpc-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import type { Google } from "arctic";
 import { Hono } from "hono";
@@ -9,7 +10,8 @@ import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { devicesRoutes } from "./routes/devices.js";
 import { healthRoute } from "./routes/health.js";
-import { meRoute } from "./routes/me.js";
+import { createContextFactory } from "./trpc/context.js";
+import { appRouter } from "./trpc/router.js";
 
 export function createApp(db: Db, google?: Google) {
   const app = new Hono();
@@ -27,7 +29,14 @@ export function createApp(db: Db, google?: Google) {
     app.route("/api/auth", authRoutes(db, google));
   }
 
-  app.route("/api/me", meRoute(db));
+  app.use(
+    "/api/trpc/*",
+    trpcServer({
+      router: appRouter,
+      endpoint: "/api/trpc",
+      createContext: createContextFactory(db),
+    }),
+  );
 
   mountDocs(app);
 
