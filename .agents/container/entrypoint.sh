@@ -25,6 +25,11 @@ if [ -f /mnt/secrets/claude-credentials.json ]; then
   cp /mnt/secrets/claude-credentials.json "$HOME/.claude/.credentials.json"
 fi
 
+echo "==> Pulling latest main..."
+GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+git fetch "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" main
+git reset --hard FETCH_HEAD
+
 echo "==> Installing dependencies..."
 CI=true pnpm install --frozen-lockfile
 
