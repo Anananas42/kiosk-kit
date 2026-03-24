@@ -20,6 +20,25 @@ Admin dashboard for KioskKit platform operators, hosted at **admin.kioskk.net**.
 
 The admin never accesses kiosk contents. Each kiosk is a customer's own database with sensitive data (buyers, consumption records, pricing).
 
+## Architecture
+
+### Data providers
+
+Each resource has its own `DataProvider` implementation under `src/dataProvider/`:
+
+```
+src/dataProvider/
+  index.ts      — routes resources via combineDataProviders
+  devices.ts    — CRUD operations for devices (via tRPC)
+  users.ts      — read-only provider for users (via tRPC)
+```
+
+To add a new resource: create a new `<resource>.ts` file implementing `DataProvider`, then add a case to the switch in `index.ts`.
+
+### Resources (UI)
+
+React-admin resource components live in `src/resources/`, one file per resource.
+
 ## Local development
 
 ```bash
