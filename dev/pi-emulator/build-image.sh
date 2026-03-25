@@ -96,9 +96,18 @@ download_pios() {
 }
 
 prepare_disk() {
-  log "Converting to qcow2 and resizing to 8G..."
+  log "Converting to qcow2 and resizing to 16G..."
   qemu-img convert -f raw -O qcow2 "$RAW_IMAGE" "$DISK_IMAGE"
   qemu-img resize "$DISK_IMAGE" 16G
+
+  # Grow partition 2 to fill the disk, then resize the filesystem
+  guestfish --rw -a "$DISK_IMAGE" <<'GROW_SCRIPT'
+run
+list-partitions
+part-resize /dev/sda 2 -1
+e2fsck-f /dev/sda2
+resize2fs /dev/sda2
+GROW_SCRIPT
 }
 
 create_pi_user() {
@@ -218,7 +227,6 @@ FSTAB
     echo "add $DISK_IMAGE"
     echo "run"
     echo "list-partitions"
-    echo "resize2fs /dev/sda2"
     echo "mount /dev/sda2 /"
     echo "upload $patch_dir/fstab /etc/fstab"
     # Copy kernel modules to /usr/lib/modules/ (not /lib/ which is a symlink on Pi OS).
