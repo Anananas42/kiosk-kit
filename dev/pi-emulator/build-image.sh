@@ -98,7 +98,7 @@ download_pios() {
 prepare_disk() {
   log "Converting to qcow2 and resizing to 8G..."
   qemu-img convert -f raw -O qcow2 "$RAW_IMAGE" "$DISK_IMAGE"
-  qemu-img resize "$DISK_IMAGE" 8G
+  qemu-img resize "$DISK_IMAGE" 16G
 }
 
 create_pi_user() {
