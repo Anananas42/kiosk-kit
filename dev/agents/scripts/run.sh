@@ -7,6 +7,7 @@
 #   ./dev/agents/scripts/run.sh --build                  # rebuild image first
 #   ./dev/agents/scripts/run.sh --build "implement X"    # rebuild + task
 #   ./dev/agents/scripts/run.sh --no-loop "test task"    # skip PR watch loop
+#   ./dev/agents/scripts/run.sh --docker "task"          # start with Docker (DinD) sidecar
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -14,11 +15,13 @@ cd "$(dirname "$0")/../.."
 BUILD_FLAG=""
 TASK=""
 NO_LOOP=""
+DOCKER_PROFILE=""
 
 for arg in "$@"; do
   case "$arg" in
     --build) BUILD_FLAG="--build" ;;
     --no-loop) NO_LOOP="1" ;;
+    --docker) DOCKER_PROFILE="--profile docker" ;;
     *) TASK="$arg" ;;
   esac
 done
@@ -39,4 +42,4 @@ fi
 export AGENT_TASK="$TASK"
 export AGENT_NO_LOOP="${NO_LOOP}"
 
-exec docker compose -f dev/agents/container/docker-compose.yml run --rm $BUILD_FLAG agent
+exec docker compose -f dev/agents/container/docker-compose.yml $DOCKER_PROFILE run --rm $BUILD_FLAG agent

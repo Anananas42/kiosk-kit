@@ -11,6 +11,18 @@ services:
       timeout: 5s
       retries: 15
 
+  dind:
+    image: docker:dind
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    profiles: ["docker"]
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
   agent:
     build:
       context: ../..
@@ -29,6 +41,7 @@ services:
     environment:
       CI: "true"
       DATABASE_URL: postgresql://kioskkit:kioskkit@postgres:5432/kioskkit
+      DOCKER_HOST: tcp://dind:2375
       AGENT_TASK: ${AGENT_TASK:-}
       AGENT_NO_LOOP: ${AGENT_NO_LOOP:-}
     stdin_open: true
