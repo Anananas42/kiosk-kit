@@ -103,7 +103,11 @@ describe("device proxy", () => {
     const body = JSON.stringify({ items: [] });
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response(body, { status: 200, headers: { "content-type": "application/json" } })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(body, { status: 200, headers: { "content-type": "application/json" } }),
+        ),
     );
 
     const res = await app.request("/devices/device-1/kiosk/catalog");
@@ -111,7 +115,7 @@ describe("device proxy", () => {
     expect(await res.json()).toEqual({ items: [] });
 
     const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fetchCall[0]).toBe("http://100.64.1.5:3001/api/catalog");
+    expect(fetchCall[0]).toBe("http://100.64.1.5:3001/catalog");
 
     vi.unstubAllGlobals();
   });
@@ -138,7 +142,11 @@ describe("device proxy", () => {
     const body = JSON.stringify({ items: [] });
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response(body, { status: 200, headers: { "content-type": "application/json" } })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(body, { status: 200, headers: { "content-type": "application/json" } }),
+        ),
     );
 
     const res = await app.request("/devices/device-1/kiosk/catalog");
