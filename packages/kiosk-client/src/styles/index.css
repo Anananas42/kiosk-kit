@@ -24,6 +24,9 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+.kiosk *, .kiosk *::before, .kiosk *::after {
   cursor: none !important;
 }
 
