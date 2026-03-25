@@ -15,7 +15,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Raspberry Pi OS Lite (64-bit, Bookworm) — update URL when new releases ship.
 PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-11-19/2024-11-19-raspios-bookworm-arm64-lite.img.xz"
-PIOS_CHECKSUM="sha256:a0dc4251e73151e4109d0c499aba04dae7afbbcfaac54afa1ea1b55f75764f0d"
+PIOS_CHECKSUM="a0dc4251e73151e4109d0c499aba04dae7afbbcfaac54afa1ea1b55f75764f0d"
 
 SSH_PORT=2222
 QEMU_RAM="2G"
@@ -71,6 +71,8 @@ download_pios() {
   log "Downloading Raspberry Pi OS Lite..."
   local local_xz="$WORK_DIR/raspios.img.xz"
   curl -fL -o "$local_xz" "$PIOS_URL"
+  log "Verifying checksum..."
+  echo "$PIOS_CHECKSUM  $local_xz" | sha256sum -c - || err "Checksum mismatch for downloaded image"
   log "Decompressing..."
   xz -d "$local_xz"
 }

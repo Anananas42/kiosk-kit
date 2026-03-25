@@ -11,6 +11,7 @@
     "typecheck": "turbo typecheck",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
+    "lint:shell": "find . -name '*.sh' -not -path './node_modules/*' -not -path './ansible/.venv/*' -not -path './.husky/*' -print0 | xargs -0 shellcheck --severity=warning",
     "test": "vitest run",
     "start:kiosk": "node packages/kiosk-server/dist/index.js",
     "test:pi-emulator": "dev/pi-emulator/test.sh",
@@ -20,6 +21,9 @@
   "lint-staged": {
     "*.{ts,tsx,js,json}": [
       "biome check --fix --no-errors-on-unmatched"
+    ],
+    "*.sh": [
+      "shellcheck --severity=warning"
     ]
   },
   "pnpm": {

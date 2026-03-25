@@ -19,7 +19,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Same Pi OS image as the emulator
 PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-11-19/2024-11-19-raspios-bookworm-arm64-lite.img.xz"
-PIOS_CHECKSUM="sha256:a0dc4251e73151e4109d0c499aba04dae7afbbcfaac54afa1ea1b55f75764f0d"
+PIOS_CHECKSUM="a0dc4251e73151e4109d0c499aba04dae7afbbcfaac54afa1ea1b55f75764f0d"
 
 IMAGE_SIZE="6G"
 WORK_DIR="$SCRIPT_DIR/.work"
@@ -128,6 +128,8 @@ download_pios() {
   mkdir -p "$WORK_DIR"
   local xz_file="$WORK_DIR/raspios.img.xz"
   curl -fL -o "$xz_file" "$PIOS_URL"
+  log "Verifying checksum..."
+  echo "$PIOS_CHECKSUM  $xz_file" | sha256sum -c - || err "Checksum mismatch for downloaded image"
   log "Decompressing..."
   xz -d "$xz_file"
 }
