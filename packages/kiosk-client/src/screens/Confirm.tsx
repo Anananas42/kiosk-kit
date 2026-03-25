@@ -1,10 +1,10 @@
 import type { CatalogItem } from "@kioskkit/shared";
 import { formatCurrency, getDeliveryDateLabel, parsePrice } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { trpc } from "../trpc.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import Tile from "../components/Tile.js";
 import { useT } from "../i18n/useT.js";
+import { trpc } from "../trpc.js";
 
 const QUANTITIES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -138,7 +138,9 @@ export default function Confirm({
                 onClick={() => onConfirm("+", qty)}
                 type="button"
               >
-                {t("confirm.addQtyPrice", { qty, price: priceLabel })}
+                {priceLabel
+                  ? t("confirm.addQtyPrice", { qty, price: priceLabel })
+                  : t("confirm.addQty", { qty })}
               </button>
               {canStorno &&
                 (confirmingStorno ? (
