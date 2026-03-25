@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
-import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID } from "../local-dev.js";
+import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const PROXY_TIMEOUT_MS = 10_000;
@@ -55,7 +55,14 @@ export function deviceProxyRoutes(db: Db) {
     if (!device) return c.json({ error: "Not found" }, 404);
 
     const kioskPath = c.req.path.replace(/^.*?\/kiosk\//, "");
-    const targetUrl = `http://${getDeviceHost(device)}/api/${kioskPath}`;
+    // In dev, route admin SPA requests to the kiosk-admin Vite dev server
+    const isAdminPath = kioskPath.startsWith("admin");
+    const host =
+      isDev && device.id === LOCAL_DEVICE_ID && isAdminPath
+        ? LOCAL_KIOSK_ADMIN_HOST
+        : getDeviceHost(device);
+    const queryString = new URL(c.req.url).search;
+    const targetUrl = `http://${host}/${kioskPath}${queryString}`;
 
     try {
       const headers = new Headers(c.req.raw.headers);

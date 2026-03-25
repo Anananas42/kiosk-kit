@@ -36,7 +36,15 @@ export function App() {
             </button>
           </span>
         </header>
-        <main style={{ width: "100%", maxWidth: 900, flex: 1, display: "flex", flexDirection: "column" }}>
+        <main
+          style={{
+            width: "100%",
+            maxWidth: 900,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <Routes>
             <Route path="/" element={<DeviceList />} />
             <Route path="/devices/:id" element={<DeviceDetail />} />
@@ -52,7 +60,7 @@ const styles = {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    minHeight: "100vh",
+    height: "100%",
     fontFamily: "system-ui, sans-serif",
     padding: "1rem",
     gap: "1rem",

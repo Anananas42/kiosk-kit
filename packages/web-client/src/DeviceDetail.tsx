@@ -19,7 +19,7 @@ export function DeviceDetail() {
   if (!id) return <p>Missing device ID.</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <div>
         <Link to="/">&larr; Back to devices</Link>
         <h2>{device?.name ?? "Loading..."}</h2>
@@ -36,7 +36,7 @@ export function DeviceDetail() {
       </div>
 
       {online === false ? null : online === null ? null : (
-        <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+        <div style={{ flex: 1, minHeight: 0 }}>
           {iframeLoading && <p>Loading...</p>}
           <iframe
             src={`/api/devices/${id}/kiosk/admin/`}

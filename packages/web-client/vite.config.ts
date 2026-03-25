@@ -14,17 +14,9 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
-      ...(kioskAdminDevUrl
-        ? {
-            "^/api/devices/.+/kiosk/admin": {
-              target: kioskAdminDevUrl,
-              rewrite: (p: string) => p.replace(/^\/api\/devices\/.+\/kiosk\/admin/, "/admin"),
-            },
-            "/admin": {
-              target: kioskAdminDevUrl,
-            },
-          }
-        : {}),
+      "/admin": {
+        target: kioskAdminDevUrl ?? "http://localhost:5176",
+      },
       "/api": "http://localhost:3002",
     },
   },
