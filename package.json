@@ -6,6 +6,7 @@
     "dev": "./scripts/dev.sh",
     "dev:web": "./scripts/dev.sh web",
     "dev:kiosk": "./scripts/dev.sh kiosk",
+    "dev:kiosk-emu": "./scripts/dev.sh kiosk-emu",
     "dev:landing": "./scripts/dev.sh landing",
     "build": "turbo build",
     "typecheck": "turbo typecheck",

@@ -94,6 +94,46 @@ case "$PROFILE" in
     echo ""
     exec pnpm exec turbo dev --filter=@kioskkit/kiosk-server --filter=@kioskkit/kiosk-client --filter=@kioskkit/kiosk-admin --output-logs=errors-only
     ;;
+  kiosk-emu)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    EMU_DIR="$SCRIPT_DIR/../dev/pi-emulator"
+
+    if [[ ! -f "$EMU_DIR/golden.qcow2" ]]; then
+      echo "Error: Golden image not found. Build it first:" >&2
+      echo "  ./dev/pi-emulator/build-image.sh" >&2
+      exit 1
+    fi
+
+    cleanup_emu() {
+      echo ""
+      echo "Shutting down Pi emulator..."
+      if [[ -f "$EMU_DIR/.work/qemu.pid" ]]; then
+        kill "$(cat "$EMU_DIR/.work/qemu.pid")" 2>/dev/null || true
+      fi
+    }
+    trap cleanup_emu EXIT INT TERM
+
+    "$EMU_DIR/run.sh" --bg
+
+    echo "  kiosk (Pi emu)  → http://localhost:${PI_EMU_KIOSK_PORT:-3001}"
+    echo "  ssh              → ssh -p ${PI_EMU_SSH_PORT:-2222} pi@localhost"
+    echo ""
+    echo "Waiting for kiosk server..."
+
+    SECONDS=0
+    until curl -sf -o /dev/null "http://localhost:${PI_EMU_KIOSK_PORT:-3001}/api/health" 2>/dev/null; do
+      if (( SECONDS >= 120 )); then
+        echo "Error: Kiosk server did not become healthy within 120 seconds." >&2
+        exit 1
+      fi
+      sleep 2
+    done
+    echo "Kiosk server ready. Press Ctrl-C to stop."
+    echo ""
+
+    # Keep running until interrupted
+    while true; do sleep 60; done
+    ;;
   landing)
     echo "  landing        → http://localhost:4321"
     echo ""
@@ -101,7 +141,7 @@ case "$PROFILE" in
     ;;
   *)
     echo "Unknown profile: $PROFILE" >&2
-    echo "Usage: $0 [all|web|kiosk|landing]" >&2
+    echo "Usage: $0 [all|web|kiosk|kiosk-emu|landing]" >&2
     exit 1
     ;;
 esac

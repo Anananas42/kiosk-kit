@@ -19,7 +19,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Same Pi OS image as the emulator
 PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-11-19/2024-11-19-raspios-bookworm-arm64-lite.img.xz"
-PIOS_CHECKSUM="a0dc4251e73151e4109d0c499aba04dae7afbbcfaac54afa1ea1b55f75764f0d"
+PIOS_CHECKSUM="6ac3a10a1f144c7e9d1f8e568d75ca809288280a593eb6ca053e49b539f465a4"
 
 IMAGE_SIZE="6G"
 WORK_DIR="$SCRIPT_DIR/.work"
