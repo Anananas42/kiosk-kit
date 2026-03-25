@@ -1,3 +1,4 @@
+import { formatCurrency, parsePrice } from "@kioskkit/shared";
 import { type FormEvent, useCallback, useState } from "react";
 import { useData, useFormStatus } from "../hooks.js";
 import { trpc } from "../trpc.js";
@@ -5,7 +6,12 @@ import { trpc } from "../trpc.js";
 export function CatalogTab() {
   const fetcher = useCallback(() => trpc["catalog.list"].query(), []);
   const { data: catalog, error, loading, reload } = useData(fetcher);
+  const settingsFetcher = useCallback(() => trpc["admin.settings.get"].query(), []);
+  const { data: settings } = useData(settingsFetcher);
   const form = useFormStatus();
+
+  const locale = settings?.locale ?? "cs";
+  const currency = settings?.currency ?? "CZK";
 
   const [catName, setCatName] = useState("");
   const [catPreorder, setCatPreorder] = useState(false);
@@ -107,7 +113,9 @@ export function CatalogTab() {
                   <span>
                     {item.name}
                     {item.quantity ? ` — ${item.quantity}` : ""}
-                    {item.price ? ` @ ${item.price}` : ""}
+                    {item.price
+                      ? ` @ ${formatCurrency(parsePrice(item.price), locale, currency)}`
+                      : ""}
                     {item.dphRate ? (
                       <span style={{ color: "#888", fontSize: "0.85em", marginLeft: "0.25em" }}>
                         ({item.dphRate}% DPH)
