@@ -108,6 +108,11 @@ export function CatalogTab() {
                     {item.name}
                     {item.quantity ? ` — ${item.quantity}` : ""}
                     {item.price ? ` @ ${item.price}` : ""}
+                    {item.dphRate ? (
+                      <span style={{ color: "#888", fontSize: "0.85em", marginLeft: "0.25em" }}>
+                        ({item.dphRate}% DPH)
+                      </span>
+                    ) : null}
                   </span>
                   <button
                     type="button"
@@ -151,11 +156,7 @@ export function CatalogTab() {
         <>
           <h4 className="section-heading">Add Item</h4>
           <form onSubmit={handleAddItem} className="form-row">
-            <select
-              value={itemCatId}
-              onChange={(e) => setItemCatId(e.target.value)}
-              required
-            >
+            <select value={itemCatId} onChange={(e) => setItemCatId(e.target.value)} required>
               <option value="">Select category</option>
               {catalog.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -172,21 +173,21 @@ export function CatalogTab() {
             />
             <input
               type="text"
-              placeholder="Quantity"
+              placeholder="e.g. 100g"
               value={itemQty}
               onChange={(e) => setItemQty(e.target.value)}
               style={{ width: "6rem" }}
             />
             <input
               type="text"
-              placeholder="Price"
+              placeholder="e.g. 12.50"
               value={itemPrice}
               onChange={(e) => setItemPrice(e.target.value)}
               style={{ width: "6rem" }}
             />
             <input
               type="text"
-              placeholder="DPH Rate"
+              placeholder="e.g. 21"
               value={itemDph}
               onChange={(e) => setItemDph(e.target.value)}
               style={{ width: "6rem" }}
