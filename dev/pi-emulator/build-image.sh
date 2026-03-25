@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # build-image.sh — Download Pi OS, boot in QEMU, provision with Ansible, snapshot golden image.
 #
+# Uses a two-layer cache so that app-only changes rebuild in ~5 min instead of ~30 min.
+#
+#   Layer 1 (base system):  Pi OS + QEMU patches + Ansible provision (--skip-tags tailscale,app)
+#   Layer 2 (app deploy):   Boot base overlay, run deploy.yml, snapshot golden image
+#
 # Prerequisites: qemu-system-aarch64, qemu-img, guestfish (libguestfs-tools)
 #
-# Usage: ./build-image.sh [--force]
-#   --force   Rebuild the golden image even if it already exists.
+# Usage:
+#   ./build-image.sh              # Build with caching (skip unchanged layers)
+#   ./build-image.sh --force      # Rebuild everything from scratch
+#   ./build-image.sh --app-only   # Skip base layer (must already exist)
 
 set -euo pipefail
 
@@ -36,6 +43,8 @@ RAW_IMAGE="$WORK_DIR/raspios.img"
 DISK_IMAGE="$WORK_DIR/disk.qcow2"
 ANSIBLE_DIR="$REPO_ROOT/deploy/pi/ansible"
 
+BASE_IMAGE="$WORK_DIR/provisioned-base.qcow2"
+
 # shellcheck source=../../deploy/pi/lib/pi-image-common.sh
 source "$REPO_ROOT/deploy/pi/lib/pi-image-common.sh"
 
@@ -43,8 +52,9 @@ trap cleanup_qemu EXIT
 
 # --- Emulator-specific functions ---------------------------------------------
 
-provision_with_ansible() {
-  log "Running Ansible provisioning..."
+# provision_base — run provision.yml skipping tailscale and app tags (Layer 1).
+provision_base() {
+  log "Running Ansible base provisioning (--skip-tags tailscale,app)..."
 
   local inventory_file="$WORK_DIR/inventory.yml"
   cat > "$inventory_file" <<EOF
@@ -69,19 +79,13 @@ EOF
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
-    --skip-tags tailscale \
+    --skip-tags tailscale,app \
     -e "kioskkit_tailscale_auth_key=skip" \
-    || { err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
+    || { err "Ansible base provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
 }
 
-setup_wifi_simulation() {
-  log "Setting up mac80211_hwsim for WiFi testing..."
-  ssh_pi "sudo modprobe mac80211_hwsim radios=2 2>/dev/null && echo 'mac80211_hwsim loaded' || echo 'WARN: mac80211_hwsim not available — WiFi simulation will be limited'"
-
-  ssh_pi "echo 'mac80211_hwsim' | sudo tee /etc/modules-load.d/hwsim.conf >/dev/null; echo 'options mac80211_hwsim radios=2' | sudo tee /etc/modprobe.d/hwsim.conf >/dev/null"
-}
-
-deploy_kiosk_app() {
+# deploy_app — run deploy.yml to sync code and build the application (Layer 2).
+deploy_app() {
   log "Deploying kiosk application into the VM..."
 
   local inventory_file="$WORK_DIR/inventory.yml"
@@ -107,6 +111,13 @@ deploy_kiosk_app() {
   err "Kiosk server health check failed after $retries attempts"
 }
 
+setup_wifi_simulation() {
+  log "Setting up mac80211_hwsim for WiFi testing..."
+  ssh_pi "sudo modprobe mac80211_hwsim radios=2 2>/dev/null && echo 'mac80211_hwsim loaded' || echo 'WARN: mac80211_hwsim not available — WiFi simulation will be limited'"
+
+  ssh_pi "echo 'mac80211_hwsim' | sudo tee /etc/modules-load.d/hwsim.conf >/dev/null; echo 'options mac80211_hwsim radios=2' | sudo tee /etc/modprobe.d/hwsim.conf >/dev/null"
+}
+
 shutdown_and_snapshot() {
   shutdown_qemu
 
@@ -125,25 +136,58 @@ shutdown_and_snapshot() {
 
 main() {
   local force=0
-  [[ "${1:-}" == "--force" ]] && force=1
+  local app_only=0
 
-  if [[ -f "$GOLDEN_IMAGE" && $force -eq 0 ]]; then
-    log "Golden image already exists at $GOLDEN_IMAGE"
-    log "Use --force to rebuild."
-    exit 0
-  fi
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force)    force=1; shift ;;
+      --app-only) app_only=1; shift ;;
+      *) err "Unknown argument: $1" ;;
+    esac
+  done
 
   require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook
   mkdir -p "$WORK_DIR"
 
-  download_pios
-  prepare_disk
-  patch_image_for_virt
-  boot_qemu
-  provision_with_ansible
-  wait_for_reboot
-  setup_wifi_simulation
-  shutdown_and_snapshot
+  local ansible_hash app_hash
+  ansible_hash=$(compute_layer_hash "$REPO_ROOT/deploy/pi/ansible")
+  app_hash=$(compute_layer_hash "$REPO_ROOT/packages" "$REPO_ROOT/pnpm-lock.yaml" "$REPO_ROOT/turbo.json")
+
+  # --- Layer 1: Base system ---------------------------------------------------
+  local base_changed=0
+  if [[ $app_only -eq 1 ]]; then
+    [[ -f "$BASE_IMAGE" ]] || err "No base image found at $BASE_IMAGE. Run without --app-only first."
+    [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --app-only first."
+    log "Skipping base layer (--app-only)."
+  elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$WORK_DIR/base-hash" 2>/dev/null)" == "$ansible_hash" ]] && [[ $force -eq 0 ]]; then
+    log "Base system cached (Ansible unchanged). Skipping to app deployment."
+  else
+    base_changed=1
+    log "Building base system layer..."
+    download_pios
+    prepare_disk
+    patch_image_for_virt
+    boot_qemu
+    provision_base
+    wait_for_reboot
+    shutdown_qemu
+    cp "$DISK_IMAGE" "$BASE_IMAGE"
+    echo "$ansible_hash" > "$WORK_DIR/base-hash"
+    log "Base system layer cached."
+  fi
+
+  # --- Layer 2: App deployment ------------------------------------------------
+  if [[ -f "$GOLDEN_IMAGE" ]] && [[ "$(cat "$WORK_DIR/app-hash" 2>/dev/null)" == "$app_hash" ]] && [[ $base_changed -eq 0 ]] && [[ $force -eq 0 ]]; then
+    log "App layer cached. Golden image is up to date."
+  else
+    log "Building app deployment layer..."
+    create_cow_overlay "$BASE_IMAGE" "$DISK_IMAGE"
+    boot_qemu
+    deploy_app
+    setup_wifi_simulation
+    shutdown_and_snapshot
+    echo "$app_hash" > "$WORK_DIR/app-hash"
+  fi
 }
 
 main "$@"
