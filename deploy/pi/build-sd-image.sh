@@ -96,9 +96,9 @@ parse_args() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --device-id)   DEVICE_ID="$2"; shift 2 ;;
-      --customer-tag) CUSTOMER_TAG="$2"; shift 2 ;;
-      --tailscale-key) TAILSCALE_KEY="$2"; shift 2 ;;
+      --device-id)   [[ $# -ge 2 ]] || err "--device-id requires a value"; DEVICE_ID="$2"; shift 2 ;;
+      --customer-tag) [[ $# -ge 2 ]] || err "--customer-tag requires a value"; CUSTOMER_TAG="$2"; shift 2 ;;
+      --tailscale-key) [[ $# -ge 2 ]] || err "--tailscale-key requires a value"; TAILSCALE_KEY="$2"; shift 2 ;;
       --dev)
         DEVICE_ID="${PI_DEV_DEVICE_ID:-}"
         CUSTOMER_TAG="${PI_DEV_CUSTOMER_TAG:-}"
