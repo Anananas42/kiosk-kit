@@ -106,7 +106,7 @@ Key properties:
 
 ## Docker-in-Docker (DinD) sidecar
 
-Some tasks require Docker (e.g. running the Pi simulator with `pnpm dev:kiosk-sim`, or `pnpm test:integration`). Use the `--docker` flag to start a DinD sidecar alongside the agent:
+Some tasks require Docker (e.g. running `pnpm test:integration` or other Docker-based workflows). Use the `--docker` flag to start a DinD sidecar alongside the agent:
 
 ```bash
 ./dev/agents/scripts/run.sh --docker "task that needs docker"
