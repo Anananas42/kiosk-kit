@@ -78,10 +78,6 @@ docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml logs --
 
 **Stuck (no output):** If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Re-dispatch.
 
-**Crashed (exit code 127):** If the container exited immediately with code 127, the AGENT_TASK env var had shell escaping issues that broke the entrypoint. Check tmux output with `tmux capture-pane -t agent-<slug> -p -S -50`. Fix: write the task to a temp file and dispatch using `AGENT_TASK="$(cat /tmp/agent-task-<slug>.txt)"`.
-
-**Container gone:** If `docker compose ps -a` shows nothing and the tmux pane shows "Agent exited with code X. Cleaning up..." — the agent exited and the tmux session auto-cleaned. Check whether a PR was created (`gh pr list --search "KIO-XX"`). If the PR exists and the agent should still be in the watch loop, something went wrong — re-dispatch.
-
 Recovery for all cases:
 
 ```bash
