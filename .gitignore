@@ -11,3 +11,5 @@ docker-compose.override.yml
 dev/pi-emulator/golden.qcow2
 dev/pi-emulator/.work/
 dev/agents/container/docker-compose.override.yml
+deploy/pi/.output/
+deploy/pi/.work/
