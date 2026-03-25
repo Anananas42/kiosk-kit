@@ -42,10 +42,14 @@ require_cmd() {
 # Suppress GUI SSH password prompts and use sshpass for all SSH connections
 export SSH_ASKPASS=""
 export SSH_ASKPASS_REQUIRE=never
-PI_SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no)
+PI_SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
 
 ssh_pi() {
-  sshpass -p "$PI_SSH_PASS" ssh "${PI_SSH_OPTS[@]}" -p "$SSH_PORT" pi@localhost "$@"
+  if [[ -n "${BUILD_SSH_KEY:-}" && -f "${BUILD_SSH_KEY:-}" ]]; then
+    ssh -i "$BUILD_SSH_KEY" "${PI_SSH_OPTS[@]}" -p "$SSH_PORT" pi@localhost "$@"
+  else
+    sshpass -p "$PI_SSH_PASS" ssh "${PI_SSH_OPTS[@]}" -p "$SSH_PORT" pi@localhost "$@"
+  fi
 }
 
 # --- QEMU PID tracking for wait_for_ssh death detection ----------------------
@@ -175,6 +179,9 @@ FSTAB
   # Save kernel to WORK_DIR for direct boot (used by run.sh too)
   cp "$KERNEL_ROOT"/boot/vmlinuz-* "$KERNEL"
 
+  # Save the virt kernel version for later cleanup (used by restore_pi_boot_state)
+  ls "$KERNEL_ROOT/lib/modules/" | head -1 > "$WORK_DIR/virt-kernel-version"
+
   # Build a minimal initrd with virtio modules so the kernel can mount /dev/vda2.
   # The Debian arm64 kernel has virtio as modules, not built-in.
   build_initrd "$KERNEL_ROOT" "$PACKAGES_FILE"
@@ -190,8 +197,14 @@ create_pi_user() {
   local user_dir="$WORK_DIR/user-setup"
   mkdir -p "$user_dir"
 
-  # Password hash for "raspberry": openssl passwd -6 raspberry
+  # Password hash for "raspberry": openssl passwd -6 -salt rpi raspberry
   local pass_hash='$6$rpi$bNU6H3//23Q69yt.29cRueoCEWuRY.XhpIClqSja6.FjhrGQgzD4RQp7YFBcMosjt9zRf60WsqRMRVvj7Z2gN1'
+
+  # Generate an ephemeral SSH keypair for build-time access.
+  # Password auth is disabled by the security tasks after reboot,
+  # so post-reboot SSH (wait_for_reboot, wifi setup, etc.) needs key auth.
+  BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
+  ssh-keygen -t ed25519 -f "$BUILD_SSH_KEY" -N "" -q
 
   # Download files from image, edit on host, upload back
   guestfish --ro -a "$DISK_IMAGE" -m /dev/sda2 <<EOF
@@ -215,6 +228,10 @@ EOF
   mkdir -p "$user_dir/sshd_config.d"
   : > "$user_dir/sshd_config.d/rename_user.conf"
 
+  # Prepare authorized_keys with the ephemeral build key
+  mkdir -p "$user_dir/ssh"
+  cp "${BUILD_SSH_KEY}.pub" "$user_dir/ssh/authorized_keys"
+
   guestfish --rw -a "$DISK_IMAGE" -m /dev/sda2 <<EOF
 upload $user_dir/passwd /etc/passwd
 upload $user_dir/shadow /etc/shadow
@@ -222,6 +239,14 @@ upload $user_dir/group /etc/group
 
 mkdir-p /home/pi
 chown 1000 1000 /home/pi
+
+# SSH key for build-time access
+mkdir-p /home/pi/.ssh
+upload $user_dir/ssh/authorized_keys /home/pi/.ssh/authorized_keys
+chmod 0700 /home/pi/.ssh
+chmod 0600 /home/pi/.ssh/authorized_keys
+chown 1000 1000 /home/pi/.ssh
+chown 1000 1000 /home/pi/.ssh/authorized_keys
 
 # Enable SSH
 ln-sf /usr/lib/systemd/system/ssh.service /etc/systemd/system/multi-user.target.wants/ssh.service
@@ -373,8 +398,7 @@ wait_for_ssh() {
       tail -15 "$WORK_DIR/qemu-console.log" 2>/dev/null
       err "QEMU died before SSH became available"
     fi
-    if sshpass -p "$PI_SSH_PASS" ssh "${PI_SSH_OPTS[@]}" -o ConnectTimeout=2 \
-         -p "$port" pi@localhost true 2>/dev/null; then
+    if ssh_pi true 2>/dev/null; then
       log "SSH is up."
       return 0
     fi

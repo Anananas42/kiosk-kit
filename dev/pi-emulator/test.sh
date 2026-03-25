@@ -24,16 +24,21 @@ SKIP=0
 
 log()      { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 log_test() { printf '\033[1;33m  TEST:\033[0m %s... ' "$*"; }
-pass()     { printf '\033[1;32mPASS\033[0m\n'; ((PASS++)); }
-fail()     { printf '\033[1;31mFAIL\033[0m — %s\n' "$*"; ((FAIL++)); }
-skip()     { printf '\033[1;33mSKIP\033[0m — %s\n' "$*"; ((SKIP++)); }
+pass()     { printf '\033[1;32mPASS\033[0m\n'; PASS=$((PASS + 1)); }
+fail()     { printf '\033[1;31mFAIL\033[0m — %s\n' "$*"; FAIL=$((FAIL + 1)); }
+skip()     { printf '\033[1;33mSKIP\033[0m — %s\n' "$*"; SKIP=$((SKIP + 1)); }
 
 export SSH_ASKPASS=""
 export SSH_ASKPASS_REQUIRE=never
-SSH_CMD=(sshpass -p raspberry ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no -o ConnectTimeout=5 -p "$SSH_PORT" pi@localhost)
+BUILD_SSH_KEY="$SCRIPT_DIR/.work/build-ssh-key"
+SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5)
 
 remote() {
-  "${SSH_CMD[@]}" "$@" 2>/dev/null
+  if [[ -f "$BUILD_SSH_KEY" ]]; then
+    ssh -i "$BUILD_SSH_KEY" "${SSH_OPTS[@]}" -p "$SSH_PORT" pi@localhost "$@" 2>/dev/null
+  else
+    sshpass -p raspberry ssh "${SSH_OPTS[@]}" -p "$SSH_PORT" pi@localhost "$@" 2>/dev/null
+  fi
 }
 
 # Assert that a remote command succeeds.

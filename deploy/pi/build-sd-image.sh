@@ -71,6 +71,7 @@ PIOS_CHECKSUM="6ac3a10a1f144c7e9d1f8e568d75ca809288280a593eb6ca053e49b539f465a4"
 # Tailscale arm64 .deb URL and checksum
 TAILSCALE_VERSION="1.80.3"
 TAILSCALE_DEB_URL="https://pkgs.tailscale.com/stable/debian/pool/tailscale_${TAILSCALE_VERSION}_arm64.deb"
+TAILSCALE_DEB_CHECKSUM="aed221f435b3ed6e5a6ed0694a3e91b04136264b96ae27cca39433a95fbd03e2"
 
 # shellcheck source=lib/pi-image-common.sh
 source "$REPO_ROOT/deploy/pi/lib/pi-image-common.sh"
@@ -146,7 +147,8 @@ all:
           ansible_port: $SSH_PORT
           ansible_user: pi
           ansible_ssh_pass: "raspberry"
-          ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no"
+          ansible_ssh_private_key_file: "$BUILD_SSH_KEY"
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           kioskkit_tailscale_auth_key: "skip"
           kioskkit_device_id: "${DEVICE_ID}"
           kioskkit_customer_tag: "${CUSTOMER_TAG}"
@@ -155,7 +157,7 @@ EOF
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
-    --skip-tags tailscale,security,watchdog \
+    --skip-tags tailscale \
     -e "kioskkit_tailscale_auth_key=skip" \
     || err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
@@ -172,7 +174,7 @@ restore_pi_boot_state() {
   # patch_image_for_virt from the Debian kernel. The Pi's native modules
   # are from the Raspberry Pi kernel and have a different version string.
   local virt_kver
-  virt_kver=$(ls "$WORK_DIR/patch-files/kernel-root/lib/modules/" 2>/dev/null | head -1 || true)
+  virt_kver=$(cat "$WORK_DIR/virt-kernel-version" 2>/dev/null || true)
 
   local gf_cmds="$WORK_DIR/restore-boot.cmd"
   {
@@ -190,6 +192,8 @@ restore_pi_boot_state() {
     echo "glob rm /boot/vmlinuz-*"
     echo "glob rm /boot/config-*"
     echo "glob rm /boot/System.map-*"
+    # Remove ephemeral build SSH key from the image
+    echo "rm-f /home/pi/.ssh/authorized_keys"
   } > "$gf_cmds"
 
   guestfish < "$gf_cmds" || log "WARN: Some restore commands failed (may be OK if files didn't exist)"
@@ -216,6 +220,8 @@ EOF
   local ts_deb="$inject_dir/tailscale.deb"
   curl -fSL -o "$ts_deb" "$TAILSCALE_DEB_URL" \
     || err "Failed to download Tailscale .deb from $TAILSCALE_DEB_URL"
+  echo "$TAILSCALE_DEB_CHECKSUM  $ts_deb" | sha256sum -c - \
+    || err "Checksum mismatch for Tailscale .deb"
 
   # Use guestfish to inject everything into the image
   guestfish --rw -a "$DISK_IMAGE" -m /dev/sda2 <<EOF

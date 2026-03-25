@@ -1,41 +1,26 @@
 # Pi Emulator (QEMU)
 
 QEMU-based Raspberry Pi emulator for pre-release validation. Boots a real Pi OS
-image, provisions it with the production Ansible playbook, deploys and builds
-the full kiosk stack, and runs smoke tests against the result.
+image, provisions it with the production Ansible playbook, and runs smoke tests
+against the result.
 
-The golden image includes the fully built kiosk application. On boot, the kiosk
-server starts automatically via `kioskkit.service` and serves the kiosk UI at
-`http://localhost:3001` (forwarded from QEMU guest port 3001).
-
-Replaces the previous `dev/kiosk-sim/` mock approach with higher-fidelity
-emulation using real systemd services, wpa_supplicant, and (optionally)
-mac80211_hwsim for WiFi testing.
+Uses shared image-building functions from `deploy/pi/lib/pi-image-common.sh`.
 
 ## Prerequisites
 
-Install on your host machine:
-
 ```bash
 # Ubuntu/Debian
-sudo apt install qemu-system-arm qemu-utils qemu-efi-aarch64 libguestfs-tools
+sudo apt install qemu-system-arm qemu-utils libguestfs-tools sshpass
+sudo chmod 644 /boot/vmlinuz-*  # libguestfs needs to read the host kernel
 
-# macOS (Homebrew)
-brew install qemu
-# Note: libguestfs is not available via Homebrew. Use Docker or a Linux VM
-# to run build-image.sh, then use run.sh/test.sh on macOS.
-```
-
-You also need Ansible installed (for provisioning):
-
-```bash
+# Ansible
 pip install ansible
 ```
 
 ## Quick start
 
 ```bash
-# 1. Build the golden image (downloads Pi OS, provisions with Ansible, ~15-20 min)
+# 1. Build the golden image (~30 min first time, ARM emulation is slow)
 ./build-image.sh
 
 # 2. Boot the emulator
@@ -45,11 +30,22 @@ pip install ansible
 open http://localhost:3001
 
 # 4. SSH into it (in another terminal)
-ssh -p 2222 pi@localhost
+ssh -i .work/build-ssh-key -p 2222 pi@localhost
 
 # 5. Run smoke tests (boots a fresh overlay and tests automatically)
 ./test.sh
 ```
+
+## How it works
+
+1. Downloads Raspberry Pi OS Lite (arm64, Bookworm) with checksum verification
+2. Converts to qcow2, grows partition and filesystem via guestfish
+3. Downloads Debian arm64 kernel (has virtio drivers) from Debian repos
+4. Patches image: fstab for virtio, kernel modules to `/usr/lib/modules/`, pi user via passwd/shadow/group edits
+5. Builds a minimal initrd with virtio + ext4 modules and ARM64 busybox
+6. Boots in QEMU with direct kernel boot (`-kernel`/`-initrd`, no UEFI)
+7. Runs Ansible `provision.yml` over SSH (skips tailscale — not needed for emulator)
+8. Reboots, configures mac80211_hwsim for WiFi simulation, snapshots as `golden.qcow2`
 
 ## Architecture
 
@@ -77,28 +73,29 @@ ssh -p 2222 pi@localhost
 The QEMU `raspi3b` machine has USB-based networking (slow, fragile) and
 `raspi4b` support is new and buggy. The generic `aarch64 virt` machine provides
 stable virtio networking, configurable RAM/CPU, and reliable SSH port
-forwarding — everything needed for Ansible provisioning and testing.
+forwarding.
 
-The trade-off is needing the Debian arm64 kernel (which has virtio drivers)
-instead of the stock Pi kernel. This is installed into the image during
-`build-image.sh` via guestfish.
+The trade-off: the Debian arm64 kernel is used instead of the stock Pi kernel
+(needed for virtio drivers). A custom initrd loads virtio and ext4 modules
+before mounting root. The stock Pi kernel and boot partition are untouched.
 
 ## Scripts
 
 ### `build-image.sh`
 
-Downloads Pi OS Lite, patches it for QEMU virt (installs Debian arm64 kernel,
-fixes fstab, enables SSH), boots it, runs the Ansible provisioning playbook,
-deploys the kiosk application via `deploy.yml`, verifies the health endpoint,
-then snapshots the disk as `golden.qcow2`.
+Sources `deploy/pi/lib/pi-image-common.sh` for shared functions. Adds
+emulator-specific provisioning (wifi simulation) and snapshots the golden image.
 
 ```bash
 ./build-image.sh           # Build (skips if golden.qcow2 exists)
 ./build-image.sh --force   # Force rebuild
 ```
 
-The golden image needs rebuilding when `deploy/pi/ansible/` or the kiosk
-application source code changes.
+Rebuild when `deploy/pi/ansible/` or application source code changes.
+
+Environment variables:
+- `PI_EMU_RAM` — Guest RAM (default: 6G)
+- `PI_EMU_CPUS` — Guest CPUs (default: half of host cores)
 
 ### `run.sh`
 
@@ -114,53 +111,50 @@ is never modified.
 Environment variables:
 - `PI_EMU_SSH_PORT` — SSH port on host (default: 2222)
 - `PI_EMU_KIOSK_PORT` — Kiosk server port on host (default: 3001)
-- `PI_EMU_RAM` — Guest RAM (default: 2G)
-- `PI_EMU_CPUS` — Guest CPUs (default: 4)
+- `PI_EMU_RAM` — Guest RAM (default: 6G)
+- `PI_EMU_CPUS` — Guest CPUs (default: half of host cores)
 
 ### `test.sh`
 
-Boots a fresh overlay and runs a smoke test suite covering:
+Boots a fresh overlay and runs smoke tests covering:
 
 - SSH connectivity and OS identification
-- Kiosk user and app directory exist
-- Node.js and pnpm available
+- Kiosk user and app directory
+- Node.js and pnpm
 - kioskkit.service enabled and healthy on port 3001
 - Kiosk UI serves HTML
 - wpa_supplicant installed, WiFi scripts deployed
-- mac80211_hwsim WiFi simulation (if available)
-- Firewall rules active
-- SSH hardening applied
+- mac80211_hwsim WiFi simulation (skips if unavailable)
+- nftables firewall active
+- SSH password authentication disabled
 
 ```bash
 ./test.sh              # Full run (boot + test + shutdown)
 ./test.sh --skip-boot  # Skip boot (QEMU already running)
 ```
 
-## WiFi testing with mac80211_hwsim
+## SSH access
 
-The build script attempts to load `mac80211_hwsim` (a kernel module that
-creates virtual WiFi interfaces). When available, this enables testing real
-`wpa_supplicant` interactions without physical hardware.
+Build-time SSH uses an ephemeral ed25519 keypair generated during image build
+and stored at `.work/build-ssh-key`. Password authentication is disabled by
+the security hardening tasks — only key auth works.
 
-The Debian arm64 kernel typically includes this module. If it's not available
-in a particular kernel version, the tests gracefully skip WiFi-specific checks.
-
-When loaded with `radios=2`, it creates two virtual WiFi interfaces (wlan0,
-wlan1) that can communicate with each other — useful for testing scan, connect,
-and forget operations against real `wpa_supplicant`.
+```bash
+ssh -i .work/build-ssh-key -p 2222 pi@localhost
+```
 
 ## Golden image management
 
-- `golden.qcow2` is gitignored (too large to commit)
-- Rebuild when Ansible playbook changes: `./build-image.sh --force`
-- The `.work/` directory contains intermediate files (downloaded image, UEFI
-  firmware) and is also gitignored
+- `golden.qcow2` is gitignored (~5G, built locally)
+- `.work/` contains intermediate files (Pi OS download, kernel, initrd, SSH key) — also gitignored
+- Rebuild trigger: Ansible playbook changes, application code changes
+- The golden image includes the fully provisioned system with security hardening, firewall, and the built kiosk application
 
 ## File structure
 
 ```
 dev/pi-emulator/
-├── build-image.sh     # Build the golden image
+├── build-image.sh     # Build the golden image (sources shared library)
 ├── run.sh             # Boot for interactive use
 ├── test.sh            # Run smoke tests
 ├── README.md          # This file
@@ -168,6 +162,8 @@ dev/pi-emulator/
 └── .work/             # Intermediate files (gitignored)
     ├── raspios.img    # Downloaded Pi OS image
     ├── disk.qcow2     # Working disk during build
-    ├── QEMU_EFI.fd    # UEFI firmware
-    └── efivars.fd     # UEFI variable store
+    ├── vmlinuz        # Debian arm64 kernel (for direct boot)
+    ├── initrd.img     # Custom initrd with virtio modules
+    ├── build-ssh-key  # Ephemeral SSH key for build-time access
+    └── qemu-console.log  # Serial console output (for debugging)
 ```

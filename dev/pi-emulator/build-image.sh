@@ -58,7 +58,8 @@ all:
           ansible_port: $SSH_PORT
           ansible_user: pi
           ansible_ssh_pass: "raspberry"
-          ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no"
+          ansible_ssh_private_key_file: "$BUILD_SSH_KEY"
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           # Tailscale is skipped in the emulator — use dummy values
           kioskkit_tailscale_auth_key: "skip"
           kioskkit_device_id: "emu-001"
@@ -68,7 +69,7 @@ EOF
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
-    --skip-tags tailscale,security,watchdog \
+    --skip-tags tailscale \
     -e "kioskkit_tailscale_auth_key=skip" \
     || { err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
 }
