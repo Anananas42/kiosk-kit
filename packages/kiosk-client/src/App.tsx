@@ -118,7 +118,9 @@ function AppInner({
   const repeatTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const isOffline = useHealth();
-  const dimmed = useIdleDim(settings.idleDimMs);
+  const idleDimMs = import.meta.env.DEV ? 600_000 : settings.idleDimMs;
+  const inactivityMs = import.meta.env.DEV ? 600_000 : settings.inactivityTimeoutMs;
+  const dimmed = useIdleDim(idleDimMs);
 
   const preorderCategories = catalog.filter((cat) => cat.preorder);
   const preorderNames = new Set(preorderCategories.map((cat) => cat.name));
@@ -141,7 +143,7 @@ function AppInner({
   const { secondsLeft, dismiss: dismissWarning } = useInactivityReset(
     state.screen !== "buyer",
     reset,
-    settings.inactivityTimeoutMs,
+    inactivityMs,
   );
 
   useEffect(() => {

@@ -45,6 +45,20 @@ done
 
 If a server fails to start within 30 seconds, capture the error output. Mark all test steps that depend on that server as **⏭️ SKIPPED** with the error output in the Notes column.
 
+## Step 2.5: Authenticate
+
+The container has a pre-seeded test user session. Before navigating to any authenticated page, inject the session cookie using Playwright:
+
+1. First navigate to the target origin (e.g., `browser_navigate` to `http://localhost:3002` or whichever server you're testing)
+2. Then run `browser_evaluate` with:
+   ```js
+   document.cookie = "session=${TEST_SESSION_TOKEN}; path=/";
+   ```
+   where `${TEST_SESSION_TOKEN}` is the environment variable available in your shell. Read it with a Bash command (`echo $TEST_SESSION_TOKEN`) and substitute the value into the JS string.
+3. After setting the cookie, navigate to the actual test URL — you are now authenticated as an admin user.
+
+Do this once per origin. The cookie persists for subsequent navigations to the same origin.
+
 ## Step 3: Execute tests
 
 Use Playwright MCP tools to execute each test step:

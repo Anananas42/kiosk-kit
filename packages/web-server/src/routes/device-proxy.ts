@@ -2,17 +2,25 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
+import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const PROXY_TIMEOUT_MS = 10_000;
 const HEALTH_TIMEOUT_MS = 5_000;
+const isDev = process.env.NODE_ENV === "development";
 
-async function getAccessibleDevice(
-  db: Db,
-  deviceId: string,
-  userId: string,
-  role: string,
-) {
+function getDeviceHost(device: { id: string; tailscaleIp: string | null }): string {
+  if (isDev && device.id === LOCAL_DEVICE_ID) {
+    return LOCAL_DEVICE_HOST;
+  }
+  return `${device.tailscaleIp}:3001`;
+}
+
+async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
+  if (isDev && deviceId === LOCAL_DEVICE_ID) {
+    return { id: LOCAL_DEVICE_ID, tailscaleIp: null, userId };
+  }
+
   const conditions =
     role === "admin"
       ? eq(devices.id, deviceId)
@@ -31,7 +39,7 @@ export function deviceProxyRoutes(db: Db) {
     if (!device) return c.json({ error: "Not found" }, 404);
 
     try {
-      const res = await fetch(`http://${device.tailscaleIp}:3001/api/health`, {
+      const res = await fetch(`http://${getDeviceHost(device)}/api/health`, {
         signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
       });
       return c.json({ online: res.ok });
@@ -47,7 +55,7 @@ export function deviceProxyRoutes(db: Db) {
     if (!device) return c.json({ error: "Not found" }, 404);
 
     const kioskPath = c.req.path.replace(/^.*?\/kiosk\//, "");
-    const targetUrl = `http://${device.tailscaleIp}:3001/api/${kioskPath}`;
+    const targetUrl = `http://${getDeviceHost(device)}/api/${kioskPath}`;
 
     try {
       const headers = new Headers(c.req.raw.headers);

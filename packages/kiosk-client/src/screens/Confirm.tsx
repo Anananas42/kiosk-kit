@@ -142,7 +142,9 @@ export default function Confirm({
                 onClick={() => onConfirm("+", qty)}
                 type="button"
               >
-                {t("confirm.addQtyPrice", { qty, price: priceLabel })}
+                {priceLabel
+                  ? t("confirm.addQtyPrice", { qty, price: priceLabel })
+                  : t("confirm.addQty", { qty })}
               </button>
               {canStorno &&
                 (confirmingStorno ? (

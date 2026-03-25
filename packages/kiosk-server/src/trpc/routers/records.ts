@@ -3,8 +3,8 @@ import {
   ItemCountInputSchema,
   ItemCountResponseSchema,
   OverviewResponseSchema,
-  RecordRequestSchema,
   type RecordEntry,
+  RecordRequestSchema,
 } from "@kioskkit/shared";
 import { z } from "zod";
 import { withLock } from "../../lock.js";
@@ -40,9 +40,15 @@ export const recordsRouter = router({
       });
     }),
 
-  "records.list": baseProcedure.output(OverviewResponseSchema).query(({ ctx }) => {
-    return { records: ctx.store.getRecords() };
-  }),
+  "records.list": baseProcedure
+    .input(z.object({ buyer: z.number().int().min(1) }).optional())
+    .output(OverviewResponseSchema)
+    .query(({ ctx, input }) => {
+      const records = input?.buyer
+        ? ctx.store.getRecordsByBuyer(input.buyer)
+        : ctx.store.getRecords();
+      return { records };
+    }),
 
   "records.itemCount": baseProcedure
     .input(ItemCountInputSchema)

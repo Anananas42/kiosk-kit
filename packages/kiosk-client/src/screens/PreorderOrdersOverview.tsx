@@ -53,10 +53,10 @@ export default function PreorderOrdersOverview({
 
   useEffect(() => {
     trpc["records.list"]
-      .query()
+      .query({ buyer })
       .then((data) => setRecords(data.records))
       .catch(() => setError(t("preorder.loadError")));
-  }, [t]);
+  }, [t, buyer]);
 
   const dayMap = records
     ? aggregatePreorderOrders(records, buyer, preorderNames, noDeliveryDays)

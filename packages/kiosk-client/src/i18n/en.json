@@ -34,6 +34,7 @@
   "confirm.alreadyOrdered": "Already ordered: {count} pc",
   "confirm.sending": "Sending",
   "confirm.addQtyPrice": "Add {qty}\u00d7 for {price}",
+  "confirm.addQty": "Add {qty}\u00d7",
   "confirm.removeQty": "Really remove {qty} pc?",
   "confirm.removeItem": "Remove {qty}\u00d7 {item}",
   "confirm.yes": "Yes",

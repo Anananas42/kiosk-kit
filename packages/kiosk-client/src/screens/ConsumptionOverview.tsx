@@ -67,10 +67,10 @@ export default function ConsumptionOverview({
 
   useEffect(() => {
     trpc["records.list"]
-      .query()
+      .query({ buyer })
       .then((data) => setRecords(data.records))
       .catch(() => setError(t("overview.loadError")));
-  }, [t]);
+  }, [t, buyer]);
 
   const byItem = records ? aggregateItems(records, buyer) : {};
   const items = Object.entries(byItem).filter(([, v]) => v.added > 0);
