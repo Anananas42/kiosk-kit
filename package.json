@@ -16,6 +16,8 @@
     "test": "vitest run",
     "start:kiosk": "node packages/kiosk-server/dist/index.js",
     "test:pi-emulator": "dev/pi-emulator/test.sh",
+    "storybook": "pnpm --filter @kioskkit/ui storybook",
+    "build-storybook": "pnpm --filter @kioskkit/ui build-storybook",
     "screenshot": "node dev/agents/scripts/screenshot.mjs",
     "prepare": "husky"
   },
