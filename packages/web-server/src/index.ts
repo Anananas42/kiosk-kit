@@ -16,7 +16,8 @@ const google =
       )
     : undefined;
 
-const app = createApp(db, google);
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+const app = createApp(db, google, cookieDomain);
 const port = Number(process.env.PORT) || 3002;
 
 serve({ fetch: app.fetch, port }, (info) => {
