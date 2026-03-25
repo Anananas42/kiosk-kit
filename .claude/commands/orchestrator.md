@@ -16,8 +16,12 @@ Establish the correct patterns, conventions, and architecture from the very firs
 
 Each task gets its own isolated container stack (agent + postgres). Use `.agents/scripts/dispatch.sh` which starts the containers in a tmux session that auto-cleans up after the agent exits. The script returns immediately.
 
+**IMPORTANT: Always write the task to a temp file first**, then read it into the env var. Passing large task descriptions directly via heredoc or string interpolation causes shell escaping issues (backticks, quotes, special characters) that silently break the container entrypoint with exit code 127.
+
 ```bash
-AGENT_TASK="<full task description>" ./.agents/scripts/dispatch.sh "agent-<slug>"
+# 1. Write task to temp file using the Write tool (path: /tmp/agent-task-<slug>.txt)
+# 2. Dispatch using cat:
+AGENT_TASK="$(cat /tmp/agent-task-<slug>.txt)" ./.agents/scripts/dispatch.sh "agent-<slug>"
 ```
 
 To check on a running agent: `tmux attach -t agent-<slug>` (detach with `Ctrl-b d`).
@@ -27,6 +31,7 @@ The task description you pass as `AGENT_TASK` should be a complete, self-contain
 - Which packages/files are likely involved
 - The Linear issue ID (for branch naming: `kio-<id>/<description>`)
 - Any constraints or gotchas the user mentioned
+- Avoid backticks, code blocks, and complex formatting in the task file — use plain text descriptions instead
 
 ## What the agent does after dispatch
 
