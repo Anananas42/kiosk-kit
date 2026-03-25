@@ -15,7 +15,7 @@
     "start:kiosk": "node packages/kiosk-server/dist/index.js",
     "dev:kiosk-sim": "docker compose -f dev/docker-compose.yml up --build kiosk-sim",
     "test:integration": "scripts/test-integration.sh",
-    "screenshot": "node .agents/scripts/screenshot.mjs",
+    "screenshot": "node dev/agents/scripts/screenshot.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

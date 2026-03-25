@@ -3,10 +3,7 @@ import { useData, useFormStatus } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
 export function BuyersTab() {
-  const fetcher = useCallback(
-    () => trpc["buyers.list"].query().then((r) => r.buyers),
-    [],
-  );
+  const fetcher = useCallback(() => trpc["buyers.list"].query().then((r) => r.buyers), []);
   const { data: buyers, error, loading, reload } = useData(fetcher);
   const form = useFormStatus();
 
@@ -76,16 +73,11 @@ export function BuyersTab() {
                 value={editLabel}
                 onChange={(e) => setEditLabel(e.target.value)}
                 required
-                autoFocus
               />
               <button type="submit" className="btn btn-primary btn-sm">
                 Save
               </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setEditId(null)}
-              >
+              <button type="button" className="btn btn-sm" onClick={() => setEditId(null)}>
                 Cancel
               </button>
             </form>

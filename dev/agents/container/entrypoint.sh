@@ -26,7 +26,7 @@ if [ -f /mnt/secrets/claude-credentials.json ]; then
 fi
 
 echo "==> Pulling latest main..."
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 git fetch "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" main
 git reset --hard FETCH_HEAD
 
@@ -55,7 +55,7 @@ echo "==> Generating CLAUDE.md with all agent skills..."
   echo "You are running inside an isolated agent container. The following skills are available."
   echo "Read and follow them carefully."
   echo ""
-  for skill in .agents/skills/*/SKILL.md; do
+  for skill in dev/agents/skills/*/SKILL.md; do
     echo "---"
     echo ""
     cat "$skill"
@@ -170,7 +170,7 @@ fi
 echo "==> Waiting for PR on branch $BRANCH..."
 PR_WAIT_COUNT=0
 PR_WAIT_MAX=10
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 while [ "$PR_WAIT_COUNT" -lt "$PR_WAIT_MAX" ]; do
   PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
   if [ -n "$PR_INIT_JSON" ]; then
@@ -179,14 +179,14 @@ while [ "$PR_WAIT_COUNT" -lt "$PR_WAIT_MAX" ]; do
   PR_WAIT_COUNT=$((PR_WAIT_COUNT + 1))
   echo "==> No PR yet (attempt $PR_WAIT_COUNT/$PR_WAIT_MAX). Waiting ${POLL_INTERVAL}s..."
   sleep "$POLL_INTERVAL"
-  GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+  GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 done
 
 if [ -z "$PR_INIT_JSON" ]; then
   echo "==> No PR found after $PR_WAIT_MAX attempts. Re-invoking claude to create PR..."
   start_log_tailer
   claude --dangerously-skip-permissions -p "You pushed branch $BRANCH but no PR exists yet. Follow the cicd-workflow skill: create a PR using the GitHub App token, link it to the Linear issue, and enable auto-merge."
-  GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+  GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
   PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
 fi
 
@@ -201,7 +201,7 @@ SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pul
 SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
 
 while true; do
-  GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+  GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 
   # Check PR state
   PR_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number,state,reviewDecision,title 2>/dev/null || echo "")

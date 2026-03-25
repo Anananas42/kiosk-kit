@@ -131,12 +131,8 @@
           "name": "catalog_items_category_id_catalog_categories_id_fk",
           "tableFrom": "catalog_items",
           "tableTo": "catalog_categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["category_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -254,12 +250,8 @@
           "name": "records_buyer_buyers_id_fk",
           "tableFrom": "records",
           "tableTo": "buyers",
-          "columnsFrom": [
-            "buyer"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["buyer"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

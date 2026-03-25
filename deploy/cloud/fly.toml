@@ -2,7 +2,7 @@ app = "kiosk-kit"
 primary_region = "fra"
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "deploy/cloud/Dockerfile"
 
 [http_service]
   internal_port = 3002

@@ -34,7 +34,7 @@ if needs_postgres; then
   fi
 
   printf "  Postgres ..."
-  if ! docker compose up -d --wait 2>&1 | tail -1 > /dev/null; then
+  if ! docker compose -f dev/docker-compose.yml up -d --wait 2>&1 | tail -1 > /dev/null; then
     echo " FAILED"
     echo "Error: Could not start Postgres via docker compose." >&2
     exit 1

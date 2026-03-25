@@ -3,14 +3,13 @@ import {
   Datagrid,
   DateField,
   Edit,
-  FunctionField,
   List,
   ReferenceField,
   ReferenceInput,
+  required,
   SimpleForm,
   TextField,
   TextInput,
-  required,
 } from "react-admin";
 
 export function DeviceList() {
@@ -33,8 +32,7 @@ function DeviceForm() {
     <SimpleForm>
       <TextInput source="name" validate={required()} />
       <TextInput source="tailscaleIp" label="Tailscale IP" validate={required()} />
-      <ReferenceInput source="userId" reference="users">
-      </ReferenceInput>
+      <ReferenceInput source="userId" reference="users"></ReferenceInput>
     </SimpleForm>
   );
 }

@@ -57,12 +57,12 @@ RUN pnpm install --frozen-lockfile --store-dir /home/agent/.local/share/pnpm/sto
   && chown -R agent:agent /workspace /home/agent
 
 # CLI wrappers (enforce naming conventions for git/gh)
-COPY .agents/container/wrappers /opt/wrappers
+COPY dev/agents/container/wrappers /opt/wrappers
 RUN chmod +x /opt/wrappers/*
 ENV PATH="/opt/wrappers:$PATH"
 
 # Entrypoint
-COPY .agents/container/entrypoint.sh /entrypoint.sh
+COPY dev/agents/container/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER agent

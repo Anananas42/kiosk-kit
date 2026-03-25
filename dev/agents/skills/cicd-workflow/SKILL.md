@@ -78,7 +78,7 @@ The `/fill-pr-template` skill should leave a `TODO` placeholder for screenshots 
 Generate a short-lived installation token (expires in 1 hour):
 
 ```bash
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 ```
 
 Use it for **both** pushing the branch and creating the PR. Never modify the `origin` remote — push directly to the HTTPS URL instead:
@@ -92,7 +92,7 @@ GH_TOKEN="${GH_TOKEN}" gh pr create --title "..." --body "..."
 **Token refresh**: the app token expires after 1 hour. Before any `gh` or `git push` command in the watch loop, regenerate it:
 
 ```bash
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 ```
 
 ## Auto-merge
@@ -110,7 +110,7 @@ After creating the PR (or resuming an existing one), poll every 2 minutes. Each 
 ### 1. Refresh token and check PR state
 
 ```bash
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 PR_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json state,reviewDecision,mergeStateStatus)
 ```
 
@@ -129,7 +129,7 @@ GH_TOKEN="${GH_TOKEN}" gh pr checks
 ```bash
 GH_TOKEN="${GH_TOKEN}" gh run view <run-id> --log-failed
 # ... fix the issue, commit ...
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 git push "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" "HEAD:refs/heads/${BRANCH}"
 ```
 

@@ -8,4 +8,4 @@ data/
 .venv/
 docker-compose.override.yml
 .screenshots/
-.agents/container/docker-compose.override.yml
+dev/agents/container/docker-compose.override.yml

@@ -14,3 +14,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  postgres:
+    image: postgres:17
+    ports: ["5433:5432"]
+    environment:
+      POSTGRES_DB: kioskkit
+      POSTGRES_USER: kioskkit
+      POSTGRES_PASSWORD: kioskkit
+    volumes: [pgdata:/var/lib/postgresql/data]
+volumes:
+  pgdata:

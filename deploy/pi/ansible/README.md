@@ -11,7 +11,7 @@ Ansible playbooks for provisioning and managing KioskKit Raspberry Pi devices.
 ## Usage
 
 ```bash
-cd ansible/
+cd deploy/pi/ansible/
 
 # Full initial provisioning (replaces setup.sh)
 ansible-playbook playbooks/provision.yml -l <host>
