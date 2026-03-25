@@ -18,8 +18,8 @@ PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_li
 PIOS_CHECKSUM="6ac3a10a1f144c7e9d1f8e568d75ca809288280a593eb6ca053e49b539f465a4"
 
 SSH_PORT=2222
-QEMU_RAM="2G"
-QEMU_CPUS=4
+QEMU_RAM="${PI_EMU_RAM:-6G}"
+QEMU_CPUS="${PI_EMU_CPUS:-$(( $(nproc) / 2 ))}"
 
 WORK_DIR="$SCRIPT_DIR/.work"
 GOLDEN_IMAGE="$SCRIPT_DIR/golden.qcow2"
