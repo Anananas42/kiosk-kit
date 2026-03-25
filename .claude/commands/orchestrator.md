@@ -16,8 +16,12 @@ Establish the correct patterns, conventions, and architecture from the very firs
 
 Each task gets its own isolated container stack (agent + postgres). Use `dev/agents/scripts/dispatch.sh` which starts the containers in a tmux session that auto-cleans up after the agent exits. The script returns immediately.
 
+**IMPORTANT: Always write the task to a temp file first**, then read it into the env var. Passing large task descriptions directly via heredoc or string interpolation causes shell escaping issues (backticks, quotes, special characters) that silently break the container entrypoint with exit code 127.
+
 ```bash
-AGENT_TASK="<full task description>" ./dev/agents/scripts/dispatch.sh "agent-<slug>"
+# 1. Write task to temp file using the Write tool (path: /tmp/agent-task-<slug>.txt)
+# 2. Dispatch using cat:
+AGENT_TASK="$(cat /tmp/agent-task-<slug>.txt)" ./dev/agents/scripts/dispatch.sh "agent-<slug>"
 ```
 
 To check on a running agent: `tmux attach -t agent-<slug>` (detach with `Ctrl-b d`).
@@ -27,6 +31,7 @@ The task description you pass as `AGENT_TASK` should be a complete, self-contain
 - Which packages/files are likely involved
 - The Linear issue ID (for branch naming: `kio-<id>/<description>`)
 - Any constraints or gotchas the user mentioned
+- Avoid backticks, code blocks, and complex formatting in the task file — use plain text descriptions instead
 
 ## What the agent does after dispatch
 
@@ -65,18 +70,20 @@ Every PR must link to a Linear issue. Create one before dispatching if it doesn'
 
 ## Stuck agent recovery
 
-After dispatching agents, check their logs every ~2-3 minutes. Look for this pattern:
+After dispatching agents, check their logs every ~2-3 minutes. Look for these patterns:
 
 ```bash
-docker compose -p "agent-<slug>" logs --tail 5 agent
+docker compose -p "agent-<slug>" -f dev/agents/container/docker-compose.yml logs --tail 5 agent
 ```
 
-If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Recovery:
+**Stuck (no output):** If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Re-dispatch.
+
+Recovery for all cases:
 
 ```bash
 docker compose -p "agent-<slug>" -f dev/agents/container/docker-compose.yml down -v
-# Re-dispatch with the same AGENT_TASK
-AGENT_TASK="<same task>" ./dev/agents/scripts/dispatch.sh "agent-<slug>"
+# Re-dispatch
+AGENT_TASK="$(cat /tmp/agent-task-<slug>.txt)" ./dev/agents/scripts/dispatch.sh "agent-<slug>"
 ```
 
 This is the only scenario where you should proactively monitor. Do not check CI status, PR reviews, or other agent progress — the agents handle that themselves.
