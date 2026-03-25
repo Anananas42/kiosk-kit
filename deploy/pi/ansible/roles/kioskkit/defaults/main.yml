@@ -2,7 +2,7 @@
 # Application
 kioskkit_install_dir: /opt/kioskkit
 kioskkit_user: kiosk
-kioskkit_node_major: 20
+kioskkit_node_major: 24
 kioskkit_app_port: 3001
 
 # Display
