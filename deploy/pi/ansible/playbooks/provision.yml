@@ -9,5 +9,5 @@
   post_tasks:
     - name: Reboot to apply all changes
       ansible.builtin.reboot:
-        reboot_timeout: 120
+        reboot_timeout: 600
         msg: "KioskKit provisioning complete — rebooting"

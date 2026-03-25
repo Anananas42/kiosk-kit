@@ -370,7 +370,7 @@ boot_qemu_for_provisioning() {
     -drive "if=virtio,file=$DISK_IMAGE,format=qcow2"
     -nic "user,model=virtio,hostfwd=tcp::${SSH_PORT}-:22"
     -display none -serial "file:$WORK_DIR/qemu-console.log"
-    -no-reboot -daemonize -pidfile "$WORK_DIR/qemu.pid"
+    -daemonize -pidfile "$WORK_DIR/qemu.pid"
   )
   qemu-system-aarch64 "${qemu_args[@]}"
 
@@ -407,6 +407,13 @@ EOF
     --skip-tags tailscale,security,watchdog \
     -e "kioskkit_tailscale_auth_key=skip" \
     || { err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
+}
+
+wait_for_reboot() {
+  log "Waiting for VM to come back after reboot..."
+  # After Ansible reboot, SSH will drop. Wait for it to return.
+  sleep 10
+  wait_for_ssh "$SSH_PORT" 300
 }
 
 setup_wifi_simulation() {
@@ -446,10 +453,16 @@ shutdown_and_snapshot() {
   log "Shutting down VM for snapshotting..."
   ssh_pi "sudo shutdown -h now" 2>/dev/null || true
 
-  sleep 5
-  if kill -0 "$QEMU_PID" 2>/dev/null; then
-    kill "$QEMU_PID" 2>/dev/null || true
-    wait "$QEMU_PID" 2>/dev/null || true
+  # Wait for QEMU to exit after guest shutdown
+  local pid
+  pid=$(cat "$WORK_DIR/qemu.pid" 2>/dev/null || echo "")
+  if [[ -n "$pid" ]]; then
+    local wait_secs=0
+    while kill -0 "$pid" 2>/dev/null && (( wait_secs < 60 )); do
+      sleep 2
+      ((wait_secs += 2))
+    done
+    kill "$pid" 2>/dev/null || true
   fi
   unset QEMU_PID
 
@@ -484,8 +497,8 @@ main() {
   patch_image_for_virt
   boot_qemu_for_provisioning
   provision_with_ansible
+  wait_for_reboot
   setup_wifi_simulation
-  deploy_kiosk_app
   shutdown_and_snapshot
 }
 
