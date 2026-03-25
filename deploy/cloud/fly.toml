@@ -1,9 +1,6 @@
 app = "kiosk-kit"
 primary_region = "fra"
 
-[build]
-  dockerfile = "deploy/cloud/Dockerfile"
-
 [http_service]
   internal_port = 3002
   force_https = true

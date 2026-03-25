@@ -35,7 +35,7 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - run: flyctl deploy --config deploy/cloud/fly.toml
+      - run: flyctl deploy . --config deploy/cloud/fly.toml --dockerfile deploy/cloud/Dockerfile
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
