@@ -114,6 +114,22 @@ sudo kpartx -dv deploy/pi/.work/kioskkit-*.img
 
 Check that binfmt_misc is properly registered for aarch64. The chroot runs ARM binaries through `qemu-aarch64-static` transparently.
 
+## Maintainability
+
+What to update when things change:
+
+| Change | What to update |
+|--------|---------------|
+| **New Pi OS release** | `PIOS_URL` and `PIOS_CHECKSUM` in `build-sd-image.sh` (lines 21–22). Delete `.work/raspios.img` to force re-download. |
+| **Image needs more space** | `IMAGE_SIZE` in `build-sd-image.sh` (line 24). Current default is 6GB. |
+| **Ansible playbook changes** | Nothing — the build script runs `provision.yml` directly, so changes are picked up automatically. |
+| **New Ansible roles that call systemctl** | Verify `chroot-bin/fake-systemctl` handles the new subcommands (enable/disable/daemon-reload are covered). |
+| **Tailscale install method changes** | Update `install_tailscale()` in `build-sd-image.sh`. It currently adds the Tailscale apt repo and installs inside the chroot. |
+| **First-boot service changes** | Edit `first-boot/tailscale-firstboot.sh` and/or `first-boot/kioskkit-tailscale-firstboot.service`. The config path `/etc/kioskkit/tailscale-firstboot.conf` is referenced in both the service script and the build script's `inject_firstboot_service()`. |
+| **New device credentials or flags** | Add to `parse_args()` in `build-sd-image.sh` and to the config file written in `inject_firstboot_service()`. |
+| **Adding new prerequisites** | Add the command to the `require_cmd` call in `main()` and document in the Prerequisites section above. |
+| **CI shellcheck** | Shell scripts are linted in `ci.yml`. Add new scripts to the `shellcheck` step. |
+
 ## File structure
 
 ```
