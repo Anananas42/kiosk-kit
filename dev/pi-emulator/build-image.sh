@@ -192,6 +192,34 @@ setup_wifi_simulation() {
       "echo 'mac80211_hwsim' | sudo tee /etc/modules-load.d/hwsim.conf >/dev/null; echo 'options mac80211_hwsim radios=2' | sudo tee /etc/modprobe.d/hwsim.conf >/dev/null"
 }
 
+deploy_kiosk_app() {
+  log "Deploying kiosk application into the VM..."
+
+  local inventory_file="$WORK_DIR/inventory.yml"
+
+  ansible-playbook \
+    -i "$inventory_file" \
+    "$ANSIBLE_DIR/playbooks/deploy.yml" \
+    || { err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
+
+  log "Waiting for kioskkit.service to start..."
+  sleep 5
+
+  local retries=12
+  for (( i=1; i<=retries; i++ )); do
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+         -p "$SSH_PORT" pi@localhost \
+         "curl -sf -o /dev/null http://localhost:3001/api/health" 2>/dev/null; then
+      log "Kiosk server is healthy (port 3001)."
+      return 0
+    fi
+    log "Health check attempt $i/$retries — waiting 5s..."
+    sleep 5
+  done
+
+  err "Kiosk server health check failed after $retries attempts"
+}
+
 shutdown_and_snapshot() {
   log "Shutting down VM for snapshotting..."
   ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
@@ -237,6 +265,7 @@ main() {
   boot_qemu_for_provisioning
   provision_with_ansible
   setup_wifi_simulation
+  deploy_kiosk_app
   shutdown_and_snapshot
 }
 
