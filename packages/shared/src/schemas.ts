@@ -290,6 +290,49 @@ export const PreorderReportSchema = z.object({
   rows: z.array(PreorderReportRowSchema),
 });
 
+// ── WiFi schemas ───────────────────────────────────────────────────
+
+export const WifiNetworkSchema = z.object({
+  ssid: z.string(),
+  signal: z.number(),
+  security: z.enum(["open", "wpa"]),
+});
+
+export type WifiNetwork = z.infer<typeof WifiNetworkSchema>;
+
+export const WifiConnectRequestSchema = z.object({
+  ssid: z.string().min(1, "SSID is required"),
+  password: z.string().optional(),
+});
+
+export type WifiConnectRequest = z.infer<typeof WifiConnectRequestSchema>;
+
+export const WifiForgetRequestSchema = z.object({
+  ssid: z.string().min(1, "SSID is required"),
+});
+
+export type WifiForgetRequest = z.infer<typeof WifiForgetRequestSchema>;
+
+export const WifiStatusSchema = z.object({
+  current: z
+    .object({
+      ssid: z.string(),
+      signal: z.number(),
+    })
+    .nullable(),
+  ethernet: z.boolean(),
+  saved: z.array(
+    z.object({
+      ssid: z.string(),
+      inRange: z.boolean(),
+      signal: z.number().optional(),
+    }),
+  ),
+  available: z.array(WifiNetworkSchema),
+});
+
+export type WifiStatus = z.infer<typeof WifiStatusSchema>;
+
 // ── Item count input schema ─────────────────────────────────────────
 
 export const ItemCountInputSchema = z.object({
