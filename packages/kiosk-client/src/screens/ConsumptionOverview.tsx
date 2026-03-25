@@ -1,8 +1,9 @@
 import { formatCurrency, parsePrice, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { trpc } from "../trpc.js";
+import LoadingDots from "../components/LoadingDots.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import { useT } from "../i18n/useT.js";
+import { trpc } from "../trpc.js";
 
 interface AggregatedItem {
   label: string;
@@ -87,7 +88,10 @@ export default function ConsumptionOverview({
         {error && <div className="overview-error">{error}</div>}
 
         {records === null && !error && (
-          <div className="sending-overlay">{t("overview.loading")}</div>
+          <div className="sending-overlay">
+            {t("overview.loading")}
+            <LoadingDots />
+          </div>
         )}
 
         {records !== null &&

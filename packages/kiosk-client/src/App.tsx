@@ -7,6 +7,7 @@ import {
   REPEAT_ORDER_MS,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import LoadingDots from "./components/LoadingDots.js";
 import SuccessFlash from "./components/SuccessFlash.js";
 import { useCatalog } from "./hooks/useCatalog.js";
 import { useHealth } from "./hooks/useHealth.js";
@@ -254,7 +255,10 @@ function AppInner({
         <div className="crash-screen">
           <div className="crash-screen__icon">⚠️</div>
           <div className="crash-screen__title">{t("app.crash.title")}</div>
-          <div className="crash-screen__message">{t("app.crash.message")}</div>
+          <div className="crash-screen__message">
+            {t("app.crash.message")}
+            <LoadingDots />
+          </div>
         </div>
       </div>
     );

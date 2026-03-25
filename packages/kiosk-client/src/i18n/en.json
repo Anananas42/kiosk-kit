@@ -7,11 +7,11 @@
   "app.insufficientBalance": "Buyer {buyer} has no \"{item}\" to remove.",
   "app.connectionFailed": "Connection failed. Please try again.",
   "app.crash.title": "Server unavailable",
-  "app.crash.message": "The system is restarting. Please wait\u2026",
+  "app.crash.message": "The system is restarting. Please wait",
 
   "buyer.title": "🏠 Select {buyerNoun}",
   "buyer.repeat": "🔁 Repeat {buyer} {item}",
-  "buyer.loading": "Loading\u2026",
+  "buyer.loading": "Loading",
   "buyer.empty": "No buyers configured. Use the admin panel to add buyers.",
 
   "category.title": "📋 Select category",
@@ -32,7 +32,7 @@
   "confirm.delivery": "Delivery: {date}",
   "confirm.deliveryTotal": "Delivery: {date} · Total: {total}",
   "confirm.alreadyOrdered": "Already ordered: {count} pc",
-  "confirm.sending": "Sending\u2026",
+  "confirm.sending": "Sending",
   "confirm.addQtyPrice": "Add {qty}\u00d7 for {price}",
   "confirm.removeQty": "Really remove {qty} pc?",
   "confirm.removeItem": "Remove {qty}\u00d7 {item}",
@@ -60,7 +60,7 @@
   "overview.title": "📊 Consumption #{buyer}",
   "overview.back": "Back",
   "overview.loadError": "Failed to load data.",
-  "overview.loading": "Loading\u2026",
+  "overview.loading": "Loading",
   "overview.empty": "No consumption.",
   "overview.headerItem": "Item",
   "overview.headerQty": "Qty",
@@ -71,6 +71,6 @@
   "overview.dash": "—",
 
   "common.back": "Back",
-  "common.loading": "Loading\u2026",
-  "common.sending": "Sending\u2026"
+  "common.loading": "Loading",
+  "common.sending": "Sending"
 }

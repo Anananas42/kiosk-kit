@@ -7,11 +7,11 @@
   "app.insufficientBalance": "Kupující {buyer} nemá žádný \"{item}\" k odebrání.",
   "app.connectionFailed": "Připojení selhalo. Zkuste to znovu.",
   "app.crash.title": "Server nedostupný",
-  "app.crash.message": "Systém se restartuje. Prosím vyčkejte\u2026",
+  "app.crash.message": "Systém se restartuje. Prosím vyčkejte",
 
   "buyer.title": "🏠 Vyberte {buyerNoun}",
   "buyer.repeat": "🔁 Opakovat {buyer} {item}",
-  "buyer.loading": "Načítám\u2026",
+  "buyer.loading": "Načítám",
   "buyer.empty": "Žádní kupující nejsou nastaveni. Přidejte je v administraci.",
 
   "category.title": "📋 Vyberte kategorii",
@@ -32,7 +32,7 @@
   "confirm.delivery": "Dodání: {date}",
   "confirm.deliveryTotal": "Dodání: {date} · Celkem: {total}",
   "confirm.alreadyOrdered": "Již objednáno: {count} ks",
-  "confirm.sending": "Odesílám\u2026",
+  "confirm.sending": "Odesílám",
   "confirm.addQtyPrice": "Přidat {qty}\u00d7 za {price}",
   "confirm.removeQty": "Opravdu odebrat {qty} ks?",
   "confirm.removeItem": "Odebrat {qty}\u00d7 {item}",
@@ -60,7 +60,7 @@
   "overview.title": "📊 Konzumace #{buyer}",
   "overview.back": "Zpět",
   "overview.loadError": "Nepodařilo se načíst data.",
-  "overview.loading": "Načítám\u2026",
+  "overview.loading": "Načítám",
   "overview.empty": "Žádná konzumace.",
   "overview.headerItem": "Položka",
   "overview.headerQty": "Ks",
@@ -71,6 +71,6 @@
   "overview.dash": "—",
 
   "common.back": "Zpět",
-  "common.loading": "Načítám\u2026",
-  "common.sending": "Odesílám\u2026"
+  "common.loading": "Načítám",
+  "common.sending": "Odesílám"
 }

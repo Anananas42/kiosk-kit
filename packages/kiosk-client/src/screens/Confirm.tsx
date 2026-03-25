@@ -1,10 +1,11 @@
 import type { CatalogItem } from "@kioskkit/shared";
 import { formatCurrency, getDeliveryDateLabel, parsePrice } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
-import { trpc } from "../trpc.js";
+import LoadingDots from "../components/LoadingDots.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import Tile from "../components/Tile.js";
 import { useT } from "../i18n/useT.js";
+import { trpc } from "../trpc.js";
 
 const QUANTITIES = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -130,7 +131,10 @@ export default function Confirm({
           )}
 
           {isSending ? (
-            <div className="sending-overlay">{t("confirm.sending")}</div>
+            <div className="sending-overlay">
+              {t("confirm.sending")}
+              <LoadingDots />
+            </div>
           ) : (
             <div className="confirm-actions confirm-actions--preorder">
               <button
@@ -205,7 +209,10 @@ export default function Confirm({
         )}
 
         {isSending ? (
-          <div className="sending-overlay">{t("confirm.sending")}</div>
+          <div className="sending-overlay">
+            {t("confirm.sending")}
+            <LoadingDots />
+          </div>
         ) : (
           <div className="confirm-actions">
             <button

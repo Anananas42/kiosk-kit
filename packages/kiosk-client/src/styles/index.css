@@ -810,6 +810,13 @@ body {
   color: var(--color-muted);
 }
 
+/* ===== Loading dots ===== */
+.loading-dots {
+  display: inline-block;
+  width: 1.5ch;
+  text-align: left;
+}
+
 /* ===== Maintenance screen ===== */
 .maintenance-screen {
   display: flex;

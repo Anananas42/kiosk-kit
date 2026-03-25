@@ -1,4 +1,5 @@
 import type { Buyer } from "@kioskkit/shared";
+import LoadingDots from "../components/LoadingDots.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import Tile from "../components/Tile.js";
 import { useT } from "../i18n/useT.js";
@@ -43,7 +44,10 @@ export default function BuyerSelect({
             <div className="catalog-error__message">{error}</div>
           </div>
         ) : loading ? (
-          <div className="empty-state">{t("buyer.loading")}</div>
+          <div className="empty-state">
+            {t("buyer.loading")}
+            <LoadingDots />
+          </div>
         ) : buyers.length === 0 ? (
           <div className="empty-state">{t("buyer.empty")}</div>
         ) : (
