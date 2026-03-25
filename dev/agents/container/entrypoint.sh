@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "==> Copying repo to /workspace..."
 # Root node_modules is a named volume — exclude only it (not per-package ones)
-rsync -a --exclude /node_modules --exclude .claude/worktrees /mnt/repo/ /workspace/
+rsync -a --exclude /node_modules --exclude .claude/worktrees --exclude '*.qcow2' --exclude '.work/' --exclude '.output/' /mnt/repo/ /workspace/
 
 echo "==> Configuring git..."
 git config user.name "kiosk-kit-agent[bot]"

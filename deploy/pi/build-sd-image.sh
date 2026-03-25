@@ -46,7 +46,9 @@ SSH_PORT=2222
 # shellcheck disable=SC2034
 QEMU_RAM="${SD_BUILD_RAM:-4G}"
 # shellcheck disable=SC2034
-QEMU_CPUS="${SD_BUILD_CPUS:-$(( $(nproc) / 2 ))}"
+_half_cpus=$(( $(nproc) / 2 ))
+# shellcheck disable=SC2034
+QEMU_CPUS="${SD_BUILD_CPUS:-$(( _half_cpus > 8 ? 8 : _half_cpus ))}"
 
 # When running in the container, /workspace is the repo root (read-only mount).
 # Use /build as the writable work directory.
