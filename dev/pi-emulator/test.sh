@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SSH_PORT="${PI_EMU_SSH_PORT:-2222}"
 KIOSK_PORT="${PI_EMU_KIOSK_PORT:-3001}"
 
-# --- Helpers ------------------------------------------------------------------
+# --- Test framework -----------------------------------------------------------
 
 PASS=0
 FAIL=0
@@ -33,6 +33,30 @@ SSH_CMD=(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o Conn
 remote() {
   "${SSH_CMD[@]}" "$@" 2>/dev/null
 }
+
+# Assert that a remote command succeeds.
+assert_remote() {
+  local name=$1 cmd=$2 fail_msg=$3
+  log_test "$name"
+  if remote bash -c "$cmd"; then
+    pass
+  else
+    fail "$fail_msg"
+  fi
+}
+
+# Assert that a remote command's output matches a pattern.
+assert_remote_grep() {
+  local name=$1 cmd=$2 pattern=$3 fail_msg=$4
+  log_test "$name"
+  if remote bash -c "$cmd" | grep -qi "$pattern"; then
+    pass
+  else
+    fail "$fail_msg"
+  fi
+}
+
+# --- Boot management ---------------------------------------------------------
 
 wait_for_ssh() {
   local timeout=${1:-180}
@@ -62,178 +86,159 @@ cleanup_qemu() {
 }
 trap cleanup_qemu EXIT
 
-# --- Parse args ---------------------------------------------------------------
-
-SKIP_BOOT=0
-for arg in "$@"; do
-  case "$arg" in
-    --skip-boot) SKIP_BOOT=1 ;;
-    *)           echo "Unknown argument: $arg" >&2; exit 1 ;;
-  esac
-done
-
-# --- Boot if needed -----------------------------------------------------------
-
-if [[ $SKIP_BOOT -eq 0 ]]; then
-  BOOT_MANAGED=1
-  log "Booting golden image for testing..."
-  "$SCRIPT_DIR/run.sh" --bg
-  wait_for_ssh 180
-else
-  log "Skipping boot — assuming QEMU is already running."
-  # Quick check that SSH is reachable
-  remote true || { echo "FATAL: Cannot reach SSH on port $SSH_PORT" >&2; exit 1; }
-fi
-
-# --- Smoke tests --------------------------------------------------------------
-
-log "Running smoke tests..."
-echo ""
-
-# 1. SSH connectivity (already verified, but make it an explicit test)
-log_test "SSH connectivity"
-if remote echo ok | grep -q ok; then
-  pass
-else
-  fail "cannot execute commands via SSH"
-fi
-
-# 2. OS identification
-log_test "Raspberry Pi OS detected"
-if remote cat /etc/os-release | grep -qi "raspberry\|debian"; then
-  pass
-else
-  fail "unexpected OS"
-fi
-
-# 3. Kiosk user exists
-log_test "Kiosk user exists"
-if remote id kiosk >/dev/null 2>&1; then
-  pass
-else
-  fail "kiosk user not found"
-fi
-
-# 4. Node.js installed
-log_test "Node.js available"
-NODE_VERSION=$(remote node --version 2>/dev/null || echo "")
-if [[ -n "$NODE_VERSION" ]]; then
-  pass
-else
-  fail "node not found"
-fi
-
-# 5. pnpm installed
-log_test "pnpm available"
-if remote pnpm --version >/dev/null 2>&1; then
-  pass
-else
-  fail "pnpm not found"
-fi
-
-# 6. KioskKit application directory exists
-log_test "KioskKit app directory exists"
-if remote test -d /opt/kioskkit; then
-  pass
-else
-  fail "/opt/kioskkit not found"
-fi
-
-# 7. kioskkit systemd service exists
-log_test "kioskkit.service unit exists"
-if remote systemctl cat kioskkit.service >/dev/null 2>&1; then
-  pass
-else
-  fail "kioskkit.service not found"
-fi
-
-# 8. kioskkit service starts (or at least doesn't crash immediately)
-log_test "kioskkit.service is enabled"
-if remote systemctl is-enabled kioskkit.service 2>/dev/null | grep -q "enabled"; then
-  pass
-else
-  fail "kioskkit.service not enabled"
-fi
-
-# 9. wpa_supplicant installed
-log_test "wpa_supplicant installed"
-if remote which wpa_supplicant >/dev/null 2>&1; then
-  pass
-else
-  fail "wpa_supplicant not found"
-fi
-
-# 10. WiFi scripts deployed
-log_test "WiFi management scripts deployed"
-WIFI_SCRIPTS_OK=1
-for script in wifi-scan.sh wifi-connect.sh wifi-forget.sh wifi-status.sh; do
-  if ! remote test -x "/opt/kioskkit/system/$script"; then
-    WIFI_SCRIPTS_OK=0
-    break
+ensure_booted() {
+  local skip_boot=$1
+  if [[ $skip_boot -eq 0 ]]; then
+    BOOT_MANAGED=1
+    log "Booting golden image for testing..."
+    "$SCRIPT_DIR/run.sh" --bg
+    wait_for_ssh 180
+  else
+    log "Skipping boot — assuming QEMU is already running."
+    remote true || { echo "FATAL: Cannot reach SSH on port $SSH_PORT" >&2; exit 1; }
   fi
-done
-if [[ $WIFI_SCRIPTS_OK -eq 1 ]]; then
-  pass
-else
-  fail "one or more WiFi scripts missing from /opt/kioskkit/system/"
-fi
+}
 
-# 11. mac80211_hwsim module
-log_test "mac80211_hwsim kernel module"
-if remote lsmod | grep -q mac80211_hwsim; then
-  pass
-elif remote sudo modprobe mac80211_hwsim radios=2 2>/dev/null && remote lsmod | grep -q mac80211_hwsim; then
-  pass
-else
-  skip "mac80211_hwsim not available in this kernel"
-fi
+# --- Test groups --------------------------------------------------------------
 
-# 12. Simulated WiFi interface (only if hwsim loaded)
-log_test "Simulated WiFi interface (wlan0)"
-if remote ip link show wlan0 >/dev/null 2>&1; then
-  pass
-elif remote lsmod | grep -q mac80211_hwsim; then
-  fail "mac80211_hwsim loaded but no wlan0 interface"
-else
-  skip "depends on mac80211_hwsim"
-fi
+test_system_basics() {
+  assert_remote \
+    "SSH connectivity" \
+    "echo ok" \
+    "cannot execute commands via SSH"
 
-# 13. Firewall (nftables) active
-log_test "nftables firewall active"
-if remote sudo nft list ruleset 2>/dev/null | grep -q "table"; then
-  pass
-else
-  fail "nftables has no rules loaded"
-fi
+  assert_remote_grep \
+    "Raspberry Pi OS detected" \
+    "cat /etc/os-release" \
+    "raspberry\|debian" \
+    "unexpected OS"
+}
 
-# 14. Kiosk server responds on port 3001 (inside the VM)
-log_test "Kiosk server health endpoint (port 3001)"
-HEALTH=$(remote curl -sf http://localhost:3001/api/health 2>/dev/null || echo "")
-if [[ -n "$HEALTH" ]]; then
-  pass
-else
-  skip "kiosk server not running (may need app deployment)"
-fi
+test_kiosk_app() {
+  assert_remote \
+    "Kiosk user exists" \
+    "id kiosk" \
+    "kiosk user not found"
 
-# 15. Security: SSH password auth disabled
-log_test "SSH password authentication disabled"
-if remote grep -qi "^PasswordAuthentication no" /etc/ssh/sshd_config 2>/dev/null; then
-  pass
-else
-  # Check for sshd_config.d drop-ins
-  if remote grep -rqi "PasswordAuthentication no" /etc/ssh/sshd_config.d/ 2>/dev/null; then
+  assert_remote \
+    "Node.js available" \
+    "node --version" \
+    "node not found"
+
+  assert_remote \
+    "pnpm available" \
+    "pnpm --version" \
+    "pnpm not found"
+
+  assert_remote \
+    "KioskKit app directory exists" \
+    "test -d /opt/kioskkit" \
+    "/opt/kioskkit not found"
+
+  assert_remote \
+    "kioskkit.service unit exists" \
+    "systemctl cat kioskkit.service" \
+    "kioskkit.service not found"
+
+  assert_remote_grep \
+    "kioskkit.service is enabled" \
+    "systemctl is-enabled kioskkit.service" \
+    "enabled" \
+    "kioskkit.service not enabled"
+
+  log_test "Kiosk server health endpoint (port 3001)"
+  local health
+  health=$(remote curl -sf http://localhost:3001/api/health 2>/dev/null || echo "")
+  if [[ -n "$health" ]]; then
+    pass
+  else
+    skip "kiosk server not running (may need app deployment)"
+  fi
+}
+
+test_wifi() {
+  assert_remote \
+    "wpa_supplicant installed" \
+    "which wpa_supplicant" \
+    "wpa_supplicant not found"
+
+  log_test "WiFi management scripts deployed"
+  local scripts_ok=1
+  for script in wifi-scan.sh wifi-connect.sh wifi-forget.sh wifi-status.sh; do
+    if ! remote test -x "/opt/kioskkit/system/$script"; then
+      scripts_ok=0
+      break
+    fi
+  done
+  if [[ $scripts_ok -eq 1 ]]; then
+    pass
+  else
+    fail "one or more WiFi scripts missing from /opt/kioskkit/system/"
+  fi
+
+  log_test "mac80211_hwsim kernel module"
+  if remote lsmod | grep -q mac80211_hwsim; then
+    pass
+  elif remote sudo modprobe mac80211_hwsim radios=2 2>/dev/null && remote lsmod | grep -q mac80211_hwsim; then
+    pass
+  else
+    skip "mac80211_hwsim not available in this kernel"
+  fi
+
+  log_test "Simulated WiFi interface (wlan0)"
+  if remote ip link show wlan0 >/dev/null 2>&1; then
+    pass
+  elif remote lsmod | grep -q mac80211_hwsim; then
+    fail "mac80211_hwsim loaded but no wlan0 interface"
+  else
+    skip "depends on mac80211_hwsim"
+  fi
+}
+
+test_security() {
+  log_test "nftables firewall active"
+  if remote sudo nft list ruleset 2>/dev/null | grep -q "table"; then
+    pass
+  else
+    fail "nftables has no rules loaded"
+  fi
+
+  log_test "SSH password authentication disabled"
+  if remote grep -qi "^PasswordAuthentication no" /etc/ssh/sshd_config 2>/dev/null; then
+    pass
+  elif remote grep -rqi "PasswordAuthentication no" /etc/ssh/sshd_config.d/ 2>/dev/null; then
     pass
   else
     fail "password authentication may still be enabled"
   fi
-fi
+}
 
-# --- Results ------------------------------------------------------------------
+# --- Main --------------------------------------------------------------------
 
-echo ""
-log "Results: $PASS passed, $FAIL failed, $SKIP skipped (total $((PASS + FAIL + SKIP)))"
+main() {
+  local skip_boot=0
+  for arg in "$@"; do
+    case "$arg" in
+      --skip-boot) skip_boot=1 ;;
+      *)           echo "Unknown argument: $arg" >&2; exit 1 ;;
+    esac
+  done
 
-if [[ $FAIL -gt 0 ]]; then
-  exit 1
-fi
-exit 0
+  ensure_booted "$skip_boot"
+
+  log "Running smoke tests..."
+  echo ""
+
+  test_system_basics
+  test_kiosk_app
+  test_wifi
+  test_security
+
+  echo ""
+  log "Results: $PASS passed, $FAIL failed, $SKIP skipped (total $((PASS + FAIL + SKIP)))"
+
+  [[ $FAIL -gt 0 ]] && exit 1
+  exit 0
+}
+
+main "$@"
