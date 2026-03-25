@@ -19,6 +19,7 @@ export function useCatalog() {
   const [settings, setSettings] = useState<KioskSettings>(() => DEFAULT_KIOSK_SETTINGS);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [buyerError, setBuyerError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
     trpc["catalog.list"]
@@ -36,10 +37,12 @@ export function useCatalog() {
       .then((data) => {
         setBuyers(data.buyers);
         setBuyerError(null);
+        setLoading(false);
       })
       .catch((err) => {
         console.error("Buyers load error:", err);
         setBuyerError(err instanceof Error ? err.message : "Failed to load buyers.");
+        setLoading(false);
       });
     trpc["preorderConfig.get"]
       .query()
@@ -72,5 +75,5 @@ export function useCatalog() {
     return () => clearInterval(id);
   }, [load, error]);
 
-  return { catalog, buyers, preorderConfig, settings, reload: load, error };
+  return { catalog, buyers, preorderConfig, settings, reload: load, error, loading };
 }

@@ -1,5 +1,6 @@
 import { formatDate, getDeliveryDate, type RecordRow } from "@kioskkit/shared";
 import { useEffect, useState } from "react";
+import LoadingDots from "../components/LoadingDots.js";
 import ScreenHeader from "../components/ScreenHeader.js";
 import { useT } from "../i18n/useT.js";
 import { trpc } from "../trpc.js";
@@ -73,7 +74,12 @@ export default function PreorderOrdersOverview({
       <div className="screen-body screen-body--scroll">
         {error && <div className="overview-error">{error}</div>}
 
-        {records === null && !error && <div className="sending-overlay">{t("common.loading")}</div>}
+        {records === null && !error && (
+          <div className="sending-overlay">
+            {t("common.loading")}
+            <LoadingDots />
+          </div>
+        )}
 
         {records !== null && !hasAny && (
           <div className="overview-empty">{t("preorder.noOrders")}</div>
