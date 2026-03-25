@@ -146,14 +146,16 @@ test_kiosk_app() {
     "enabled" \
     "kioskkit.service not enabled"
 
-  log_test "Kiosk server health endpoint (port 3001)"
-  local health
-  health=$(remote curl -sf http://localhost:3001/api/health 2>/dev/null || echo "")
-  if [[ -n "$health" ]]; then
-    pass
-  else
-    skip "kiosk server not running (may need app deployment)"
-  fi
+  assert_remote \
+    "Kiosk server health endpoint (port 3001)" \
+    "curl -sf -o /dev/null http://localhost:3001/api/health" \
+    "kiosk server not responding on port 3001"
+
+  assert_remote_grep \
+    "Kiosk UI serves HTML at /" \
+    "curl -sf http://localhost:3001/" \
+    "<html" \
+    "expected HTML response from kiosk server"
 }
 
 test_wifi() {

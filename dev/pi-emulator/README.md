@@ -1,8 +1,12 @@
 # Pi Emulator (QEMU)
 
 QEMU-based Raspberry Pi emulator for pre-release validation. Boots a real Pi OS
-image, provisions it with the production Ansible playbook, and runs smoke tests
-against the result.
+image, provisions it with the production Ansible playbook, deploys and builds
+the full kiosk stack, and runs smoke tests against the result.
+
+The golden image includes the fully built kiosk application. On boot, the kiosk
+server starts automatically via `kioskkit.service` and serves the kiosk UI at
+`http://localhost:3001` (forwarded from QEMU guest port 3001).
 
 Replaces the previous `dev/kiosk-sim/` mock approach with higher-fidelity
 emulation using real systemd services, wpa_supplicant, and (optionally)
@@ -37,10 +41,13 @@ pip install ansible
 # 2. Boot the emulator
 ./run.sh
 
-# 3. SSH into it (in another terminal)
+# 3. Access the kiosk UI
+open http://localhost:3001
+
+# 4. SSH into it (in another terminal)
 ssh -p 2222 pi@localhost
 
-# 4. Run smoke tests (boots a fresh overlay and tests automatically)
+# 5. Run smoke tests (boots a fresh overlay and tests automatically)
 ./test.sh
 ```
 
@@ -82,6 +89,7 @@ instead of the stock Pi kernel. This is installed into the image during
 
 Downloads Pi OS Lite, patches it for QEMU virt (installs Debian arm64 kernel,
 fixes fstab, enables SSH), boots it, runs the Ansible provisioning playbook,
+deploys the kiosk application via `deploy.yml`, verifies the health endpoint,
 then snapshots the disk as `golden.qcow2`.
 
 ```bash
@@ -89,7 +97,8 @@ then snapshots the disk as `golden.qcow2`.
 ./build-image.sh --force   # Force rebuild
 ```
 
-The golden image only needs rebuilding when `deploy/pi/ansible/` changes.
+The golden image needs rebuilding when `deploy/pi/ansible/` or the kiosk
+application source code changes.
 
 ### `run.sh`
 
@@ -115,7 +124,8 @@ Boots a fresh overlay and runs a smoke test suite covering:
 - SSH connectivity and OS identification
 - Kiosk user and app directory exist
 - Node.js and pnpm available
-- kioskkit.service enabled
+- kioskkit.service enabled and healthy on port 3001
+- Kiosk UI serves HTML
 - wpa_supplicant installed, WiFi scripts deployed
 - mac80211_hwsim WiFi simulation (if available)
 - Firewall rules active
