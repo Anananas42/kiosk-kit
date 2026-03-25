@@ -70,18 +70,24 @@ Every PR must link to a Linear issue. Create one before dispatching if it doesn'
 
 ## Stuck agent recovery
 
-After dispatching agents, check their logs every ~2-3 minutes. Look for this pattern:
+After dispatching agents, check their logs every ~2-3 minutes. Look for these patterns:
 
 ```bash
-docker compose -p "agent-<slug>" logs --tail 5 agent
+docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml logs --tail 5 agent
 ```
 
-If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Recovery:
+**Stuck (no output):** If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Re-dispatch.
+
+**Crashed (exit code 127):** If the container exited immediately with code 127, the AGENT_TASK env var had shell escaping issues that broke the entrypoint. Check tmux output with `tmux capture-pane -t agent-<slug> -p -S -50`. Fix: write the task to a temp file and dispatch using `AGENT_TASK="$(cat /tmp/agent-task-<slug>.txt)"`.
+
+**Container gone:** If `docker compose ps -a` shows nothing and the tmux pane shows "Agent exited with code X. Cleaning up..." — the agent exited and the tmux session auto-cleaned. Check whether a PR was created (`gh pr list --search "KIO-XX"`). If the PR exists and the agent should still be in the watch loop, something went wrong — re-dispatch.
+
+Recovery for all cases:
 
 ```bash
 docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml down -v
-# Re-dispatch with the same AGENT_TASK
-AGENT_TASK="<same task>" ./.agents/scripts/dispatch.sh "agent-<slug>"
+# Re-dispatch
+AGENT_TASK="$(cat /tmp/agent-task-<slug>.txt)" ./.agents/scripts/dispatch.sh "agent-<slug>"
 ```
 
 This is the only scenario where you should proactively monitor. Do not check CI status, PR reviews, or other agent progress — the agents handle that themselves.
