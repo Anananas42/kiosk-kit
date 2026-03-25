@@ -1,0 +1,16 @@
+services:
+  kiosk-sim:
+    build:
+      context: ../
+      dockerfile: dev/kiosk-sim/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - MOCK_WIFI_NETWORKS=[{"ssid":"Office","signal":-45,"security":"wpa"},{"ssid":"Guest","signal":-72,"security":"open"},{"ssid":"Neighbor","signal":-80,"security":"wpa"}]
+      - MOCK_ETHERNET_CARRIER=1
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
