@@ -11,7 +11,7 @@ import { healthRoute } from "./routes/health.js";
 import { createContextFactory } from "./trpc/context.js";
 import { appRouter } from "./trpc/router.js";
 
-export function createApp(db: Db, google?: Google) {
+export function createApp(db: Db, google?: Google, cookieDomain?: string) {
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -24,7 +24,7 @@ export function createApp(db: Db, google?: Google) {
   app.route("/api/health", healthRoute());
 
   if (google) {
-    app.route("/api/auth", authRoutes(db, google));
+    app.route("/api/auth", authRoutes(db, google, cookieDomain));
   }
 
   app.use(
