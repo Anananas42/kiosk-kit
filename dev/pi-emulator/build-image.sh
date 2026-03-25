@@ -404,7 +404,7 @@ EOF
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
-    --skip-tags tailscale \
+    --skip-tags tailscale,security,watchdog \
     -e "kioskkit_tailscale_auth_key=skip" \
     || { err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
 }
