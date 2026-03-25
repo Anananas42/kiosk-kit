@@ -393,7 +393,7 @@ all:
           kioskkit_customer_tag: "emulator"
 EOF
 
-  ansible-playbook \
+  ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
     --skip-tags tailscale \
@@ -413,7 +413,7 @@ deploy_kiosk_app() {
 
   local inventory_file="$WORK_DIR/inventory.yml"
 
-  ansible-playbook \
+  ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/deploy.yml" \
     || { err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
