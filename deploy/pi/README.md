@@ -16,13 +16,13 @@ For running without Docker (e.g. in CI):
 
 ```bash
 sudo apt install qemu-system-arm qemu-utils libguestfs-tools \
-  ansible sshpass curl xz-utils openssh-client
+  ansible sshpass curl jq xz-utils openssh-client
 sudo chmod 644 /boot/vmlinuz-*  # libguestfs needs to read the host kernel
 ```
 
 ## Usage
 
-### Production build
+### Production build (explicit key)
 
 ```bash
 ./deploy/pi/build-sd-image.sh \
@@ -31,6 +31,24 @@ sudo chmod 644 /boot/vmlinuz-*  # libguestfs needs to read the host kernel
   --tailscale-key tskey-auth-XXXX
 ```
 
+### Production build (auto-generate key via API)
+
+If `--tailscale-key` is omitted, the script generates a single-use auth key via the
+Tailscale API. Set the required credentials in `.env` or as environment variables:
+
+```bash
+# .env (or export these)
+TAILSCALE_API_KEY=tskey-api-XXXX
+TAILSCALE_TAILNET=your-tailnet.ts.net
+
+./deploy/pi/build-sd-image.sh \
+  --device-id 042 \
+  --customer-tag acme
+```
+
+The generated key is single-use, non-reusable, non-ephemeral, and tagged with
+`tag:kioskkit` (plus `tag:<customer-tag>` when set).
+
 Auto-detects if running outside a container and re-execs inside Docker. No sudo needed.
 
 ### Dev build
@@ -38,7 +56,7 @@ Auto-detects if running outside a container and re-execs inside Docker. No sudo 
 ```bash
 export PI_DEV_DEVICE_ID=dev-001
 export PI_DEV_CUSTOMER_TAG=dev
-export PI_DEV_TAILSCALE_KEY=tskey-auth-XXXX
+export PI_DEV_TAILSCALE_KEY=tskey-auth-XXXX   # optional — falls back to API generation
 ./deploy/pi/build-sd-image.sh --dev
 ```
 
@@ -104,7 +122,7 @@ On first power-on with ethernet connected:
    - On failure: exits non-zero, retries on next boot (safe to reboot without ethernet)
 4. Device appears in Tailscale admin console, accessible remotely
 
-The Tailscale auth key is embedded in the image between flash and first successful boot. Use single-use or short-lived keys for production.
+The Tailscale auth key is embedded in the image between flash and first successful boot. When no explicit key is provided, the script auto-generates a single-use key via the Tailscale API (requires `TAILSCALE_API_KEY` and `TAILSCALE_TAILNET`).
 
 ## SSH access
 
@@ -130,6 +148,10 @@ docker run --rm \
 Environment variables for tuning:
 - `SD_BUILD_RAM` — QEMU guest RAM (default: 4G)
 - `SD_BUILD_CPUS` — QEMU guest CPUs (default: half of host cores)
+
+Environment variables for Tailscale API key auto-generation (when `--tailscale-key` is omitted):
+- `TAILSCALE_API_KEY` — Tailscale API key (or set in `.env`)
+- `TAILSCALE_TAILNET` — Tailscale tailnet name (or set in `.env`)
 
 ## Shared library
 

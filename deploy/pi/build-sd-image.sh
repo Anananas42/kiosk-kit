@@ -9,14 +9,28 @@
 #
 # Prerequisites (all provided by the Dockerfile):
 #   qemu-system-aarch64, qemu-img, guestfish (libguestfs-tools),
-#   ansible-playbook, sshpass, curl, xz, dpkg-deb
+#   ansible-playbook, sshpass, curl, jq, xz, dpkg-deb
 #
 # Usage:
 #   ./build-sd-image.sh --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
+#   ./build-sd-image.sh --device-id 042 --customer-tag acme   # auto-generates key via Tailscale API
 #   ./build-sd-image.sh --dev                   # reads PI_DEV_* env vars
 #   ./build-sd-image.sh --dev --force            # rebuild all layers
 #   ./build-sd-image.sh --dev --app-only         # skip base layer (must exist)
 #   ./build-sd-image.sh --dev --device-only      # stamp device on existing app image (~30s)
+#
+# Options:
+#   --device-id ID         Device identifier (e.g. 042)
+#   --customer-tag TAG     Customer tag for Tailscale ACLs (e.g. acme)
+#   --tailscale-key KEY    Explicit Tailscale auth key; if omitted, auto-generated via API
+#   --dev                  Use PI_DEV_* env vars for device-id, customer-tag, tailscale-key
+#   --force                Rebuild all cached layers from scratch
+#   --app-only             Skip base layer rebuild (must already exist)
+#   --device-only          Only stamp device on existing app image (~30s)
+#
+# Environment variables (for API key auto-generation when --tailscale-key is omitted):
+#   TAILSCALE_API_KEY      Tailscale API key (also read from .env)
+#   TAILSCALE_TAILNET      Tailscale tailnet name (also read from .env)
 
 set -euo pipefail
 
@@ -118,7 +132,10 @@ parse_args() {
 
   [[ -n "$DEVICE_ID" ]]     || err "Missing --device-id (or set PI_DEV_DEVICE_ID with --dev)"
   [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
-  [[ -n "$TAILSCALE_KEY" ]] || err "Missing --tailscale-key (or set PI_DEV_TAILSCALE_KEY with --dev)"
+  # If no explicit key provided, auto-generate one via Tailscale API
+  if [[ -z "$TAILSCALE_KEY" ]]; then
+    generate_tailscale_key
+  fi
 
   # --device-only implies --app-only (no base rebuild either)
   if [[ $DEVICE_ONLY -eq 1 ]]; then
@@ -126,6 +143,61 @@ parse_args() {
   fi
 
   log "Building image for device=$DEVICE_ID customer=$CUSTOMER_TAG"
+}
+
+# --- Tailscale API key generation --------------------------------------------
+
+generate_tailscale_key() {
+  # Load .env from repo root if present
+  if [[ -f "$REPO_ROOT/.env" ]]; then
+    while IFS='=' read -r key value; do
+      case "$key" in
+        TAILSCALE_API_KEY|TAILSCALE_TAILNET) export "$key=$value" ;;
+      esac
+    done < <(grep -E '^TAILSCALE_(API_KEY|TAILNET)=' "$REPO_ROOT/.env")
+  fi
+
+  if [[ -z "${TAILSCALE_API_KEY:-}" ]] || [[ -z "${TAILSCALE_TAILNET:-}" ]]; then
+    err "No --tailscale-key provided and TAILSCALE_API_KEY/TAILSCALE_TAILNET not set.
+  Either pass --tailscale-key tskey-auth-XXXX explicitly, or set both
+  TAILSCALE_API_KEY and TAILSCALE_TAILNET in environment or .env file."
+  fi
+
+  log "Generating single-use Tailscale auth key via API..."
+
+  # Build tags array: always include tag:kioskkit, add customer tag if set
+  local tags_json
+  tags_json=$(jq -n '["tag:kioskkit"]')
+  if [[ -n "$CUSTOMER_TAG" ]]; then
+    tags_json=$(printf '%s' "$tags_json" | jq --arg t "tag:$CUSTOMER_TAG" '. + [$t]')
+  fi
+
+  local description
+  description="kioskkit-${DEVICE_ID} build $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  local payload
+  payload=$(jq -n \
+    --argjson tags "$tags_json" \
+    --arg desc "$description" \
+    '{capabilities: {devices: {create: {reusable: false, ephemeral: false, tags: $tags}}}, description: $desc}')
+
+  local response curl_err
+  if ! response=$(curl -fsS --max-time 30 \
+    -u "${TAILSCALE_API_KEY}:" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>/tmp/curl_stderr); then
+    curl_err=$(cat /tmp/curl_stderr)
+    err "Tailscale API call failed: ${response:-$curl_err}"
+  fi
+
+  TAILSCALE_KEY=$(printf '%s' "$response" | jq -r '.key // empty') \
+    || err "Failed to parse Tailscale API response"
+  [[ -n "$TAILSCALE_KEY" ]] || err "Tailscale API returned empty key. Response: $response"
+
+  local key_id
+  key_id=$(printf '%s' "$response" | jq -r '.id // "unknown"')
+  log "Generated Tailscale auth key: id=$key_id description=\"$description\""
 }
 
 # --- SD image specific functions ---------------------------------------------
@@ -382,7 +454,7 @@ stamp_device() {
 main() {
   parse_args "$@"
 
-  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl
+  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl jq
   mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
 
   # Set BUILD_SSH_KEY path early so write_inventory can reference it.

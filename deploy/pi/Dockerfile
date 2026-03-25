@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ansible \
     sshpass \
     curl \
+    jq \
     xz-utils \
     dpkg-dev \
     python3 \
