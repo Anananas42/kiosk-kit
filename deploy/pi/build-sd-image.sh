@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # build-sd-image.sh — Build a flashable SD card image for KioskKit Pi devices.
 #
-# Uses qemu-user-static chroot to run Ansible provisioning inside a stock
-# Raspberry Pi OS image, producing a device-specific .img ready for dd/Etcher.
+# Uses QEMU system emulation (no sudo, no chroot, no binfmt_misc) to run
+# Ansible provisioning inside a booted Pi OS VM, then restores the native
+# Pi boot state and injects Tailscale first-boot authentication.
 #
-# Prerequisites: qemu-user-static, binfmt-support, ansible-playbook, kpartx, parted
+# Prerequisites (all provided by the Dockerfile):
+#   qemu-system-aarch64, qemu-img, guestfish (libguestfs-tools),
+#   ansible-playbook, sshpass, curl, xz, dpkg-deb
 #
 # Usage:
 #   ./build-sd-image.sh --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
@@ -15,79 +18,66 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# --- Docker re-exec ---------------------------------------------------------
+# If not inside a container, rebuild and re-exec inside Docker.
+
+if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
+  command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker is required when running outside a container" >&2; exit 1; }
+  echo "==> Building SD image builder Docker image..."
+  docker build -t kioskkit-sd-builder "$SCRIPT_DIR"
+  echo "==> Re-executing inside container..."
+  exec docker run --rm \
+    -e KIOSKKIT_IN_CONTAINER=1 \
+    -v "$REPO_ROOT:/workspace:ro" \
+    -v "$SCRIPT_DIR/.output:/output" \
+    kioskkit-sd-builder "$@"
+fi
+
 # --- Configuration -----------------------------------------------------------
 
-# Same Pi OS image as the emulator
+# Variables consumed by pi-image-common.sh after sourcing
+# shellcheck disable=SC2034
+SSH_PORT=2222
+# shellcheck disable=SC2034
+QEMU_RAM="${SD_BUILD_RAM:-4G}"
+# shellcheck disable=SC2034
+QEMU_CPUS="${SD_BUILD_CPUS:-$(( $(nproc) / 2 ))}"
+
+# When running in the container, /workspace is the repo root (read-only mount).
+# Use /build as the writable work directory.
+if [ -n "${KIOSKKIT_IN_CONTAINER:-}" ]; then
+  REPO_ROOT="/workspace"
+  WORK_DIR="/build"
+  OUTPUT_DIR="/output"
+else
+  WORK_DIR="$SCRIPT_DIR/.work"
+  OUTPUT_DIR="$SCRIPT_DIR/.output"
+fi
+
+# shellcheck disable=SC2034
+KERNEL="$WORK_DIR/vmlinuz"
+# shellcheck disable=SC2034
+INITRD="$WORK_DIR/initrd.img"
+# shellcheck disable=SC2034
+RAW_IMAGE="$WORK_DIR/raspios.img"
+DISK_IMAGE="$WORK_DIR/disk.qcow2"
+ANSIBLE_DIR="$REPO_ROOT/deploy/pi/ansible"
+
+# shellcheck disable=SC2034
 PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-11-19/2024-11-19-raspios-bookworm-arm64-lite.img.xz"
+# shellcheck disable=SC2034
 PIOS_CHECKSUM="6ac3a10a1f144c7e9d1f8e568d75ca809288280a593eb6ca053e49b539f465a4"
 
-IMAGE_SIZE="6G"
-WORK_DIR="$SCRIPT_DIR/.work"
-OUTPUT_DIR="$SCRIPT_DIR/.output"
-MNT_DIR="$WORK_DIR/mnt"
-CACHED_IMAGE="$WORK_DIR/raspios.img"
-ANSIBLE_DIR="$REPO_ROOT/deploy/pi/ansible"
-PISHRINK="$WORK_DIR/pishrink.sh"
-PISHRINK_URL="https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh"
+# Tailscale arm64 .deb URL and checksum
+TAILSCALE_VERSION="1.80.3"
+TAILSCALE_DEB_URL="https://pkgs.tailscale.com/stable/debian/pool/tailscale_${TAILSCALE_VERSION}_arm64.deb"
 
-# --- State tracking for cleanup ---------------------------------------------
+# shellcheck source=lib/pi-image-common.sh
+source "$REPO_ROOT/deploy/pi/lib/pi-image-common.sh"
 
-LOOP_DEV=""
-MOUNTED_ROOT=0
-MOUNTED_BOOT=0
-MOUNTED_PROC=0
-MOUNTED_SYS=0
-MOUNTED_DEV=0
-MOUNTED_DEVPTS=0
-WORK_IMAGE=""
+trap cleanup_qemu EXIT
 
-# --- Utilities ---------------------------------------------------------------
-
-log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
-err() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
-
-require_cmd() {
-  for cmd in "$@"; do
-    command -v "$cmd" >/dev/null 2>&1 || err "Required command not found: $cmd"
-  done
-}
-
-# --- Cleanup trap ------------------------------------------------------------
-
-cleanup() {
-  local exit_code=$?
-  set +e
-  log "Cleaning up..."
-
-  if [[ "$MOUNTED_PROC" -eq 1 ]]; then
-    umount "$MNT_DIR/proc" 2>/dev/null
-  fi
-  if [[ "$MOUNTED_SYS" -eq 1 ]]; then
-    umount "$MNT_DIR/sys" 2>/dev/null
-  fi
-  if [[ "$MOUNTED_DEVPTS" -eq 1 ]]; then
-    umount "$MNT_DIR/dev/pts" 2>/dev/null
-  fi
-  if [[ "$MOUNTED_DEV" -eq 1 ]]; then
-    umount "$MNT_DIR/dev" 2>/dev/null
-  fi
-  if [[ "$MOUNTED_BOOT" -eq 1 ]]; then
-    umount "$MNT_DIR/boot/firmware" 2>/dev/null
-  fi
-  if [[ "$MOUNTED_ROOT" -eq 1 ]]; then
-    umount "$MNT_DIR" 2>/dev/null
-  fi
-  if [[ -n "$LOOP_DEV" ]]; then
-    kpartx -dv "$WORK_IMAGE" 2>/dev/null
-    LOOP_DEV=""
-  fi
-
-  set -e
-  exit "$exit_code"
-}
-trap cleanup EXIT
-
-# --- Domain functions --------------------------------------------------------
+# --- Argument parsing --------------------------------------------------------
 
 parse_args() {
   DEVICE_ID=""
@@ -96,7 +86,7 @@ parse_args() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --device-id)   [[ $# -ge 2 ]] || err "--device-id requires a value"; DEVICE_ID="$2"; shift 2 ;;
+      --device-id)    [[ $# -ge 2 ]] || err "--device-id requires a value"; DEVICE_ID="$2"; shift 2 ;;
       --customer-tag) [[ $# -ge 2 ]] || err "--customer-tag requires a value"; CUSTOMER_TAG="$2"; shift 2 ;;
       --tailscale-key) [[ $# -ge 2 ]] || err "--tailscale-key requires a value"; TAILSCALE_KEY="$2"; shift 2 ;;
       --dev)
@@ -109,111 +99,40 @@ parse_args() {
     esac
   done
 
-  [[ -n "$DEVICE_ID" ]]    || err "Missing --device-id (or set PI_DEV_DEVICE_ID with --dev)"
-  [[ -n "$CUSTOMER_TAG" ]] || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
+  [[ -n "$DEVICE_ID" ]]     || err "Missing --device-id (or set PI_DEV_DEVICE_ID with --dev)"
+  [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
   [[ -n "$TAILSCALE_KEY" ]] || err "Missing --tailscale-key (or set PI_DEV_TAILSCALE_KEY with --dev)"
-
-  WORK_IMAGE="$WORK_DIR/kioskkit-${DEVICE_ID}.img"
 
   log "Building image for device=$DEVICE_ID customer=$CUSTOMER_TAG"
 }
 
-download_pios() {
-  if [[ -f "$CACHED_IMAGE" ]]; then
-    log "Using cached Pi OS image."
-    return 0
-  fi
+# --- SD image specific functions ---------------------------------------------
 
-  log "Downloading Raspberry Pi OS Lite..."
-  mkdir -p "$WORK_DIR"
-  local xz_file="$WORK_DIR/raspios.img.xz"
-  curl -fL -o "$xz_file" "$PIOS_URL"
-  log "Verifying checksum..."
-  echo "$PIOS_CHECKSUM  $xz_file" | sha256sum -c - || err "Checksum mismatch for downloaded image"
-  log "Decompressing..."
-  xz -d "$xz_file"
+save_original_boot_state() {
+  log "Saving original Pi boot state for later restoration..."
+  local orig_dir="$WORK_DIR/original-boot"
+  mkdir -p "$orig_dir"
+
+  # Save original fstab and list boot firmware contents
+  guestfish --ro -a "$DISK_IMAGE" <<EOF
+run
+mount /dev/sda2 /
+mount /dev/sda1 /boot/firmware
+download /etc/fstab $orig_dir/fstab
+# List boot firmware files so we know what belongs to Pi vs. virt kernel
+ls /boot/firmware
+EOF
+  # Also save the partition info for reference
+  guestfish --ro -a "$DISK_IMAGE" <<'EOF' > "$orig_dir/boot-files.txt"
+run
+mount /dev/sda1 /
+ls /
+EOF
+  log "Original boot state saved to $orig_dir"
 }
 
-prepare_image() {
-  log "Preparing working image..."
-  cp "$CACHED_IMAGE" "$WORK_IMAGE"
-
-  log "Expanding image to $IMAGE_SIZE..."
-  truncate -s "$IMAGE_SIZE" "$WORK_IMAGE"
-
-  log "Expanding root partition..."
-  parted -s "$WORK_IMAGE" resizepart 2 100%
-
-  # Set up loop device to resize filesystem
-  local kpartx_out
-  kpartx_out=$(kpartx -av "$WORK_IMAGE")
-  local loop_name
-  loop_name=$(echo "$kpartx_out" | grep -m1 'loop' | awk '{print $3}' | sed 's/p[0-9]*$//')
-  local root_dev="/dev/mapper/${loop_name}p2"
-
-  log "Running e2fsck and resize2fs on $root_dev..."
-  e2fsck -f -y "$root_dev" || true
-  resize2fs "$root_dev"
-
-  kpartx -dv "$WORK_IMAGE"
-  log "Image prepared."
-}
-
-mount_image() {
-  log "Mounting image partitions..."
-  mkdir -p "$MNT_DIR"
-
-  local kpartx_out
-  kpartx_out=$(kpartx -av "$WORK_IMAGE")
-  local loop_name
-  loop_name=$(echo "$kpartx_out" | grep -m1 'loop' | awk '{print $3}' | sed 's/p[0-9]*$//')
-  LOOP_DEV="$loop_name"
-
-  local boot_dev="/dev/mapper/${loop_name}p1"
-  local root_dev="/dev/mapper/${loop_name}p2"
-
-  mount "$root_dev" "$MNT_DIR"
-  MOUNTED_ROOT=1
-
-  mkdir -p "$MNT_DIR/boot/firmware"
-  mount "$boot_dev" "$MNT_DIR/boot/firmware"
-  MOUNTED_BOOT=1
-
-  log "Image mounted at $MNT_DIR"
-}
-
-setup_chroot() {
-  log "Setting up chroot environment..."
-
-  mount -t proc proc "$MNT_DIR/proc"
-  MOUNTED_PROC=1
-
-  mount -t sysfs sys "$MNT_DIR/sys"
-  MOUNTED_SYS=1
-
-  mount -o bind /dev "$MNT_DIR/dev"
-  MOUNTED_DEV=1
-
-  mount -o bind /dev/pts "$MNT_DIR/dev/pts"
-  MOUNTED_DEVPTS=1
-
-  # DNS resolution
-  cp /etc/resolv.conf "$MNT_DIR/etc/resolv.conf"
-
-  # qemu-user-static for ARM binary execution
-  cp /usr/bin/qemu-aarch64-static "$MNT_DIR/usr/bin/"
-
-  # Install fake systemctl wrapper
-  log "Installing fake systemctl wrapper..."
-  mkdir -p "$MNT_DIR/usr/local/bin"
-  cp "$SCRIPT_DIR/chroot-bin/fake-systemctl" "$MNT_DIR/usr/local/bin/systemctl"
-  chmod +x "$MNT_DIR/usr/local/bin/systemctl"
-
-  log "Chroot environment ready."
-}
-
-run_ansible() {
-  log "Running Ansible provisioning (chroot connection)..."
+provision_with_ansible() {
+  log "Running Ansible provisioning..."
 
   local inventory_file="$WORK_DIR/inventory.yml"
   cat > "$inventory_file" <<EOF
@@ -222,132 +141,168 @@ all:
   children:
     kiosks:
       hosts:
-        sdimage:
-          ansible_connection: chroot
-          ansible_host: ${MNT_DIR}
+        qemu-pi:
+          ansible_host: localhost
+          ansible_port: $SSH_PORT
+          ansible_user: pi
+          ansible_ssh_pass: "raspberry"
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PreferredAuthentications=password -o PubkeyAuthentication=no"
           kioskkit_tailscale_auth_key: "skip"
           kioskkit_device_id: "${DEVICE_ID}"
           kioskkit_customer_tag: "${CUSTOMER_TAG}"
 EOF
 
-  ansible-playbook \
+  ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$inventory_file" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
-    --skip-tags tailscale \
+    --skip-tags tailscale,security,watchdog \
     -e "kioskkit_tailscale_auth_key=skip" \
-    || err "Ansible provisioning failed. Check logs above."
-
-  log "Ansible provisioning complete."
+    || err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
-install_tailscale() {
-  log "Installing Tailscale package inside chroot..."
+restore_pi_boot_state() {
+  log "Restoring native Pi boot state..."
+  local orig_dir="$WORK_DIR/original-boot"
 
-  chroot "$MNT_DIR" /bin/bash -c '
-    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg \
-      > /usr/share/keyrings/tailscale-archive-keyring.gpg
-    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list \
-      > /etc/apt/sources.list.d/tailscale.list
-    apt-get update -qq
-    apt-get install -y -qq tailscale
-  '
+  # Restore original fstab (PARTUUID-based) and remove virt kernel files.
+  # The virt kernel modules go under /usr/lib/modules/<virt-kver>/; the Pi's
+  # native kernel modules are under a different version directory and are untouched.
+  #
+  # We need to identify virt kernel modules to remove. They were added by
+  # patch_image_for_virt from the Debian kernel. The Pi's native modules
+  # are from the Raspberry Pi kernel and have a different version string.
+  local virt_kver
+  virt_kver=$(ls "$WORK_DIR/patch-files/kernel-root/lib/modules/" 2>/dev/null | head -1 || true)
 
-  log "Tailscale installed."
+  local gf_cmds="$WORK_DIR/restore-boot.cmd"
+  {
+    echo "add $DISK_IMAGE"
+    echo "run"
+    echo "mount /dev/sda2 /"
+    echo "upload $orig_dir/fstab /etc/fstab"
+    # Remove virt kernel modules if we know the version
+    if [[ -n "$virt_kver" ]]; then
+      echo "rm-rf /usr/lib/modules/$virt_kver"
+    fi
+    # Remove virt boot files (vmlinuz-*, config-*, System.map-* from Debian kernel)
+    # These were uploaded to /boot/ by patch_image_for_virt. The Pi's real kernel
+    # lives in /boot/firmware/ on the boot partition (sda1), which we didn't touch.
+    echo "glob rm /boot/vmlinuz-*"
+    echo "glob rm /boot/config-*"
+    echo "glob rm /boot/System.map-*"
+  } > "$gf_cmds"
+
+  guestfish < "$gf_cmds" || log "WARN: Some restore commands failed (may be OK if files didn't exist)"
+  rm -f "$gf_cmds"
+
+  log "Pi boot state restored."
 }
 
-inject_firstboot_service() {
-  log "Injecting first-boot Tailscale service..."
+inject_tailscale_firstboot() {
+  log "Injecting Tailscale first-boot service..."
+
+  local inject_dir="$WORK_DIR/inject-files"
+  mkdir -p "$inject_dir/etc/kioskkit"
 
   # Write config file with device-specific values
-  mkdir -p "$MNT_DIR/etc/kioskkit"
-  cat > "$MNT_DIR/etc/kioskkit/tailscale-firstboot.conf" <<EOF
+  cat > "$inject_dir/tailscale-firstboot.conf" <<EOF
 DEVICE_ID=${DEVICE_ID}
 CUSTOMER_TAG=${CUSTOMER_TAG}
 TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
 EOF
-  chmod 600 "$MNT_DIR/etc/kioskkit/tailscale-firstboot.conf"
 
-  # Copy service file and script
-  cp "$SCRIPT_DIR/first-boot/kioskkit-tailscale-firstboot.service" \
-    "$MNT_DIR/etc/systemd/system/"
+  # Download Tailscale arm64 .deb for offline installation
+  log "Downloading Tailscale arm64 .deb..."
+  local ts_deb="$inject_dir/tailscale.deb"
+  curl -fSL -o "$ts_deb" "$TAILSCALE_DEB_URL" \
+    || err "Failed to download Tailscale .deb from $TAILSCALE_DEB_URL"
 
-  mkdir -p "$MNT_DIR/opt/kioskkit/system"
-  cp "$SCRIPT_DIR/first-boot/tailscale-firstboot.sh" \
-    "$MNT_DIR/opt/kioskkit/system/"
-  chmod +x "$MNT_DIR/opt/kioskkit/system/tailscale-firstboot.sh"
+  # Use guestfish to inject everything into the image
+  guestfish --rw -a "$DISK_IMAGE" -m /dev/sda2 <<EOF
+# Tailscale first-boot config
+mkdir-p /etc/kioskkit
+upload $inject_dir/tailscale-firstboot.conf /etc/kioskkit/tailscale-firstboot.conf
+chmod 0600 /etc/kioskkit/tailscale-firstboot.conf
 
-  # Enable via symlink
-  mkdir -p "$MNT_DIR/etc/systemd/system/multi-user.target.wants"
-  ln -sf /etc/systemd/system/kioskkit-tailscale-firstboot.service \
-    "$MNT_DIR/etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service"
+# First-boot service and script
+upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-tailscale-firstboot.service /etc/systemd/system/kioskkit-tailscale-firstboot.service
+mkdir-p /opt/kioskkit/system
+upload $REPO_ROOT/deploy/pi/first-boot/tailscale-firstboot.sh /opt/kioskkit/system/tailscale-firstboot.sh
+chmod 0755 /opt/kioskkit/system/tailscale-firstboot.sh
 
-  log "First-boot service injected."
+# Enable the first-boot service
+mkdir-p /etc/systemd/system/multi-user.target.wants
+ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service
+
+# Install Tailscale .deb — extract manually since we can't run dpkg (ARM binary).
+# We extract to a temp dir, then copy the files into the image.
+EOF
+
+  # Extract Tailscale .deb on the host and copy files into the image
+  local ts_root="$inject_dir/tailscale-root"
+  mkdir -p "$ts_root"
+  dpkg-deb -x "$ts_deb" "$ts_root"
+
+  # Build a guestfish command file to copy Tailscale files
+  local gf_cmds="$inject_dir/guestfish-ts.cmd"
+  {
+    echo "add $DISK_IMAGE"
+    echo "run"
+    echo "mount /dev/sda2 /"
+    # Copy binaries
+    if [ -f "$ts_root/usr/bin/tailscale" ]; then
+      echo "upload $ts_root/usr/bin/tailscale /usr/bin/tailscale"
+      echo "chmod 0755 /usr/bin/tailscale"
+    fi
+    if [ -f "$ts_root/usr/sbin/tailscaled" ]; then
+      echo "upload $ts_root/usr/sbin/tailscaled /usr/sbin/tailscaled"
+      echo "chmod 0755 /usr/sbin/tailscaled"
+    fi
+    # Copy systemd service
+    if [ -f "$ts_root/lib/systemd/system/tailscaled.service" ]; then
+      echo "upload $ts_root/lib/systemd/system/tailscaled.service /usr/lib/systemd/system/tailscaled.service"
+      echo "mkdir-p /etc/systemd/system/multi-user.target.wants"
+      echo "ln-sf /usr/lib/systemd/system/tailscaled.service /etc/systemd/system/multi-user.target.wants/tailscaled.service"
+    fi
+    # Copy defaults file if present
+    if [ -f "$ts_root/etc/default/tailscaled" ]; then
+      echo "mkdir-p /etc/default"
+      echo "upload $ts_root/etc/default/tailscaled /etc/default/tailscaled"
+    fi
+  } > "$gf_cmds"
+
+  guestfish < "$gf_cmds"
+  rm -rf "$inject_dir"
+
+  log "Tailscale first-boot service injected."
 }
 
-cleanup_chroot() {
-  log "Cleaning up chroot..."
-
-  # Remove fake systemctl wrapper — must NOT be in the final image
-  rm -f "$MNT_DIR/usr/local/bin/systemctl"
-
-  # Remove qemu binary
-  rm -f "$MNT_DIR/usr/bin/qemu-aarch64-static"
-
-  # Restore resolv.conf (remove our copy, the image has its own)
-  rm -f "$MNT_DIR/etc/resolv.conf"
-
-  # Clear apt caches
-  rm -rf "$MNT_DIR/var/cache/apt/archives/"*.deb
-  rm -rf "$MNT_DIR/var/lib/apt/lists/"*
-
-  log "Chroot cleaned."
-}
-
-unmount_image() {
-  log "Unmounting image..."
-
-  if [[ "$MOUNTED_PROC" -eq 1 ]]; then
-    umount "$MNT_DIR/proc"
-    MOUNTED_PROC=0
-  fi
-  if [[ "$MOUNTED_SYS" -eq 1 ]]; then
-    umount "$MNT_DIR/sys"
-    MOUNTED_SYS=0
-  fi
-  if [[ "$MOUNTED_DEVPTS" -eq 1 ]]; then
-    umount "$MNT_DIR/dev/pts"
-    MOUNTED_DEVPTS=0
-  fi
-  if [[ "$MOUNTED_DEV" -eq 1 ]]; then
-    umount "$MNT_DIR/dev"
-    MOUNTED_DEV=0
-  fi
-  if [[ "$MOUNTED_BOOT" -eq 1 ]]; then
-    umount "$MNT_DIR/boot/firmware"
-    MOUNTED_BOOT=0
-  fi
-  if [[ "$MOUNTED_ROOT" -eq 1 ]]; then
-    umount "$MNT_DIR"
-    MOUNTED_ROOT=0
-  fi
-  if [[ -n "$LOOP_DEV" ]]; then
-    kpartx -dv "$WORK_IMAGE"
-    LOOP_DEV=""
-  fi
-
-  log "Image unmounted."
+convert_to_raw() {
+  log "Converting qcow2 to raw image..."
+  local raw_output="$WORK_DIR/kioskkit-${DEVICE_ID}.img"
+  qemu-img convert -f qcow2 -O raw "$DISK_IMAGE" "$raw_output"
+  FINAL_IMAGE="$raw_output"
+  log "Raw image: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
 
 shrink_image() {
-  log "Shrinking image with PiShrink..."
+  log "Shrinking image..."
 
-  if [[ ! -f "$PISHRINK" ]]; then
-    curl -fL -o "$PISHRINK" "$PISHRINK_URL"
-    chmod +x "$PISHRINK"
+  # Use virt-sparsify if available, otherwise try PiShrink
+  if command -v virt-sparsify >/dev/null 2>&1; then
+    log "Using virt-sparsify..."
+    local sparse_output="$WORK_DIR/kioskkit-${DEVICE_ID}-sparse.img"
+    virt-sparsify "$FINAL_IMAGE" "$sparse_output"
+    mv "$sparse_output" "$FINAL_IMAGE"
+  else
+    log "Downloading PiShrink..."
+    local pishrink="$WORK_DIR/pishrink.sh"
+    curl -fL -o "$pishrink" "https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh"
+    chmod +x "$pishrink"
+    bash "$pishrink" "$FINAL_IMAGE"
   fi
 
-  bash "$PISHRINK" "$WORK_IMAGE"
-  log "Image shrunk."
+  log "Image shrunk: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
 
 # --- Main --------------------------------------------------------------------
@@ -355,23 +310,25 @@ shrink_image() {
 main() {
   parse_args "$@"
 
-  require_cmd qemu-aarch64-static ansible-playbook kpartx parted e2fsck resize2fs curl chroot
+  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl
   mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
 
   download_pios
-  prepare_image
-  mount_image
-  setup_chroot
-  run_ansible
-  install_tailscale
-  inject_firstboot_service
-  cleanup_chroot
-  unmount_image
+  prepare_disk
+  save_original_boot_state
+  patch_image_for_virt
+  boot_qemu
+  provision_with_ansible
+  wait_for_reboot
+  shutdown_qemu
+  restore_pi_boot_state
+  inject_tailscale_firstboot
+  convert_to_raw
   shrink_image
 
   # Move to output
   local output_file="$OUTPUT_DIR/kioskkit-${DEVICE_ID}.img"
-  mv "$WORK_IMAGE" "$output_file"
+  mv "$FINAL_IMAGE" "$output_file"
 
   local size
   size=$(du -h "$output_file" | cut -f1)

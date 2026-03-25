@@ -1,21 +1,16 @@
 # SD Card Image Builder
 
-Build flashable SD card images for KioskKit Pi devices — entirely on a local machine, no Pi hardware needed.
-
-Uses `qemu-user-static` chroot to run the existing Ansible provisioning playbook inside a stock Raspberry Pi OS image, producing a device-specific `.img` file ready for `dd` or balenaEtcher.
+Build flashable SD card images for KioskKit Pi devices using QEMU system emulation — no sudo, no chroot, no binfmt_misc required. Only Docker is needed on the host.
 
 ## Prerequisites
 
-Install on the build host (Debian/Ubuntu):
+- Docker (that's it — everything else is inside the container)
+
+For running **without Docker** (e.g. in CI or on a Debian build host):
 
 ```bash
-sudo apt-get install qemu-user-static binfmt-support kpartx parted ansible
-```
-
-Verify binfmt is registered:
-
-```bash
-ls /proc/sys/fs/binfmt_misc/qemu-aarch64
+sudo apt-get install qemu-system-arm qemu-utils libguestfs-tools \
+  linux-image-amd64 ansible sshpass curl xz-utils dpkg-dev python3 openssh-client
 ```
 
 ## Usage
@@ -23,11 +18,13 @@ ls /proc/sys/fs/binfmt_misc/qemu-aarch64
 ### Production build
 
 ```bash
-sudo ./deploy/pi/build-sd-image.sh \
+./deploy/pi/build-sd-image.sh \
   --device-id 042 \
   --customer-tag acme \
   --tailscale-key tskey-auth-XXXX
 ```
+
+The script auto-detects if it's running outside a container and re-execs inside Docker. No `sudo` needed.
 
 ### Dev build
 
@@ -37,7 +34,7 @@ Set environment variables and use `--dev`:
 export PI_DEV_DEVICE_ID=dev-001
 export PI_DEV_CUSTOMER_TAG=dev
 export PI_DEV_TAILSCALE_KEY=tskey-auth-XXXX
-sudo ./deploy/pi/build-sd-image.sh --dev
+./deploy/pi/build-sd-image.sh --dev
 ```
 
 ### Output
@@ -54,20 +51,34 @@ sudo dd if=deploy/pi/.output/kioskkit-042.img of=/dev/sdX bs=4M status=progress
 
 Or use [balenaEtcher](https://etcher.balena.io/).
 
+## How it works
+
+Uses the same QEMU system emulation approach as the Pi emulator (`dev/pi-emulator/build-image.sh`), with shared code in `deploy/pi/lib/pi-image-common.sh`:
+
+1. Downloads and caches Raspberry Pi OS Lite (arm64, Bookworm)
+2. Converts to qcow2, resizes partition and filesystem
+3. Saves original Pi boot state (fstab, boot firmware listing)
+4. Patches image for QEMU virt machine (Debian arm64 kernel, virtio modules, initrd)
+5. Creates pi user via passwd/shadow/group file edits
+6. Boots the image in QEMU with direct kernel boot (`-kernel`/`-initrd`)
+7. Runs `ansible-playbook provision.yml` over SSH (skips tailscale, security, watchdog tags)
+8. Waits for Ansible reboot, then shuts down QEMU cleanly
+9. Restores native Pi boot state (original fstab, removes virt kernel artifacts)
+10. Injects Tailscale first-boot service and arm64 .deb (offline install)
+11. Converts qcow2 → raw .img and shrinks with virt-sparsify or PiShrink
+
 ## What the image contains
 
-The build runs the full Ansible provisioning playbook (`deploy/pi/ansible/playbooks/provision.yml`) inside the image via chroot, which configures:
+The build runs the full Ansible provisioning playbook (`deploy/pi/ansible/playbooks/provision.yml`) inside a booted VM, which configures:
 
 - **OS packages**: Node.js, sway, Chromium, nftables, wpa_supplicant, etc.
 - **Kiosk user**: locked system user with autologin
 - **Application**: full pnpm install + build of the kiosk client
 - **Systemd services**: kioskkit.service, nftables, wpa_supplicant
 - **Display**: sway config, Chromium policies, getty autologin
-- **Security**: USB storage blocked, sysctl hardening, firewall, SSH hardened
-- **Watchdog**: bcm2835_wdt configured
 - **Filesystem**: tmpfs on /tmp, noatime, performance governor
 - **WiFi**: management scripts with sudoers rules
-- **Tailscale**: package installed, first-boot authentication service
+- **Tailscale**: arm64 .deb pre-installed, first-boot authentication service
 
 ## First-boot behavior
 
@@ -81,66 +92,74 @@ Tailscale cannot authenticate during the offline image build. Instead, the image
 
 The auth key is embedded in the image — use a single-use or short-lived key for production.
 
-## How it works
+## Docker image
 
-1. Downloads and caches Raspberry Pi OS Lite (arm64, Bookworm)
-2. Copies and expands the image to 6GB
-3. Loop-mounts both partitions (boot + root) via `kpartx`
-4. Sets up a chroot with bind mounts, DNS, and `qemu-aarch64-static`
-5. Installs a fake `systemctl` wrapper (standard pi-gen pattern) for chroot compatibility
-6. Runs `ansible-playbook provision.yml` with `ansible_connection: chroot`
-7. Installs the Tailscale package via apt
-8. Injects the first-boot Tailscale authentication service
-9. Cleans up the chroot (removes wrapper, caches, qemu binary)
-10. Unmounts everything and detaches loop devices
-11. Shrinks the image with PiShrink (auto-expands on first boot)
+The `Dockerfile` at `deploy/pi/Dockerfile` provides all build dependencies:
+
+```bash
+# Build the Docker image manually (normally done automatically)
+docker build -t kioskkit-sd-builder deploy/pi/
+
+# Run directly
+docker run --rm \
+  -v "$PWD:/workspace:ro" \
+  -v "$PWD/deploy/pi/.output:/output" \
+  kioskkit-sd-builder --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
+```
+
+## Shared library
+
+The QEMU image-building logic is shared between the SD card builder and the Pi emulator via `deploy/pi/lib/pi-image-common.sh`. This library provides:
+
+- Pi OS download with checksum verification
+- Disk preparation (qcow2 conversion, partition/filesystem resize)
+- Debian arm64 kernel download, extraction, and image patching
+- Pi user creation via passwd/shadow/group file edits
+- Initrd building with virtio modules and ARM64 busybox
+- QEMU boot, SSH wait (with death detection), reboot wait, shutdown
+- Utility functions (log, err, require_cmd, ssh_pi)
 
 ## Troubleshooting
 
-### "Required command not found"
+### "Docker is required when running outside a container"
 
-Install the missing prerequisite. The script checks for: `qemu-aarch64-static`, `ansible-playbook`, `kpartx`, `parted`, `e2fsck`, `resize2fs`, `curl`, `chroot`.
+Install Docker, or install the native prerequisites listed above.
 
-### Stale mounts after a failed build
+### QEMU boot fails / SSH timeout
 
-If the script crashes without cleanup:
+Check `$WORK_DIR/qemu-console.log` for kernel panic messages. Common causes:
+- Insufficient RAM (increase `SD_BUILD_RAM`, default 4G)
+- Kernel/initrd mismatch (delete `.work/` and rebuild)
 
+### Ansible provisioning fails
+
+The VM is left running on port 2222 for debugging. SSH in with:
 ```bash
-sudo umount -R deploy/pi/.work/mnt
-sudo kpartx -dv deploy/pi/.work/kioskkit-*.img
+sshpass -p raspberry ssh -o StrictHostKeyChecking=no -p 2222 pi@localhost
 ```
-
-### Ansible fails in chroot
-
-Check that binfmt_misc is properly registered for aarch64. The chroot runs ARM binaries through `qemu-aarch64-static` transparently.
 
 ## Maintainability
 
-What to update when things change:
-
 | Change | What to update |
 |--------|---------------|
-| **New Pi OS release** | `PIOS_URL` and `PIOS_CHECKSUM` in `build-sd-image.sh` (lines 21–22). Delete `.work/raspios.img` to force re-download. |
-| **Image needs more space** | `IMAGE_SIZE` in `build-sd-image.sh` (line 24). Current default is 6GB. |
-| **Ansible playbook changes** | Nothing — the build script runs `provision.yml` directly, so changes are picked up automatically. |
-| **New Ansible roles that call systemctl** | Verify `chroot-bin/fake-systemctl` handles the new subcommands (enable/disable/daemon-reload are covered). |
-| **Tailscale install method changes** | Update `install_tailscale()` in `build-sd-image.sh`. It currently adds the Tailscale apt repo and installs inside the chroot. |
-| **First-boot service changes** | Edit `first-boot/tailscale-firstboot.sh` and/or `first-boot/kioskkit-tailscale-firstboot.service`. The config path `/etc/kioskkit/tailscale-firstboot.conf` is referenced in both the service script and the build script's `inject_firstboot_service()`. |
-| **New device credentials or flags** | Add to `parse_args()` in `build-sd-image.sh` and to the config file written in `inject_firstboot_service()`. |
-| **Adding new prerequisites** | Add the command to the `require_cmd` call in `main()` and document in the Prerequisites section above. |
-| **CI shellcheck** | Shell scripts are linted in `ci.yml`. Add new scripts to the `shellcheck` step. |
+| **New Pi OS release** | `PIOS_URL` and `PIOS_CHECKSUM` in both `build-sd-image.sh` and `lib/pi-image-common.sh` |
+| **Ansible playbook changes** | Nothing — the build runs `provision.yml` directly |
+| **Tailscale version** | `TAILSCALE_VERSION` and `TAILSCALE_DEB_URL` in `build-sd-image.sh` |
+| **Shared build logic** | Edit `deploy/pi/lib/pi-image-common.sh` (used by both emulator and SD builder) |
+| **First-boot service** | Edit `first-boot/tailscale-firstboot.sh` and/or the `.service` file |
 
 ## File structure
 
 ```
 deploy/pi/
-  build-sd-image.sh           # Main build script
-  chroot-bin/
-    fake-systemctl             # systemctl wrapper for chroot (not shipped in image)
+  build-sd-image.sh             # Main build script (QEMU system emulation)
+  Dockerfile                    # Container with all build dependencies
+  lib/
+    pi-image-common.sh          # Shared functions (emulator + SD builder)
   first-boot/
     kioskkit-tailscale-firstboot.service  # Systemd one-shot unit
     tailscale-firstboot.sh               # First-boot auth script
-  ansible/                     # Existing Ansible playbooks and roles
-  .output/                     # Built images (gitignored)
-  .work/                       # Build cache (gitignored)
+  ansible/                      # Existing Ansible playbooks and roles
+  .output/                      # Built images (gitignored)
+  .work/                        # Build cache (gitignored)
 ```
