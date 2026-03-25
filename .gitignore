@@ -8,4 +8,6 @@ data/
 .venv/
 docker-compose.override.yml
 .screenshots/
+dev/pi-emulator/golden.qcow2
+dev/pi-emulator/.work/
 dev/agents/container/docker-compose.override.yml
