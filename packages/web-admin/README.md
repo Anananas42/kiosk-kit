@@ -1,4 +1,4 @@
-# @kioskkit/admin-client
+# @kioskkit/web-admin
 
 Admin dashboard for KioskKit platform operators, hosted at **admin.kioskk.net**. Built with [react-admin](https://marmelab.com/react-admin/) v5.
 
@@ -42,7 +42,7 @@ React-admin resource components live in `src/resources/`, one file per resource.
 ## Local development
 
 ```bash
-pnpm --filter @kioskkit/admin-client dev
+pnpm --filter @kioskkit/web-admin dev
 ```
 
 The dev server runs on **port 5175** and proxies `/api` requests to `http://localhost:3002`.

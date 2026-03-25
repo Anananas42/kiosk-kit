@@ -38,7 +38,7 @@ packages/
 ├── kiosk-server/    # Pi backend — Hono + SQLite (port 3001)
 ├── web-client/      # Manager dashboard — React + Vite (port 5174)
 ├── web-server/      # Cloud backend — Hono + Postgres (port 3002)
-├── admin-client/    # Platform admin panel — React-Admin (admin.* subdomain)
+├── web-admin/       # Platform admin panel — React-Admin (admin.* subdomain)
 └── landing/         # Marketing site + interactive demo — Astro (port 4321)
 
 deploy/
@@ -99,7 +99,7 @@ Periodically reads each Pi's SQLite database over Tailscale for backup snapshots
 
 Manager dashboard SPA. Login via Google SSO. Shows a device grid (online/offline, last backup). Click a device to open its management view, which embeds the device's own kiosk-admin SPA in an iframe (proxied through the web-server over Tailscale). The web-client is a thin orchestration shell — auth, device list, status monitoring — while all kiosk management UI lives on the device itself. This eliminates version coupling between the cloud and kiosk software.
 
-### admin-client
+### web-admin
 
 Platform admin panel (react-admin) served at the `admin.*` subdomain. For platform operators only — manage all users and devices across the system. Distinct from kiosk-admin which is per-device management for customers.
 

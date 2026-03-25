@@ -28,7 +28,7 @@ Based on the changed files, start the required dev servers. Match changed file p
 | `packages/web-client/` | `pnpm --filter @kioskkit/web-client dev &` (port 5173) AND `pnpm --filter @kioskkit/web-server dev &` (port 3002) |
 | `packages/kiosk-client/` | `pnpm --filter @kioskkit/kiosk-client dev &` (port 5174) AND `pnpm --filter @kioskkit/kiosk-server dev &` (port 3001) |
 | `packages/kiosk-admin/` | `pnpm --filter @kioskkit/kiosk-admin dev &` (port 5176) AND `pnpm --filter @kioskkit/kiosk-server dev &` (port 3001) |
-| `packages/admin-client/` | `pnpm --filter @kioskkit/admin-client dev &` (port 5175) AND `pnpm --filter @kioskkit/web-server dev &` (port 3002) |
+| `packages/web-admin/` | `pnpm --filter @kioskkit/web-admin dev &` (port 5175) AND `pnpm --filter @kioskkit/web-server dev &` (port 3002) |
 | `packages/landing/` | `pnpm --filter @kioskkit/landing dev &` (port 4321) |
 | `packages/web-server/` | `pnpm --filter @kioskkit/web-server dev &` (port 3002) |
 | `packages/kiosk-server/` | `pnpm --filter @kioskkit/kiosk-server dev &` (port 3001) |

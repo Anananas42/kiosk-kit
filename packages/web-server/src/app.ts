@@ -41,10 +41,10 @@ export function createApp(db: Db, google?: Google) {
 
   app.route("/api/devices", deviceProxyRoutes(db));
 
-  // Host-based static serving: admin.* → admin-client, everything else → web-client
-  const adminAssets = serveStatic({ root: "../admin-client/dist" });
+  // Host-based static serving: admin.* → web-admin, everything else → web-client
+  const adminAssets = serveStatic({ root: "../web-admin/dist" });
   const webAssets = serveStatic({ root: "../web-client/dist" });
-  const adminFallback = serveStatic({ root: "../admin-client/dist", path: "index.html" });
+  const adminFallback = serveStatic({ root: "../web-admin/dist", path: "index.html" });
   const webFallback = serveStatic({ root: "../web-client/dist", path: "index.html" });
 
   app.use("/assets/*", (c, next) => {

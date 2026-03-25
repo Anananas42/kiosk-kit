@@ -72,7 +72,7 @@ case "$PROFILE" in
   all)
     echo "  web-server     → http://localhost:3002"
     echo "  web-client     → http://localhost:5174"
-    echo "  admin-client   → http://localhost:5175"
+    echo "  web-admin      → http://localhost:5175"
     echo "  kiosk-server   → http://localhost:3001"
     echo "  kiosk-client   → http://localhost:5173"
     echo "  kiosk-admin    → http://localhost:5176"
@@ -83,9 +83,9 @@ case "$PROFILE" in
   web)
     echo "  web-server     → http://localhost:3002"
     echo "  web-client     → http://localhost:5174"
-    echo "  admin-client   → http://localhost:5175"
+    echo "  web-admin      → http://localhost:5175"
     echo ""
-    exec pnpm exec turbo dev --filter=@kioskkit/web-server --filter=@kioskkit/web-client --filter=@kioskkit/admin-client --output-logs=errors-only
+    exec pnpm exec turbo dev --filter=@kioskkit/web-server --filter=@kioskkit/web-client --filter=@kioskkit/web-admin --output-logs=errors-only
     ;;
   kiosk)
     echo "  kiosk-server   → http://localhost:3001"
