@@ -25,19 +25,19 @@ services:
 
   agent:
     build:
-      context: ../..
+      context: ../../..
       dockerfile: dev/agents/container/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - ../..:/mnt/repo:ro
+      - ../../..:/mnt/repo:ro
       - ${HOME}/.config/github-apps/kiosk-kit-agent.pem:/mnt/secrets/kiosk-kit-agent.pem:ro
       - ${HOME}/.claude/.credentials.json:/mnt/secrets/claude-credentials.json:ro
       - agent-node-modules:/workspace/node_modules
       - agent-pnpm-store:/home/agent/.local/share/pnpm/store
     env_file:
-      - ../../.env
+      - ../../../.env
     environment:
       CI: "true"
       DATABASE_URL: postgresql://kioskkit:kioskkit@postgres:5432/kioskkit

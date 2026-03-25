@@ -10,7 +10,7 @@
 #   tmux attach -t <project-name>
 
 set -euo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 
 COMPOSE_FILE="dev/agents/container/docker-compose.yml"
 

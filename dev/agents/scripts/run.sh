@@ -10,7 +10,7 @@
 #   ./dev/agents/scripts/run.sh --docker "task"          # start with Docker (DinD) sidecar
 
 set -euo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 
 BUILD_FLAG=""
 TASK=""
