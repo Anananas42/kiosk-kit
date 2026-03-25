@@ -42,7 +42,6 @@ export default function Confirm({
   const [qty, setQty] = useState(1);
   const [confirmingStorno, setConfirmingStorno] = useState(false);
   const [existingQty, setExistingQty] = useState<number | null>(null);
-  const [cancellable, setCancellable] = useState<number | null>(null);
 
   useEffect(() => {
     if (error) setConfirmingStorno(false);
@@ -52,10 +51,7 @@ export default function Confirm({
     if (!isPreorder) return;
     trpc["records.itemCount"]
       .query({ buyer, item: item.name, itemId: item.id, preorder: true })
-      .then((data) => {
-        setExistingQty(data.count);
-        setCancellable(data.cancellable ?? 0);
-      })
+      .then((data) => setExistingQty(data.count))
       .catch(() => {});
   }, [isPreorder, buyer, item.name, item.id]);
 
@@ -69,15 +65,8 @@ export default function Confirm({
     ? t("confirm.add")
     : t("confirm.addItem", { label: `${qtyLabel}${item.name}` });
 
-  const stornoQty =
-    isPreorder && cancellable !== null
-      ? Math.min(qty, cancellable)
-      : isPreorder && existingQty !== null
-        ? Math.min(qty, existingQty)
-        : qty;
-  const canStorno =
-    !isPreorder ||
-    (cancellable !== null ? cancellable > 0 : existingQty !== null && existingQty > 0);
+  const stornoQty = isPreorder && existingQty !== null ? Math.min(qty, existingQty) : qty;
+  const canStorno = !isPreorder || (existingQty !== null && existingQty > 0);
   const stornoLabel = isPreorder
     ? t("confirm.removeItem", { qty: stornoQty, item: item.name })
     : t("confirm.removeItemSimple", { item: item.name });
@@ -128,9 +117,6 @@ export default function Confirm({
                 : t("confirm.delivery", { date: deliveryDate })}
               {existingQty !== null && existingQty > 0 && (
                 <> &middot; {t("confirm.alreadyOrdered", { count: existingQty })}</>
-              )}
-              {existingQty !== null && existingQty > 0 && cancellable === 0 && (
-                <> &middot; {t("confirm.pastOrdersLocked")}</>
               )}
             </div>
           )}

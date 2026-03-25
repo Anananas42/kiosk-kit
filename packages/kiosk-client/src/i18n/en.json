@@ -32,7 +32,7 @@
   "confirm.perUnit": "{price}/pc",
   "confirm.delivery": "Delivery: {date}",
   "confirm.deliveryTotal": "Delivery: {date} · Total: {total}",
-  "confirm.alreadyOrdered": "Already ordered: {count} pc",
+  "confirm.alreadyOrdered": "Ordered: {count} pc",
   "confirm.sending": "Sending",
   "confirm.addQtyPrice": "Add {qty}\u00d7 for {price}",
   "confirm.addQty": "Add {qty}\u00d7",
@@ -46,7 +46,6 @@
   "confirm.confirmStorno": "Really cancel?",
   "confirm.yesRemove": "Yes, remove",
   "confirm.removeItemSimple": "Remove {item}",
-  "confirm.pastOrdersLocked": "Past deliveries cannot be cancelled.",
 
   "preorder.title": "🥐 Preorder items",
   "preorder.backToCategories": "Back to categories",

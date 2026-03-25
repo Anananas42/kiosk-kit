@@ -93,15 +93,15 @@ export const recordsRouter = router({
     .input(ItemCountInputSchema)
     .output(ItemCountResponseSchema)
     .query(({ ctx, input }) => {
-      const total = ctx.store.getItemBalance(input.buyer, input.item, input.itemId);
       if (input.preorder) {
         const config = ctx.store.getPreorderConfig();
         const noDD = config ? noDeliveryDaysSet(config.deliveryDays) : new Set<number>();
         const recs = ctx.store.getRecordsForItem(input.buyer, input.item, input.itemId);
         const today = getTodayString();
         const cancellable = getCancellableBalance(recs, noDD, today);
-        return { count: total, cancellable };
+        return { count: cancellable };
       }
+      const total = ctx.store.getItemBalance(input.buyer, input.item, input.itemId);
       return { count: total };
     }),
 });
