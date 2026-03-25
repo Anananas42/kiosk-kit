@@ -31,8 +31,15 @@ run_in_docker() {
   log "Running build inside Docker container..."
   mkdir -p "$SCRIPT_DIR/.output"
 
-  docker run --rm \
-    -v "$SCRIPT_DIR/.output:/workspace/deploy/pi/.output" \
+  local -a docker_args=(
+    --rm
+    -v "$SCRIPT_DIR/.output:/workspace/deploy/pi/.output"
+  )
+  # Forward QEMU tuning env vars into the container
+  [[ -n "${PI_EMU_RAM:-}" ]]  && docker_args+=(-e "PI_EMU_RAM=$PI_EMU_RAM")
+  [[ -n "${PI_EMU_CPUS:-}" ]] && docker_args+=(-e "PI_EMU_CPUS=$PI_EMU_CPUS")
+
+  docker run "${docker_args[@]}" \
     "$DOCKER_IMAGE_NAME" \
     ./deploy/pi/build-sd-image.sh "${args[@]}"
 }
