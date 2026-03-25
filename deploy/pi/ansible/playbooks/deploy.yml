@@ -7,15 +7,15 @@
   tasks:
     - name: Sync application files
       ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/../../"
+        src: "{{ playbook_dir }}/../../../../"
         dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/"
         delete: true
         rsync_opts:
           - "--exclude=node_modules"
           - "--exclude=.git"
           - "--exclude=data/"
-          - "--exclude=system/"
-          - "--exclude=ansible/"
+          - "--exclude=deploy/"
+          - "--exclude=dev/"
           - "--exclude=plans/"
           - "--exclude=.env"
 

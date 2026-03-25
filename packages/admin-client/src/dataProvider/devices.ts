@@ -27,9 +27,7 @@ export const devicesDataProvider: DataProvider = {
   getManyReference: async (_resource, params) => {
     const all = await trpc["devices.list"].query();
     const id = toStringId(params.id);
-    const data = all.filter(
-      (d) => String(d[params.target as keyof typeof d]) === id,
-    );
+    const data = all.filter((d) => String(d[params.target as keyof typeof d]) === id);
     return { data, total: data.length };
   },
 

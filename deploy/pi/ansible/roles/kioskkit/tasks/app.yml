@@ -9,15 +9,15 @@
 
 - name: Sync application files
   ansible.posix.synchronize:
-    src: "{{ playbook_dir }}/../../"
+    src: "{{ playbook_dir }}/../../../../"
     dest: "{{ kioskkit_install_dir }}/"
     delete: true
     rsync_opts:
       - "--exclude=node_modules"
       - "--exclude=.git"
       - "--exclude=data/"
-      - "--exclude=system/"
-      - "--exclude=ansible/"
+      - "--exclude=deploy/"
+      - "--exclude=dev/"
       - "--exclude=plans/"
       - "--exclude=.env"
   notify: Restart kioskkit
@@ -40,7 +40,7 @@
 
 - name: Deploy .env file
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../../.env"
+    src: "{{ playbook_dir }}/../../../../.env"
     dest: "{{ kioskkit_install_dir }}/.env"
     owner: "{{ kioskkit_user }}"
     group: "{{ kioskkit_user }}"

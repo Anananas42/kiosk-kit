@@ -3,10 +3,7 @@ import { useData } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
 export function ConsumptionTab() {
-  const fetcher = useCallback(
-    () => trpc["reports.consumption"].query().then((r) => r.rows),
-    [],
-  );
+  const fetcher = useCallback(() => trpc["reports.consumption"].query().then((r) => r.rows), []);
   const { data: rows, error, loading } = useData(fetcher);
 
   if (loading) return <p className="msg-loading">Loading...</p>;

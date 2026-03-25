@@ -1,7 +1,7 @@
-import { router } from "./trpc.js";
 import { devicesRouter } from "./routers/devices.js";
 import { meRouter } from "./routers/me.js";
 import { usersRouter } from "./routers/users.js";
+import { router } from "./trpc.js";
 
 export const appRouter = router({
   ...meRouter._def.procedures,

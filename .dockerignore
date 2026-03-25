@@ -6,4 +6,4 @@ data
 .env
 .claude/worktrees
 .screenshots
-ansible/.venv
+deploy/pi/ansible/.venv

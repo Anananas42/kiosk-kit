@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr:*)",
+      "Read(//home/adam/.claude/**)",
+      "Bash(2)",
+      "Bash(AGENT_TASK=\"List all MCP servers you have access to. Just their names, nothing else.\" AGENT_NO_LOOP=1 docker compose -f dev/agents/container/docker-compose.yml run --rm agent)",
+      "mcp__linear-server__save_issue"
+    ]
+  }
+}

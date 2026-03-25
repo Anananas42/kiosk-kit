@@ -2,7 +2,7 @@
 # Dispatch an agent container and clean up after it exits.
 #
 # Usage:
-#   AGENT_TASK="implement feature X" ./.agents/scripts/dispatch.sh my-project
+#   AGENT_TASK="implement feature X" ./dev/agents/scripts/dispatch.sh my-project
 #
 # The script starts the compose project in a tmux session named after the
 # project. The session waits for the agent to finish, tears down containers
@@ -12,7 +12,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-COMPOSE_FILE=".agents/container/docker-compose.yml"
+COMPOSE_FILE="dev/agents/container/docker-compose.yml"
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
