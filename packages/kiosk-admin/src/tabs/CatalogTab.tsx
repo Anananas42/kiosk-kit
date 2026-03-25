@@ -173,24 +173,24 @@ export function CatalogTab() {
             />
             <input
               type="text"
-              placeholder="e.g. 100g"
+              placeholder="Quantity (e.g. 100g)"
               value={itemQty}
               onChange={(e) => setItemQty(e.target.value)}
-              style={{ width: "6rem" }}
+              style={{ width: "10rem" }}
             />
             <input
               type="text"
-              placeholder="e.g. 12.50"
+              placeholder="Price (e.g. 12.50)"
               value={itemPrice}
               onChange={(e) => setItemPrice(e.target.value)}
-              style={{ width: "6rem" }}
+              style={{ width: "10rem" }}
             />
             <input
               type="text"
-              placeholder="e.g. 21"
+              placeholder="DPH % (e.g. 21)"
               value={itemDph}
               onChange={(e) => setItemDph(e.target.value)}
-              style={{ width: "6rem" }}
+              style={{ width: "10rem" }}
             />
             <button type="submit" className="btn btn-primary">
               Add Item
