@@ -442,3 +442,31 @@ cleanup_qemu() {
     wait "$QEMU_PID" 2>/dev/null || true
   fi
 }
+
+# --- Layer caching helpers --------------------------------------------------
+
+# compute_layer_hash paths... — deterministic hash of all files under given paths.
+# Works with both files and directories. Returns a single SHA-256 hex string.
+compute_layer_hash() {
+  find "$@" -type f \
+    -not -path "*/node_modules/*" \
+    -not -path "*/dist/*" \
+    -not -path "*/.turbo/*" \
+    -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
+}
+
+# create_cow_overlay base_image overlay_path — create a qcow2 overlay backed by base_image.
+# QEMU can boot the overlay and all writes go to the overlay file, leaving the base untouched.
+create_cow_overlay() {
+  local base_image="$1"
+  local overlay_path="$2"
+  [[ -f "$base_image" ]] || err "Base image not found: $base_image"
+  qemu-img create -f qcow2 -b "$base_image" -F qcow2 "$overlay_path"
+}
+
+# flatten_overlay overlay_path output_path — collapse a COW overlay into a standalone qcow2.
+flatten_overlay() {
+  local overlay_path="$1"
+  local output_path="$2"
+  qemu-img convert -f qcow2 -O qcow2 "$overlay_path" "$output_path"
+}
