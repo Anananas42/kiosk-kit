@@ -65,6 +65,30 @@ echo "==> Generating CLAUDE.md with all agent skills..."
 
 echo "==> Ready."
 
+# --- Claude invocation with retry ---
+CLAUDE_MAX_RETRIES=5
+CLAUDE_RETRY_DELAY=30
+
+run_claude() {
+  local attempt=0
+  while [ "$attempt" -lt "$CLAUDE_MAX_RETRIES" ]; do
+    attempt=$((attempt + 1))
+    echo "==> Running claude (attempt $attempt/$CLAUDE_MAX_RETRIES)..."
+    start_log_tailer
+    if claude --dangerously-skip-permissions -p "$@"; then
+      return 0
+    fi
+    local exit_code=$?
+    echo "==> Claude exited with code $exit_code (attempt $attempt/$CLAUDE_MAX_RETRIES)."
+    if [ "$attempt" -lt "$CLAUDE_MAX_RETRIES" ]; then
+      echo "==> Retrying in ${CLAUDE_RETRY_DELAY}s..."
+      sleep "$CLAUDE_RETRY_DELAY"
+    fi
+  done
+  echo "==> Claude failed after $CLAUDE_MAX_RETRIES attempts. Container will stay running but idle."
+  return 1
+}
+
 # --- Session log tailer ---
 # Claude Code writes all activity to a JSONL session file but prints nothing
 # to stdout during tool use. This background process tails the session file
@@ -119,11 +143,16 @@ stop_log_tailer() {
   fi
 }
 
+# From here on, claude failures should not kill the container
+set +e
+trap stop_log_tailer EXIT
+
 # If AGENT_TASK is set, run claude non-interactively
 if [ -n "${AGENT_TASK:-}" ]; then
-  start_log_tailer
-  trap stop_log_tailer EXIT
-  claude --dangerously-skip-permissions -p "$AGENT_TASK"
+  if ! run_claude "$AGENT_TASK"; then
+    echo "==> Initial task failed after retries. Sleeping indefinitely — container stays up for inspection."
+    sleep infinity
+  fi
   if [ -n "${AGENT_NO_LOOP:-}" ]; then
     echo "==> --no-loop set, skipping PR watch loop."
     exit 0
@@ -139,7 +168,7 @@ fi
 
 echo "==> Agent task complete. Starting PR watch loop..."
 
-POLL_INTERVAL=30
+POLL_INTERVAL=15
 ATTEMPT_COUNT=0
 MAX_ATTEMPTS=5
 SEEN_PR_COMMENTS=0
@@ -153,16 +182,18 @@ if [ "$BRANCH" = "main" ]; then
   echo "==> Still on main branch. Re-invoking claude to push and create PR..."
   ATTEMPT_COUNT=$((ATTEMPT_COUNT + 1))
   if [ "$ATTEMPT_COUNT" -gt "$MAX_ATTEMPTS" ]; then
-    echo "==> Max attempts ($MAX_ATTEMPTS) reached without creating a PR. Exiting."
-    exit 1
+    echo "==> Max attempts ($MAX_ATTEMPTS) reached without creating a PR. Sleeping indefinitely."
+    sleep infinity
   fi
-  start_log_tailer
-  claude --dangerously-skip-permissions -p "You completed the implementation but never pushed the branch or created a PR. Follow the cicd-workflow skill: create a branch, commit your changes, push, and open a PR. The Linear issue is in AGENT_TASK."
+  if ! run_claude "You completed the implementation but never pushed the branch or created a PR. Follow the cicd-workflow skill: create a branch, commit your changes, push, and open a PR. The Linear issue is in AGENT_TASK."; then
+    echo "==> Re-invocation failed after retries. Sleeping indefinitely."
+    sleep infinity
+  fi
   # Re-read branch after re-invocation
   BRANCH=$(git branch --show-current)
   if [ "$BRANCH" = "main" ]; then
-    echo "==> Still on main after re-invocation. Exiting."
-    exit 1
+    echo "==> Still on main after re-invocation. Sleeping indefinitely."
+    sleep infinity
   fi
 fi
 
@@ -184,15 +215,14 @@ done
 
 if [ -z "$PR_INIT_JSON" ]; then
   echo "==> No PR found after $PR_WAIT_MAX attempts. Re-invoking claude to create PR..."
-  start_log_tailer
-  claude --dangerously-skip-permissions -p "You pushed branch $BRANCH but no PR exists yet. Follow the cicd-workflow skill: create a PR using the GitHub App token, link it to the Linear issue, and enable auto-merge."
+  run_claude "You pushed branch $BRANCH but no PR exists yet. Follow the cicd-workflow skill: create a PR using the GitHub App token, link it to the Linear issue, and enable auto-merge." || true
   GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
   PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
 fi
 
 if [ -z "$PR_INIT_JSON" ]; then
-  echo "==> Still no PR after re-invocation. Exiting."
-  exit 1
+  echo "==> Still no PR after re-invocation. Sleeping indefinitely."
+  sleep infinity
 fi
 
 # Initialize seen comment counts
@@ -318,13 +348,15 @@ $REVIEW_ACTION"
     echo "==> Action needed (attempt $ATTEMPT_COUNT/$MAX_ATTEMPTS). Re-invoking claude..."
 
     if [ "$ATTEMPT_COUNT" -gt "$MAX_ATTEMPTS" ]; then
-      echo "==> Max attempts ($MAX_ATTEMPTS) reached. Leaving a comment and exiting."
-      GH_TOKEN="${GH_TOKEN}" gh pr comment "$PR_NUMBER" --body "Agent hit the maximum of $MAX_ATTEMPTS fix attempts. Human help needed."
-      exit 1
+      echo "==> Max attempts ($MAX_ATTEMPTS) reached. Leaving a comment and sleeping indefinitely."
+      GH_TOKEN="${GH_TOKEN}" gh pr comment "$PR_NUMBER" --body "Agent hit the maximum of $MAX_ATTEMPTS fix attempts. Human help needed." || true
+      sleep infinity
     fi
 
-    start_log_tailer
-    claude --dangerously-skip-permissions -p "$NEEDS_ACTION"
+    if ! run_claude "$NEEDS_ACTION"; then
+      echo "==> Watch loop claude invocation failed after retries. Sleeping indefinitely."
+      sleep infinity
+    fi
 
     # Update seen comment counts so handled comments don't re-trigger
     SEEN_PR_COMMENTS=$PR_COMMENTS

@@ -26,16 +26,22 @@ tmux kill-session -t "$PROJECT" 2>/dev/null || true
 log "Starting ${PROJECT}..."
 docker compose -p "$PROJECT" -f "$COMPOSE_FILE" up --build -d
 
-# Start a tmux session that waits for the agent, cleans up, then exits
+# Start a tmux session that waits for the agent, cleans up only on success
 tmux new-session -d -s "$PROJECT" "
   echo '[$(date '+%Y-%m-%d %H:%M:%S')] Watching ${PROJECT}...'
   cd '$(pwd)'
   EXIT_CODE=0
   docker compose -p '${PROJECT}' -f '${COMPOSE_FILE}' wait agent || EXIT_CODE=\$?
   echo \"\"
-  echo \"Agent exited with code \$EXIT_CODE. Cleaning up...\"
-  docker compose -p '${PROJECT}' -f '${COMPOSE_FILE}' down -v
-  echo 'Done. Press enter to close.'
+  if [ \$EXIT_CODE -eq 0 ]; then
+    echo \"Agent exited successfully. Cleaning up...\"
+    docker compose -p '${PROJECT}' -f '${COMPOSE_FILE}' down -v
+    echo 'Done. Press enter to close.'
+  else
+    echo \"Agent exited with code \$EXIT_CODE. Containers left running for inspection.\"
+    echo 'To clean up manually: docker compose -p ${PROJECT} -f ${COMPOSE_FILE} down -v'
+    echo 'Press enter to close this tmux session (containers will keep running).'
+  fi
   read
 "
 
