@@ -236,7 +236,11 @@ function AppInner({
         reset();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "";
-        if (msg === "insufficient_balance") {
+        if (msg === "delivery_passed") {
+          setConfirmError(
+            t("app.deliveryPassed", { buyer: state.buyerLabel!, item: state.item!.name }),
+          );
+        } else if (msg === "insufficient_balance") {
           setConfirmError(
             t("app.insufficientBalance", { buyer: state.buyerLabel!, item: state.item!.name }),
           );

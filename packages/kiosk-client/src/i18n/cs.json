@@ -5,6 +5,7 @@
   "app.added": "Přidáno: {label}",
   "app.removed": "Odebráno: {label}",
   "app.insufficientBalance": "Kupující {buyer} nemá žádný \"{item}\" k odebrání.",
+  "app.deliveryPassed": "Tato objednávka již byla doručena a nelze ji zrušit.",
   "app.connectionFailed": "Připojení selhalo. Zkuste to znovu.",
   "app.crash.title": "Server nedostupný",
   "app.crash.message": "Systém se restartuje. Prosím vyčkejte",
@@ -45,6 +46,7 @@
   "confirm.confirmStorno": "Opravdu stornovat?",
   "confirm.yesRemove": "Ano, odebrat",
   "confirm.removeItemSimple": "Odebrat {item}",
+  "confirm.pastOrdersLocked": "Již doručené objednávky nelze zrušit.",
 
   "preorder.title": "🥐 Předobjednávky",
   "preorder.backToCategories": "Zpět na kategorie",

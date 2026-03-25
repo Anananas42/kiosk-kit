@@ -166,6 +166,7 @@ export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;
 
 export const ItemCountResponseSchema = z.object({
   count: z.number().int(),
+  cancellable: z.number().int().optional(),
 });
 
 export type ItemCountResponse = z.infer<typeof ItemCountResponseSchema>;
@@ -296,4 +297,5 @@ export const ItemCountInputSchema = z.object({
   buyer: z.number().int().min(1),
   item: z.string().min(1),
   itemId: z.string().optional(),
+  preorder: z.boolean().optional(),
 });

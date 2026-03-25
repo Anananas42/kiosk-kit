@@ -44,6 +44,7 @@ describe("records.submit procedure", () => {
   it("rejects insufficient balance for negative count", async () => {
     const store = {
       getItemBalance: () => 0,
+      isCategoryPreorder: () => false,
       insertRecord: vi.fn(),
     } as unknown as Store;
     const caller = createCaller({ store });
