@@ -204,6 +204,7 @@ create_pi_user() {
   # Password auth is disabled by the security tasks after reboot,
   # so post-reboot SSH (wait_for_reboot, wifi setup, etc.) needs key auth.
   BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
+  rm -f "$BUILD_SSH_KEY" "${BUILD_SSH_KEY}.pub"
   ssh-keygen -t ed25519 -f "$BUILD_SSH_KEY" -N "" -q
 
   # Download files from image, edit on host, upload back
