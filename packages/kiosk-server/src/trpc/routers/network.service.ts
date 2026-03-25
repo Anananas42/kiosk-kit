@@ -2,24 +2,11 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import type { WifiNetwork, WifiStatus } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
+import { getMockWifiStatus } from "./network.mock.js";
 
 const execFile = promisify(execFileCb);
 
 const SCRIPTS_DIR = "/opt/kioskkit/system";
-
-const MOCK_STATUS: WifiStatus = {
-  current: { ssid: "HomeNetwork", signal: -45 },
-  ethernet: false,
-  saved: [
-    { ssid: "HomeNetwork", inRange: true, signal: -45 },
-    { ssid: "OfficeWifi", inRange: false },
-  ],
-  available: [
-    { ssid: "Neighbor5G", signal: -68, security: "wpa" },
-    { ssid: "CafeOpen", signal: -72, security: "open" },
-    { ssid: "IoTNetwork", signal: -80, security: "wpa" },
-  ],
-};
 
 async function runScript(script: string, args: string[] = []): Promise<string> {
   const path = `${SCRIPTS_DIR}/${script}`;
@@ -82,7 +69,7 @@ export async function getWifiStatus(): Promise<WifiStatus> {
       runScript("wifi-status.sh"),
     ]);
   } catch (err) {
-    if (isEnoent(err)) return MOCK_STATUS;
+    if (isEnoent(err)) return getMockWifiStatus();
     throw err;
   }
 
