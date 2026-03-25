@@ -56,7 +56,7 @@ COPY packages/shared/package.json packages/shared/
 COPY packages/kiosk-server/package.json packages/kiosk-server/
 COPY packages/kiosk-client/package.json packages/kiosk-client/
 COPY packages/kiosk-admin/package.json packages/kiosk-admin/
-COPY packages/admin-client/package.json packages/admin-client/
+COPY packages/web-admin/package.json packages/web-admin/
 COPY packages/web-server/package.json packages/web-server/
 COPY packages/web-client/package.json packages/web-client/
 COPY packages/landing/package.json packages/landing/
@@ -68,7 +68,7 @@ COPY packages/shared/ packages/shared/
 COPY packages/kiosk-server/ packages/kiosk-server/
 COPY packages/kiosk-client/ packages/kiosk-client/
 COPY packages/kiosk-admin/ packages/kiosk-admin/
-COPY packages/admin-client/ packages/admin-client/
+COPY packages/web-admin/ packages/web-admin/
 COPY turbo.json ./
 
 RUN pnpm turbo build --filter=@kioskkit/kiosk-server --filter=@kioskkit/kiosk-client --filter=@kioskkit/kiosk-admin
@@ -84,7 +84,7 @@ COPY packages/shared/package.json packages/shared/
 COPY packages/kiosk-server/package.json packages/kiosk-server/
 COPY packages/kiosk-client/package.json packages/kiosk-client/
 COPY packages/kiosk-admin/package.json packages/kiosk-admin/
-COPY packages/admin-client/package.json packages/admin-client/
+COPY packages/web-admin/package.json packages/web-admin/
 COPY packages/web-server/package.json packages/web-server/
 COPY packages/web-client/package.json packages/web-client/
 COPY packages/landing/package.json packages/landing/
