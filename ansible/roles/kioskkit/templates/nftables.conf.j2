@@ -1,6 +1,6 @@
 #!/usr/sbin/nft -f
 # Managed by Ansible — do not edit manually.
-# Pi-passive model: no outbound except Tailscale + DHCP.
+# Pi-passive model: no outbound except Tailscale + DHCP + wlan0 DNS/DHCP.
 
 flush ruleset
 
@@ -36,6 +36,10 @@ table inet filter {
 
         # DHCP (needed for initial network config)
         udp dport { 67, 68 } accept
+
+        # WiFi — DNS and DHCP on wlan0
+        oif "wlan0" udp dport 53 accept
+        oif "wlan0" udp dport { 67, 68 } accept
 
         # Tailscale (WireGuard UDP)
         udp dport 41641 accept
