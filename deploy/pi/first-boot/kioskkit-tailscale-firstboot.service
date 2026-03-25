@@ -1,0 +1,13 @@
+[Unit]
+Description=KioskKit Tailscale First Boot Authentication
+After=network-online.target tailscaled.service
+Wants=network-online.target
+ConditionPathExists=/etc/kioskkit/tailscale-firstboot.conf
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kioskkit/system/tailscale-firstboot.sh
+RemainAfterExit=false
+
+[Install]
+WantedBy=multi-user.target
