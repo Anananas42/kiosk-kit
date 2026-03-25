@@ -1,3 +1,4 @@
+import { formatCurrency, parsePrice } from "@kioskkit/shared";
 import { type FormEvent, useCallback, useState } from "react";
 import { useData, useFormStatus } from "../hooks.js";
 import { trpc } from "../trpc.js";
@@ -5,7 +6,12 @@ import { trpc } from "../trpc.js";
 export function CatalogTab() {
   const fetcher = useCallback(() => trpc["catalog.list"].query(), []);
   const { data: catalog, error, loading, reload } = useData(fetcher);
+  const settingsFetcher = useCallback(() => trpc["admin.settings.get"].query(), []);
+  const { data: settings } = useData(settingsFetcher);
   const form = useFormStatus();
+
+  const locale = settings?.locale ?? "cs";
+  const currency = settings?.currency ?? "CZK";
 
   const [catName, setCatName] = useState("");
   const [catPreorder, setCatPreorder] = useState(false);
@@ -107,7 +113,14 @@ export function CatalogTab() {
                   <span>
                     {item.name}
                     {item.quantity ? ` — ${item.quantity}` : ""}
-                    {item.price ? ` @ ${item.price}` : ""}
+                    {item.price
+                      ? ` @ ${formatCurrency(parsePrice(item.price), locale, currency)}`
+                      : ""}
+                    {item.dphRate ? (
+                      <span style={{ color: "#888", fontSize: "0.85em", marginLeft: "0.25em" }}>
+                        ({item.dphRate}% DPH)
+                      </span>
+                    ) : null}
                   </span>
                   <button
                     type="button"
@@ -151,11 +164,7 @@ export function CatalogTab() {
         <>
           <h4 className="section-heading">Add Item</h4>
           <form onSubmit={handleAddItem} className="form-row">
-            <select
-              value={itemCatId}
-              onChange={(e) => setItemCatId(e.target.value)}
-              required
-            >
+            <select value={itemCatId} onChange={(e) => setItemCatId(e.target.value)} required>
               <option value="">Select category</option>
               {catalog.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -172,24 +181,24 @@ export function CatalogTab() {
             />
             <input
               type="text"
-              placeholder="Quantity"
+              placeholder="Quantity (e.g. 100g)"
               value={itemQty}
               onChange={(e) => setItemQty(e.target.value)}
-              style={{ width: "6rem" }}
+              style={{ width: "10rem" }}
             />
             <input
               type="text"
-              placeholder="Price"
+              placeholder="Price (e.g. 12.50)"
               value={itemPrice}
               onChange={(e) => setItemPrice(e.target.value)}
-              style={{ width: "6rem" }}
+              style={{ width: "10rem" }}
             />
             <input
               type="text"
-              placeholder="DPH Rate"
+              placeholder="DPH % (e.g. 21)"
               value={itemDph}
               onChange={(e) => setItemDph(e.target.value)}
-              style={{ width: "6rem" }}
+              style={{ width: "10rem" }}
             />
             <button type="submit" className="btn btn-primary">
               Add Item
