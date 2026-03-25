@@ -11,6 +11,7 @@
 #
 # Usage:
 #   ./build-sd-image.sh --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
+#   ./build-sd-image.sh --device-id 042 --customer-tag acme   # auto-generates key via Tailscale API
 #   ./build-sd-image.sh --dev   # reads PI_DEV_* env vars
 
 set -euo pipefail
@@ -104,9 +105,71 @@ parse_args() {
 
   [[ -n "$DEVICE_ID" ]]     || err "Missing --device-id (or set PI_DEV_DEVICE_ID with --dev)"
   [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
-  [[ -n "$TAILSCALE_KEY" ]] || err "Missing --tailscale-key (or set PI_DEV_TAILSCALE_KEY with --dev)"
+
+  # If no explicit key provided, auto-generate one via Tailscale API
+  if [[ -z "$TAILSCALE_KEY" ]]; then
+    generate_tailscale_key
+  fi
 
   log "Building image for device=$DEVICE_ID customer=$CUSTOMER_TAG"
+}
+
+# --- Tailscale API key generation --------------------------------------------
+
+generate_tailscale_key() {
+  # Load .env from repo root if present
+  if [[ -f "$REPO_ROOT/.env" ]]; then
+    # Source only TAILSCALE_* vars, ignoring comments and blank lines
+    while IFS='=' read -r key value; do
+      case "$key" in
+        TAILSCALE_API_KEY|TAILSCALE_TAILNET) export "$key=$value" ;;
+      esac
+    done < <(grep -E '^TAILSCALE_(API_KEY|TAILNET)=' "$REPO_ROOT/.env")
+  fi
+
+  if [[ -z "${TAILSCALE_API_KEY:-}" ]] || [[ -z "${TAILSCALE_TAILNET:-}" ]]; then
+    err "No --tailscale-key provided and TAILSCALE_API_KEY/TAILSCALE_TAILNET not set.
+  Either pass --tailscale-key tskey-auth-XXXX explicitly, or set both
+  TAILSCALE_API_KEY and TAILSCALE_TAILNET in environment or .env file."
+  fi
+
+  log "Generating single-use Tailscale auth key via API..."
+
+  # Build tags array: always include tag:kioskkit, add customer tag if set
+  local tags='"tag:kioskkit"'
+  if [[ -n "$CUSTOMER_TAG" ]]; then
+    tags="$tags, \"tag:$CUSTOMER_TAG\""
+  fi
+
+  local description
+  description="kioskkit-${DEVICE_ID} build $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  local response
+  response=$(curl -fsS --max-time 30 \
+    -u "${TAILSCALE_API_KEY}:" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"capabilities\": {
+        \"devices\": {
+          \"create\": {
+            \"reusable\": false,
+            \"ephemeral\": false,
+            \"tags\": [$tags]
+          }
+        }
+      },
+      \"description\": \"$description\"
+    }" \
+    "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>&1) \
+    || err "Tailscale API call failed: $response"
+
+  TAILSCALE_KEY=$(printf '%s' "$response" | jq -r '.key // empty') \
+    || err "Failed to parse Tailscale API response"
+  [[ -n "$TAILSCALE_KEY" ]] || err "Tailscale API returned empty key. Response: $response"
+
+  local key_id
+  key_id=$(printf '%s' "$response" | jq -r '.id // "unknown"')
+  log "Generated Tailscale auth key: id=$key_id description=\"$description\""
 }
 
 # --- SD image specific functions ---------------------------------------------
@@ -318,7 +381,7 @@ shrink_image() {
 main() {
   parse_args "$@"
 
-  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl
+  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl jq
   mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
 
   download_pios
