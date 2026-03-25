@@ -28,6 +28,9 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 
 # Rebuild the image first (after Dockerfile changes or to update Claude Code)
 ./.agents/scripts/run.sh --build
+
+# Start with Docker-in-Docker sidecar (for tasks needing docker/docker compose)
+./.agents/scripts/run.sh --docker "Run integration tests for the Pi simulator"
 ```
 
 ## What the container provides
@@ -41,6 +44,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | GitHub CLI | `gh`, authenticated via app token from `.agents/scripts/github-app-token.sh` |
 | gh-attach | `gh attach` extension for uploading screenshots to PR comments |
 | Playwright | Chromium pre-installed for screenshot verification |
+| Docker CLI | Available in image; connects to DinD sidecar when `--docker` flag is used |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
 | Repo | Full copy from host bind mount (read-only source), writable workspace |
 | MCP servers | context7, stitch, Linear, Neon, postgres — all available |
@@ -99,6 +103,18 @@ Key properties:
 - **Runs exactly once per PR** — tracked via a marker file at `/tmp/.testing-done-<PR_NUMBER>`. Once touched, the testing agent is not re-invoked even if the loop continues polling.
 - **Does NOT modify code or push changes** — it is read-only. Any failures it finds must be addressed by the main agent in a subsequent fix cycle.
 - **Crash-safe** — the testing agent invocation uses `|| true`, so a crash does not kill the watch loop. The marker file is touched unconditionally after invocation.
+
+## Docker-in-Docker (DinD) sidecar
+
+Some tasks require Docker (e.g. running the Pi simulator with `pnpm dev:kiosk-sim`, or `pnpm test:integration`). Use the `--docker` flag to start a DinD sidecar alongside the agent:
+
+```bash
+./.agents/scripts/run.sh --docker "task that needs docker"
+```
+
+This starts a `docker:dind` container and sets `DOCKER_HOST=tcp://dind:2375` in the agent. The Docker CLI is pre-installed in the agent image. The sidecar only starts when `--docker` is passed — zero overhead otherwise.
+
+Inside the agent container, `docker` and `docker compose` commands work normally via the remote DinD daemon.
 
 ## Important: Do not wait for CI
 

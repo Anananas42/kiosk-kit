@@ -14,6 +14,14 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   && apt-get update && apt-get install -y gh \
   && rm -rf /var/lib/apt/lists/*
 
+# Docker CLI (for DinD sidecar — only the client, no daemon)
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg \
+    | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bookworm stable" \
+    > /etc/apt/sources.list.d/docker.list \
+  && apt-get update && apt-get install -y docker-ce-cli docker-compose-plugin \
+  && rm -rf /var/lib/apt/lists/*
+
 # pnpm + Claude Code
 RUN corepack enable pnpm \
   && corepack prepare pnpm@latest --activate \
