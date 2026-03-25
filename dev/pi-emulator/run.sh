@@ -24,8 +24,8 @@ KIOSK_PORT="${PI_EMU_KIOSK_PORT:-3001}"
 QEMU_RAM="${PI_EMU_RAM:-2G}"
 QEMU_CPUS="${PI_EMU_CPUS:-4}"
 
-UEFI_FW="$WORK_DIR/QEMU_EFI.fd"
-UEFI_VARS="$WORK_DIR/efivars.fd"
+KERNEL="$WORK_DIR/vmlinuz"
+INITRD="$WORK_DIR/initrd.img"
 
 # --- Helpers ------------------------------------------------------------------
 
@@ -47,6 +47,8 @@ done
 # --- Pre-flight ---------------------------------------------------------------
 
 [[ -f "$GOLDEN_IMAGE" ]] || err "Golden image not found. Run ./build-image.sh first."
+[[ -f "$KERNEL" ]] || err "Kernel not found at $KERNEL — run ./build-image.sh first."
+[[ -f "$INITRD" ]] || err "Initrd not found at $INITRD — run ./build-image.sh first."
 command -v qemu-system-aarch64 >/dev/null 2>&1 || err "qemu-system-aarch64 not found"
 
 # --- Create overlay -----------------------------------------------------------
@@ -62,32 +64,24 @@ if [[ ! -f "$OVERLAY" ]]; then
   qemu-img create -f qcow2 -b "$GOLDEN_IMAGE" -F qcow2 "$OVERLAY"
 fi
 
-# --- UEFI firmware (should exist from build, but check) -----------------------
-
-[[ -f "$UEFI_FW" ]] || err "UEFI firmware not found at $UEFI_FW — run ./build-image.sh first"
-[[ -f "$UEFI_VARS" ]] || err "UEFI vars not found at $UEFI_VARS — run ./build-image.sh first"
-
-# Use a copy of efivars so the original stays clean
-UEFI_VARS_OVERLAY="$WORK_DIR/efivars-run.fd"
-cp "$UEFI_VARS" "$UEFI_VARS_OVERLAY"
-
 # --- Boot QEMU ----------------------------------------------------------------
 
 QEMU_ARGS=(
   -M virt -cpu cortex-a72 -m "$QEMU_RAM" -smp "$QEMU_CPUS"
-  -drive "if=pflash,format=raw,file=$UEFI_FW,readonly=on"
-  -drive "if=pflash,format=raw,file=$UEFI_VARS_OVERLAY"
+  -kernel "$KERNEL"
+  -initrd "$INITRD"
+  -append "root=/dev/vda2 rw console=ttyAMA0 earlycon=pl011,0x09000000 panic=-1"
   -drive "if=virtio,file=$OVERLAY,format=qcow2"
   -nic "user,model=virtio,hostfwd=tcp::${SSH_PORT}-:22,hostfwd=tcp::${KIOSK_PORT}-:3001"
-  -nographic
 )
 
 if [[ $DAEMONIZE -eq 1 ]]; then
-  QEMU_ARGS+=(-daemonize -pidfile "$WORK_DIR/qemu.pid")
+  QEMU_ARGS+=(-display none -serial null -daemonize -pidfile "$WORK_DIR/qemu.pid")
   qemu-system-aarch64 "${QEMU_ARGS[@]}"
   QEMU_PID=$(cat "$WORK_DIR/qemu.pid")
   log "QEMU running in background (PID $QEMU_PID)"
 else
+  QEMU_ARGS+=(-nographic)
   log "Booting Pi emulator..."
 fi
 
