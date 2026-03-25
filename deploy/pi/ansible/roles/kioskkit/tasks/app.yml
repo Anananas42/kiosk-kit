@@ -55,6 +55,14 @@
   changed_when: true
   notify: Restart kioskkit
 
+- name: Create system config directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}/system/config"
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
 - name: Deploy display-sleep.py
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../system/config/display-sleep.py"
