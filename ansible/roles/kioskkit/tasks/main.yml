@@ -31,6 +31,10 @@
   ansible.builtin.import_tasks: filesystem.yml
   tags: [filesystem]
 
+- name: Configure WiFi management
+  ansible.builtin.import_tasks: wifi.yml
+  tags: [wifi]
+
 - name: Configure Tailscale
   ansible.builtin.import_tasks: tailscale.yml
   tags: [tailscale]

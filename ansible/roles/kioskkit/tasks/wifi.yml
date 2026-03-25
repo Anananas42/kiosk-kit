@@ -1,0 +1,35 @@
+---
+- name: Create WiFi scripts directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}/system"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy WiFi management scripts
+  ansible.builtin.copy:
+    src: "system/{{ item }}"
+    dest: "{{ kioskkit_install_dir }}/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - wifi-scan.sh
+    - wifi-connect.sh
+    - wifi-forget.sh
+    - wifi-status.sh
+
+- name: Deploy WiFi sudoers rules
+  ansible.builtin.template:
+    src: sudoers-wifi.j2
+    dest: /etc/sudoers.d/wifi
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Enable wpa_supplicant for wlan0
+  ansible.builtin.systemd:
+    name: "wpa_supplicant@wlan0.service"
+    enabled: true
