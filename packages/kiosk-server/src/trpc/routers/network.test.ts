@@ -26,14 +26,6 @@ function mockScriptFailure(errorJson: string) {
   });
 }
 
-function mockEnoent() {
-  mockExecFile.mockImplementation((_cmd: string, _args: string[], cb: Function) => {
-    const err = new Error("ENOENT") as NodeJS.ErrnoException;
-    err.code = "ENOENT";
-    cb(err);
-  });
-}
-
 describe("admin.network.list", () => {
   it("returns merged WiFi status from scripts", async () => {
     const scanResult = JSON.stringify([
@@ -64,16 +56,6 @@ describe("admin.network.list", () => {
       { ssid: "OldNetwork", inRange: false },
     ]);
     expect(result.available).toEqual([{ ssid: "Guest", signal: -70, security: "open" }]);
-  });
-
-  it("returns mock data when scripts are missing (dev mode)", async () => {
-    mockEnoent();
-    const caller = createCaller({ store });
-    const result = await caller["admin.network.list"]();
-
-    expect(result.current).toEqual({ ssid: "HomeNetwork", signal: -45 });
-    expect(result.available.length).toBeGreaterThanOrEqual(2);
-    expect(result.saved.length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -116,14 +98,6 @@ describe("admin.network.connect", () => {
       caller["admin.network.connect"]({ ssid: "Locked", password: "bad" }),
     ).rejects.toThrow("Wrong password");
   });
-
-  it("returns ok when scripts missing (dev mode)", async () => {
-    mockEnoent();
-    const caller = createCaller({ store });
-
-    const result = await caller["admin.network.connect"]({ ssid: "DevNet" });
-    expect(result).toEqual({ ok: true });
-  });
 });
 
 describe("admin.network.forget", () => {
@@ -148,13 +122,5 @@ describe("admin.network.forget", () => {
     await expect(caller["admin.network.forget"]({ ssid: "Unknown" })).rejects.toThrow(
       "Network not found",
     );
-  });
-
-  it("returns ok when scripts missing (dev mode)", async () => {
-    mockEnoent();
-    const caller = createCaller({ store });
-
-    const result = await caller["admin.network.forget"]({ ssid: "DevNet" });
-    expect(result).toEqual({ ok: true });
   });
 });

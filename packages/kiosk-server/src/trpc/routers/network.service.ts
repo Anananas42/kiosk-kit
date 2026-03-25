@@ -2,7 +2,6 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import type { WifiNetwork, WifiStatus } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
-import { getMockWifiStatus } from "./network.mock.js";
 
 const execFile = promisify(execFileCb);
 
@@ -14,7 +13,6 @@ async function runScript(script: string, args: string[] = []): Promise<string> {
     const { stdout } = await execFile(path, args);
     return stdout;
   } catch (err: unknown) {
-    if (isEnoent(err)) throw err;
     const message = parseScriptError(err);
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
   }
@@ -26,14 +24,9 @@ async function runSudoScript(script: string, args: string[] = []): Promise<strin
     const { stdout } = await execFile("sudo", [path, ...args]);
     return stdout;
   } catch (err: unknown) {
-    if (isEnoent(err)) throw err;
     const message = parseScriptError(err);
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
   }
-}
-
-function isEnoent(err: unknown): boolean {
-  return err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT";
 }
 
 function parseScriptError(err: unknown): string {
@@ -61,17 +54,10 @@ function parseJson<T>(stdout: string, label: string): T {
 }
 
 export async function getWifiStatus(): Promise<WifiStatus> {
-  let scanOutput: string;
-  let statusOutput: string;
-  try {
-    [scanOutput, statusOutput] = await Promise.all([
-      runScript("wifi-scan.sh"),
-      runScript("wifi-status.sh"),
-    ]);
-  } catch (err) {
-    if (isEnoent(err)) return getMockWifiStatus();
-    throw err;
-  }
+  const [scanOutput, statusOutput] = await Promise.all([
+    runScript("wifi-scan.sh"),
+    runScript("wifi-status.sh"),
+  ]);
 
   const scanned = parseJson<WifiNetwork[]>(scanOutput, "wifi-scan");
   const status = parseJson<{
@@ -105,19 +91,9 @@ export async function getWifiStatus(): Promise<WifiStatus> {
 export async function connectToWifi(ssid: string, password?: string): Promise<void> {
   const args = [ssid];
   if (password) args.push(password);
-  try {
-    await runSudoScript("wifi-connect.sh", args);
-  } catch (err) {
-    if (isEnoent(err)) return;
-    throw err;
-  }
+  await runSudoScript("wifi-connect.sh", args);
 }
 
 export async function forgetWifi(ssid: string): Promise<void> {
-  try {
-    await runSudoScript("wifi-forget.sh", [ssid]);
-  } catch (err) {
-    if (isEnoent(err)) return;
-    throw err;
-  }
+  await runSudoScript("wifi-forget.sh", [ssid]);
 }
