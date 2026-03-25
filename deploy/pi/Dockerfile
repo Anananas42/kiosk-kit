@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dpkg-dev \
     python3 \
     openssh-client \
+    rsync \
     cpio \
     gzip \
   && rm -rf /var/lib/apt/lists/*
