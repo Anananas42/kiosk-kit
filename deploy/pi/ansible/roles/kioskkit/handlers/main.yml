@@ -12,6 +12,7 @@
   ansible.builtin.systemd:
     name: nftables.service
     state: restarted
+  failed_when: false
 
 - name: Reload udev
   ansible.builtin.command:

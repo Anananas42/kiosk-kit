@@ -447,7 +447,11 @@ cleanup_qemu() {
 # compute_layer_hash paths... — deterministic hash of all files under given paths.
 # Works with both files and directories. Returns a single SHA-256 hex string.
 compute_layer_hash() {
-  find "$@" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
+  find "$@" -type f \
+    -not -path "*/node_modules/*" \
+    -not -path "*/dist/*" \
+    -not -path "*/.turbo/*" \
+    -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
 }
 
 # create_cow_overlay base_image overlay_path — create a qcow2 overlay backed by base_image.

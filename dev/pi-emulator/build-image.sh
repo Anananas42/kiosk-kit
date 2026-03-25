@@ -170,6 +170,7 @@ main() {
     boot_qemu
     provision_base
     wait_for_reboot
+    setup_wifi_simulation
     shutdown_qemu
     cp "$DISK_IMAGE" "$BASE_IMAGE"
     echo "$ansible_hash" > "$WORK_DIR/base-hash"
@@ -184,7 +185,6 @@ main() {
     create_cow_overlay "$BASE_IMAGE" "$DISK_IMAGE"
     boot_qemu
     deploy_app
-    setup_wifi_simulation
     shutdown_and_snapshot
     echo "$app_hash" > "$WORK_DIR/app-hash"
   fi
