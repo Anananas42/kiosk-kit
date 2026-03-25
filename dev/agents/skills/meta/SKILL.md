@@ -5,7 +5,7 @@ description: Rules for maintaining SKILL.md files — keep them accurate as the 
 
 ## What SKILL.md files are
 
-Each `.agents/skills/<name>/SKILL.md` is a self-contained reference that gets injected into every agent conversation via the auto-generated `CLAUDE.md`. They are the primary way agents learn how to operate in this repo.
+Each `dev/agents/skills/<name>/SKILL.md` is a self-contained reference that gets injected into every agent conversation via the auto-generated `CLAUDE.md`. They are the primary way agents learn how to operate in this repo.
 
 ## When to update a SKILL.md
 
@@ -16,7 +16,7 @@ After completing work that changes how a skill operates, update the relevant SKI
 - You changed the PR template → update `fill-pr-template/SKILL.md`
 - You added a new database workflow → update `neon-postgres/SKILL.md`
 
-If your changes don't fit an existing skill, create a new one at `.agents/skills/<name>/SKILL.md`.
+If your changes don't fit an existing skill, create a new one at `dev/agents/skills/<name>/SKILL.md`.
 
 ## What a SKILL.md should contain
 

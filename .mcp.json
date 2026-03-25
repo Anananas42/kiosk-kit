@@ -2,18 +2,11 @@
   "mcpServers": {
     "postgres": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@crystaldba/postgres-mcp",
-        "${DATABASE_URL}"
-      ]
+      "args": ["-y", "@crystaldba/postgres-mcp", "${DATABASE_URL}"]
     },
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp@latest"
-      ]
+      "args": ["-y", "@upstash/context7-mcp@latest"]
     },
     "stitch": {
       "type": "http",
@@ -38,13 +31,7 @@
     },
     "playwright": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest",
-        "--headless",
-        "--browser",
-        "chromium"
-      ],
+      "args": ["-y", "@playwright/mcp@latest", "--headless", "--browser", "chromium"],
       "env": {
         "PLAYWRIGHT_BROWSERS_PATH": "/opt/playwright"
       }

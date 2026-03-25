@@ -15,11 +15,7 @@ export function authRoutes(db: Db, google: Google) {
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
 
-    const url = google.createAuthorizationURL(state, codeVerifier, [
-      "openid",
-      "email",
-      "profile",
-    ]);
+    const url = google.createAuthorizationURL(state, codeVerifier, ["openid", "email", "profile"]);
 
     setCookie(c, "oauth_state", state, {
       httpOnly: true,

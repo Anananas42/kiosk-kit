@@ -41,8 +41,15 @@ packages/
 ├── admin-client/    # Platform admin panel — React-Admin (admin.* subdomain)
 └── landing/         # Marketing site + interactive demo — Astro (port 4321)
 
-system/              # Raspberry Pi OS-level kiosk config (configs, services)
-ansible/             # Ansible playbooks for Pi provisioning and deploys
+deploy/
+├── cloud/           # Fly.io deployment (Dockerfile, fly.toml)
+└── pi/
+    ├── ansible/     # Ansible playbooks for Pi provisioning and deploys
+    └── system/      # Raspberry Pi OS-level kiosk config (configs, services)
+
+dev/
+├── agents/          # Agent container, scripts, and skills
+└── docker-compose.yml  # Local dev Postgres
 ```
 
 **Tooling**: pnpm workspaces, Turborepo, TypeScript strict mode, Vitest, Biome (lint + format), Docker Compose (local Postgres), Drizzle ORM, GitHub Actions CI.
@@ -104,7 +111,7 @@ Static marketing site with an interactive kiosk demo. Astro with React islands f
 
 ```bash
 pnpm install
-docker compose up -d  # start local Postgres
+docker compose -f dev/docker-compose.yml up -d  # start local Postgres
 pnpm dev              # starts all packages with hot reload (turbo)
 pnpm build            # production build (turbo, cached)
 pnpm typecheck        # type-check all packages
@@ -125,7 +132,7 @@ pnpm --filter @kioskkit/landing dev
 web-server uses Postgres via Drizzle ORM. Local dev uses Docker Compose:
 
 ```bash
-docker compose up -d                          # start Postgres
+docker compose -f dev/docker-compose.yml up -d  # start Postgres
 pnpm --filter web-server run db:push          # apply schema
 pnpm --filter web-server run db:generate      # generate migrations
 pnpm --filter web-server run db:migrate       # run migrations
@@ -147,7 +154,7 @@ pnpm --filter web-server run db:migrate       # run migrations
 Pi provisioning and deploys are managed with **Ansible** from a control machine over Tailscale SSH. There is no git clone, deploy key, or auto-pull on the Pi itself.
 
 ```bash
-cd ansible/
+cd deploy/pi/ansible/
 
 # Full initial provisioning (fresh Raspberry Pi OS → locked-down kiosk)
 ansible-playbook playbooks/provision.yml -l <host>
@@ -159,7 +166,7 @@ ansible-playbook playbooks/deploy.yml -l <host>
 ansible-playbook playbooks/configure.yml -l <host>
 ```
 
-Per-device variables (`kioskkit_tailscale_auth_key`, `kioskkit_device_id`, `kioskkit_customer_tag`) are set in the inventory. See `ansible/README.md` for details.
+Per-device variables (`kioskkit_tailscale_auth_key`, `kioskkit_device_id`, `kioskkit_customer_tag`) are set in the inventory. See `deploy/pi/ansible/README.md` for details.
 
 ### Network model
 

@@ -1,11 +1,4 @@
-import {
-  Datagrid,
-  DateField,
-  List,
-  Show,
-  SimpleShowLayout,
-  TextField,
-} from "react-admin";
+import { Datagrid, DateField, List, Show, SimpleShowLayout, TextField } from "react-admin";
 
 export function UserList() {
   return (

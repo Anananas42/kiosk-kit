@@ -18,16 +18,16 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 
 ```bash
 # Interactive claude session in a container
-./.agents/scripts/run.sh
+./dev/agents/scripts/run.sh
 
 # Non-interactive with a task description
-./.agents/scripts/run.sh "Implement feature X per Linear issue KIO-15"
+./dev/agents/scripts/run.sh "Implement feature X per Linear issue KIO-15"
 
 # Skip the PR watch loop (for testing)
-./.agents/scripts/run.sh --no-loop "List your MCP servers"
+./dev/agents/scripts/run.sh --no-loop "List your MCP servers"
 
 # Rebuild the image first (after Dockerfile changes or to update Claude Code)
-./.agents/scripts/run.sh --build
+./dev/agents/scripts/run.sh --build
 ```
 
 ## What the container provides
@@ -38,7 +38,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | pnpm | 10.32.1 (from corepack) |
 | Claude Code | Pre-installed, runs with `--dangerously-skip-permissions` |
 | Git identity | `kiosk-kit-agent[bot]`, no GPG signing, HTTPS remote |
-| GitHub CLI | `gh`, authenticated via app token from `.agents/scripts/github-app-token.sh` |
+| GitHub CLI | `gh`, authenticated via app token from `dev/agents/scripts/github-app-token.sh` |
 | gh-attach | `gh attach` extension for uploading screenshots to PR comments |
 | Playwright | Chromium pre-installed for screenshot verification |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
@@ -64,12 +64,12 @@ STITCH_API_KEY=...
 ## How it works
 
 1. Host repo is bind-mounted read-only at `/mnt/repo`
-2. Entrypoint (`.agents/container/entrypoint.sh`) copies it to `/workspace` via rsync
+2. Entrypoint (`dev/agents/container/entrypoint.sh`) copies it to `/workspace` via rsync
 3. Git is configured with bot identity and HTTPS origin (no SSH, no GPG)
 4. GitHub App PEM and Claude credentials are copied from `/mnt/secrets/`
 5. `pnpm install --frozen-lockfile` runs (cached across runs via named volumes)
 6. Postgres health check passes, then `db:push` applies the schema
-7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `.agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
+7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `dev/agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
 9. After claude finishes a non-interactive task, the **PR watch loop** takes over (unless `--no-loop`)
 
@@ -111,7 +111,7 @@ Similarly, do not poll for PR reviews or approval. Just create the PR, enable au
 The container does **not** have SSH keys. All git push operations use the GitHub App token:
 
 ```bash
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 BRANCH=$(git branch --show-current)
 git push "https://x-access-token:${GH_TOKEN}@github.com/Anananas42/kiosk-kit.git" "HEAD:refs/heads/${BRANCH}"
 ```
@@ -123,18 +123,18 @@ This is the same flow as the `cicd-workflow` skill. The token expires after 1 ho
 The container is the intended runtime for the `cicd-workflow` skill. A typical autonomous task:
 
 ```bash
-./.agents/scripts/run.sh "Pick up Linear issue KIO-15. Use /cicd-workflow to implement, open a PR, and watch CI."
+./dev/agents/scripts/run.sh "Pick up Linear issue KIO-15. Use /cicd-workflow to implement, open a PR, and watch CI."
 ```
 
 The agent will branch, implement, push via app token, create a PR, and enter the watch loop — all inside the container.
 
 ## Key files
 
-- `.agents/container/Dockerfile` — container image definition
-- `.agents/container/docker-compose.yml` — compose services (agent + postgres)
-- `.agents/container/entrypoint.sh` — container startup logic
-- `.agents/container/wrappers/` — git/gh wrappers enforcing naming conventions
-- `.agents/scripts/run.sh` — host-side launcher
-- `.agents/scripts/github-app-token.sh` — GitHub App token generator
-- `.agents/scripts/screenshot.mjs` — Playwright screenshot tool
+- `dev/agents/container/Dockerfile` — container image definition
+- `dev/agents/container/docker-compose.yml` — compose services (agent + postgres)
+- `dev/agents/container/entrypoint.sh` — container startup logic
+- `dev/agents/container/wrappers/` — git/gh wrappers enforcing naming conventions
+- `dev/agents/scripts/run.sh` — host-side launcher
+- `dev/agents/scripts/github-app-token.sh` — GitHub App token generator
+- `dev/agents/scripts/screenshot.mjs` — Playwright screenshot tool
 - `.mcp.json` — MCP server configuration (loaded by Claude Code)

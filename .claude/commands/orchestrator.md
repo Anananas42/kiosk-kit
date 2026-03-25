@@ -14,10 +14,10 @@ Establish the correct patterns, conventions, and architecture from the very firs
 
 ## Dispatching a task
 
-Each task gets its own isolated container stack (agent + postgres). Use `.agents/scripts/dispatch.sh` which starts the containers in a tmux session that auto-cleans up after the agent exits. The script returns immediately.
+Each task gets its own isolated container stack (agent + postgres). Use `dev/agents/scripts/dispatch.sh` which starts the containers in a tmux session that auto-cleans up after the agent exits. The script returns immediately.
 
 ```bash
-AGENT_TASK="<full task description>" ./.agents/scripts/dispatch.sh "agent-<slug>"
+AGENT_TASK="<full task description>" ./dev/agents/scripts/dispatch.sh "agent-<slug>"
 ```
 
 To check on a running agent: `tmux attach -t agent-<slug>` (detach with `Ctrl-b d`).
@@ -32,7 +32,7 @@ The task description you pass as `AGENT_TASK` should be a complete, self-contain
 
 Each agent container is fully autonomous. On startup it:
 1. Copies the repo, installs deps, pushes the DB schema
-2. Gets a generated CLAUDE.md with all skills from `.agents/skills/*/SKILL.md`
+2. Gets a generated CLAUDE.md with all skills from `dev/agents/skills/*/SKILL.md`
 3. Runs `claude --dangerously-skip-permissions -p "$AGENT_TASK"`
 4. After completing the task, enters a **PR watch loop**: polls every 20s, checks CI and reviews, re-invokes claude to fix failures or address feedback, up to 5 attempts
 5. If it hits 5 failed attempts, it posts a PR comment asking for human help and exits
@@ -47,7 +47,7 @@ You do not need to explain this to the user or monitor it. The agents handle the
 tmux ls
 
 # Tail recent container logs
-docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml logs --tail 100 agent
+docker compose -p "agent-<slug>" -f dev/agents/container/docker-compose.yml logs --tail 100 agent
 
 # Check if the PR exists yet
 gh pr list --head "kio-<id>/<description>"
@@ -74,9 +74,9 @@ docker compose -p "agent-<slug>" logs --tail 5 agent
 If the last log line is `==> Ready.` and the timestamp is more than 2 minutes old, Claude Code is stuck (usually a network issue). Recovery:
 
 ```bash
-docker compose -p "agent-<slug>" -f .agents/container/docker-compose.yml down -v
+docker compose -p "agent-<slug>" -f dev/agents/container/docker-compose.yml down -v
 # Re-dispatch with the same AGENT_TASK
-AGENT_TASK="<same task>" ./.agents/scripts/dispatch.sh "agent-<slug>"
+AGENT_TASK="<same task>" ./dev/agents/scripts/dispatch.sh "agent-<slug>"
 ```
 
 This is the only scenario where you should proactively monitor. Do not check CI status, PR reviews, or other agent progress — the agents handle that themselves.

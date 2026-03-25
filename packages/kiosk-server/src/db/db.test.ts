@@ -1,10 +1,10 @@
+import { join } from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Store } from "./store.js";
 import * as schema from "./schema.js";
+import { Store } from "./store.js";
 
 function createTestDb() {
   const sqlite = new Database(":memory:");

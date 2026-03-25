@@ -93,7 +93,7 @@ Save screenshots to `/tmp/test-screenshots/` with descriptive names (e.g., `01-p
 Regenerate the GitHub App token before posting:
 
 ```bash
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 ```
 
 Upload all screenshots and post a single PR comment with structured results:
@@ -152,7 +152,7 @@ Only submit a formal review requesting changes if there are critical failures:
 - A core feature introduced by the PR is broken
 
 ```bash
-GH_TOKEN=$(./.agents/scripts/github-app-token.sh)
+GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
 GH_TOKEN="${GH_TOKEN}" gh pr review <pr-number> --request-changes --body "🚨 Testing agent found critical failures. See test results comment for details."
 ```
 

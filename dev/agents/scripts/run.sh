@@ -2,11 +2,11 @@
 # Launch an agent in an isolated container.
 #
 # Usage:
-#   ./.agents/scripts/run.sh                          # interactive claude session
-#   ./.agents/scripts/run.sh "implement feature X"    # non-interactive task
-#   ./.agents/scripts/run.sh --build                  # rebuild image first
-#   ./.agents/scripts/run.sh --build "implement X"    # rebuild + task
-#   ./.agents/scripts/run.sh --no-loop "test task"    # skip PR watch loop
+#   ./dev/agents/scripts/run.sh                          # interactive claude session
+#   ./dev/agents/scripts/run.sh "implement feature X"    # non-interactive task
+#   ./dev/agents/scripts/run.sh --build                  # rebuild image first
+#   ./dev/agents/scripts/run.sh --build "implement X"    # rebuild + task
+#   ./dev/agents/scripts/run.sh --no-loop "test task"    # skip PR watch loop
 
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -39,4 +39,4 @@ fi
 export AGENT_TASK="$TASK"
 export AGENT_NO_LOOP="${NO_LOOP}"
 
-exec docker compose -f .agents/container/docker-compose.yml run --rm $BUILD_FLAG agent
+exec docker compose -f dev/agents/container/docker-compose.yml run --rm $BUILD_FLAG agent
