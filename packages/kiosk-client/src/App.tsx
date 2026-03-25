@@ -7,7 +7,7 @@ import {
   REPEAT_ORDER_MS,
 } from "@kioskkit/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
-import OfflineBanner from "./components/OfflineBanner.js";
+import LoadingDots from "./components/LoadingDots.js";
 import SuccessFlash from "./components/SuccessFlash.js";
 import { useCatalog } from "./hooks/useCatalog.js";
 import { useHealth } from "./hooks/useHealth.js";
@@ -55,7 +55,15 @@ const INITIAL_STATE: AppState = {
 };
 
 export default function App() {
-  const { catalog, buyers, preorderConfig, settings, reload, error: catalogError } = useCatalog();
+  const {
+    catalog,
+    buyers,
+    preorderConfig,
+    settings,
+    reload,
+    error: catalogError,
+    loading: catalogLoading,
+  } = useCatalog();
 
   return (
     <I18nProvider locale={settings.locale}>
@@ -69,6 +77,7 @@ export default function App() {
         settings={settings}
         reload={reload}
         catalogError={catalogError}
+        catalogLoading={catalogLoading}
       />
     </I18nProvider>
   );
@@ -88,6 +97,7 @@ interface AppInnerProps {
   };
   reload: () => void;
   catalogError: string | null;
+  catalogLoading: boolean;
 }
 
 function AppInner({
@@ -97,6 +107,7 @@ function AppInner({
   settings,
   reload,
   catalogError,
+  catalogLoading,
 }: AppInnerProps) {
   const t = useT();
   const [state, setState] = useState<AppState>(INITIAL_STATE);
@@ -240,6 +251,21 @@ function AppInner({
     [state, reset, t],
   );
 
+  if (isOffline) {
+    return (
+      <div className="app">
+        <div className="crash-screen">
+          <div className="crash-screen__icon">⚠️</div>
+          <div className="crash-screen__title">{t("app.crash.title")}</div>
+          <div className="crash-screen__message">
+            {t("app.crash.message")}
+            <LoadingDots />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (settings.maintenance) {
     return (
       <div className="app">
@@ -263,8 +289,6 @@ function AppInner({
         )}
       </div>
 
-      <OfflineBanner isOffline={isOffline} />
-
       {lastSuccess && <SuccessFlash message={lastSuccess} onDone={() => setLastSuccess(null)} />}
 
       {state.screen === "buyer" && (
@@ -272,6 +296,7 @@ function AppInner({
           buyers={buyers}
           onSelect={handleBuyerSelect}
           error={catalogError}
+          loading={catalogLoading}
           lastOrder={lastOrder}
           onRepeat={handleRepeat}
           buyerNoun={settings.buyerNoun}
