@@ -50,7 +50,7 @@ export default function Confirm({
   useEffect(() => {
     if (!isPreorder) return;
     trpc["records.itemCount"]
-      .query({ buyer, item: item.name, itemId: item.id })
+      .query({ buyer, item: item.name, itemId: item.id, preorder: true })
       .then((data) => setExistingQty(data.count))
       .catch(() => {});
   }, [isPreorder, buyer, item.name, item.id]);

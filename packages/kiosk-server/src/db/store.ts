@@ -129,6 +129,15 @@ export class Store {
     this.db.delete(catalogItems).where(eq(catalogItems.id, id)).run();
   }
 
+  isCategoryPreorder(categoryName: string): boolean {
+    const row = this.db
+      .select({ preorder: catalogCategories.preorder })
+      .from(catalogCategories)
+      .where(eq(catalogCategories.name, categoryName))
+      .get();
+    return row?.preorder === 1;
+  }
+
   // ── Records ─────────────────────────────────────────────────────────────
 
   getRecords(): RecordRow[] {
@@ -166,6 +175,30 @@ export class Store {
       .all();
   }
 
+  getRecordsForItem(buyer: number, item: string, itemId?: string): RecordRow[] {
+    const condition = itemId
+      ? and(
+          eq(records.buyer, buyer),
+          or(eq(records.itemId, itemId), and(eq(records.itemId, ""), eq(records.item, item))),
+        )
+      : and(eq(records.buyer, buyer), eq(records.item, item));
+
+    return this.db
+      .select({
+        timestamp: records.timestamp,
+        buyer: records.buyer,
+        count: records.count,
+        category: records.category,
+        item: records.item,
+        itemId: records.itemId,
+        quantity: records.quantity,
+        price: records.price,
+      })
+      .from(records)
+      .where(condition)
+      .all();
+  }
+
   getItemBalance(buyer: number, item: string, itemId?: string): number {
     if (itemId) {
       const row = this.db
@@ -174,10 +207,7 @@ export class Store {
         .where(
           and(
             eq(records.buyer, buyer),
-            or(
-              eq(records.itemId, itemId),
-              and(eq(records.itemId, ""), eq(records.item, item)),
-            ),
+            or(eq(records.itemId, itemId), and(eq(records.itemId, ""), eq(records.item, item))),
           ),
         )
         .get();
@@ -236,11 +266,7 @@ export class Store {
   // ── Preorder Config ───────────────────────────────────────────────────────
 
   getPreorderConfig(): PreorderConfig | null {
-    const rows = this.db
-      .select()
-      .from(preorderConfig)
-      .orderBy(preorderConfig.weekday)
-      .all();
+    const rows = this.db.select().from(preorderConfig).orderBy(preorderConfig.weekday).all();
     if (rows.length === 0) return null;
 
     const orderingDays = Array<boolean>(7).fill(true);

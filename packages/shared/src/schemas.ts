@@ -296,4 +296,5 @@ export const ItemCountInputSchema = z.object({
   buyer: z.number().int().min(1),
   item: z.string().min(1),
   itemId: z.string().optional(),
+  preorder: z.boolean().optional(),
 });
