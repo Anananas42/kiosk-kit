@@ -31,26 +31,14 @@ export const devicesDataProvider: DataProvider = {
     return { data, total: data.length };
   },
 
-  create: async (_resource, params) => {
-    const data = await trpc["devices.create"].mutate(
-      params.data as { name: string; tailscaleIp: string; userId: string },
-    );
-    return { data };
+  create: async () => {
+    throw new Error("Device creation is not supported — devices come from Tailscale");
   },
 
   update: async (_resource, params) => {
     const id = toStringId(params.id);
-    const { name, tailscaleIp, userId } = params.data as {
-      name?: string;
-      tailscaleIp?: string;
-      userId?: string;
-    };
-    const data = await trpc["devices.update"].mutate({
-      id,
-      name,
-      tailscaleIp,
-      userId,
-    });
+    const { name } = params.data as { name: string };
+    const data = await trpc["devices.update"].mutate({ id, name });
     return { data };
   },
 

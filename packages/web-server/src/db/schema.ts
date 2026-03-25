@@ -14,11 +14,10 @@ export const users = pgTable("users", {
 
 export const devices = pgTable("devices", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  tailscaleNodeId: text("tailscale_node_id").notNull().unique(),
+  tailscaleIp: text("tailscale_ip"),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   name: text("name").notNull(),
-  tailscaleIp: text("tailscale_ip").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
