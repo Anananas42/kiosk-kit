@@ -52,10 +52,9 @@ trap cleanup_qemu EXIT
 
 # --- Emulator-specific functions ---------------------------------------------
 
-# provision_base — run provision.yml skipping tailscale and app tags (Layer 1).
-provision_base() {
-  log "Running Ansible base provisioning (--skip-tags tailscale,app)..."
-
+# write_inventory — create the Ansible inventory file used by both layers.
+# Called once from main() so the inventory exists even when Layer 1 is cached.
+write_inventory() {
   local inventory_file="$WORK_DIR/inventory.yml"
   cat > "$inventory_file" <<EOF
 ---
@@ -75,9 +74,14 @@ all:
           kioskkit_device_id: "emu-001"
           kioskkit_customer_tag: "emulator"
 EOF
+}
+
+# provision_base — run provision.yml skipping tailscale and app tags (Layer 1).
+provision_base() {
+  log "Running Ansible base provisioning (--skip-tags tailscale,app)..."
 
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
-    -i "$inventory_file" \
+    -i "$WORK_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
     --skip-tags tailscale,app \
     -e "kioskkit_tailscale_auth_key=skip" \
@@ -88,10 +92,8 @@ EOF
 deploy_app() {
   log "Deploying kiosk application into the VM..."
 
-  local inventory_file="$WORK_DIR/inventory.yml"
-
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
-    -i "$inventory_file" \
+    -i "$WORK_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/deploy.yml" \
     || { err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
 
@@ -148,6 +150,12 @@ main() {
 
   require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook
   mkdir -p "$WORK_DIR"
+
+  # Set BUILD_SSH_KEY path early so write_inventory can reference it.
+  # The key itself is generated in create_pi_user() during Layer 1; on cached
+  # runs the file already exists on disk.
+  BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
+  write_inventory
 
   local ansible_hash app_hash
   ansible_hash=$(compute_layer_hash "$REPO_ROOT/deploy/pi/ansible")
