@@ -136,32 +136,30 @@ generate_tailscale_key() {
   log "Generating single-use Tailscale auth key via API..."
 
   # Build tags array: always include tag:kioskkit, add customer tag if set
-  local tags='"tag:kioskkit"'
+  local tags_json
+  tags_json=$(jq -n '["tag:kioskkit"]')
   if [[ -n "$CUSTOMER_TAG" ]]; then
-    tags="$tags, \"tag:$CUSTOMER_TAG\""
+    tags_json=$(printf '%s' "$tags_json" | jq --arg t "tag:$CUSTOMER_TAG" '. + [$t]')
   fi
 
   local description
   description="kioskkit-${DEVICE_ID} build $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-  local response
-  response=$(curl -fsS --max-time 30 \
+  local payload
+  payload=$(jq -n \
+    --argjson tags "$tags_json" \
+    --arg desc "$description" \
+    '{capabilities: {devices: {create: {reusable: false, ephemeral: false, tags: $tags}}}, description: $desc}')
+
+  local response curl_err
+  if ! response=$(curl -fsS --max-time 30 \
     -u "${TAILSCALE_API_KEY}:" \
     -H "Content-Type: application/json" \
-    -d "{
-      \"capabilities\": {
-        \"devices\": {
-          \"create\": {
-            \"reusable\": false,
-            \"ephemeral\": false,
-            \"tags\": [$tags]
-          }
-        }
-      },
-      \"description\": \"$description\"
-    }" \
-    "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>&1) \
-    || err "Tailscale API call failed: $response"
+    -d "$payload" \
+    "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>/tmp/curl_stderr); then
+    curl_err=$(cat /tmp/curl_stderr)
+    err "Tailscale API call failed: ${response:-$curl_err}"
+  fi
 
   TAILSCALE_KEY=$(printf '%s' "$response" | jq -r '.key // empty') \
     || err "Failed to parse Tailscale API response"
