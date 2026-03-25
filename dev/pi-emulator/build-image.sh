@@ -85,36 +85,40 @@ prepare_disk() {
 
 patch_image_for_virt() {
   log "Patching image for QEMU virt machine (this takes a few minutes)..."
-  guestfish --rw -a "$DISK_IMAGE" <<'GUESTFISH_SCRIPT'
+
+  # Write files to temp dir for upload into the image via guestfish.
+  # This avoids quoting issues with special characters in guestfish's write command.
+  local patch_dir="$WORK_DIR/patch-files"
+  mkdir -p "$patch_dir"
+
+  # Password hash for pi user (raspberry): openssl passwd -6 raspberry
+  printf 'pi:$6$rpi$PFE1MajCJkWCfVJz0Rk1O7MNlUjwPnSRzFiGBVPFH.ghCKYtY3vOJ8RLVB0R.dEfDLzCiNlQ3Gb/xf7GRWRA0\n' > "$patch_dir/userconf"
+
+  # fstab for virtio-blk (/dev/vda* instead of PARTUUIDs)
+  cat > "$patch_dir/fstab" <<'FSTAB'
+/dev/vda2  /              ext4  defaults,noatime  0  1
+/dev/vda1  /boot/firmware  vfat  defaults          0  2
+FSTAB
+
+  guestfish --rw -a "$DISK_IMAGE" <<GUESTFISH_SCRIPT
 run
 
 list-partitions
 
-# Resize the root partition to fill the disk
 resize2fs /dev/sda2
 
-# Mount root and boot
 mount /dev/sda2 /
 mount /dev/sda1 /boot/firmware
 
-# Enable SSH
 touch /boot/firmware/ssh
+upload $patch_dir/userconf /boot/firmware/userconf
+upload $patch_dir/fstab /etc/fstab
 
-# Set a known password for the pi user (raspberry)
-# Generate password hash: openssl passwd -6 raspberry
-write /boot/firmware/userconf "pi:$6$rpi$PFE1MajCJkWCfVJz0Rk1O7MNlUjwPnSRzFiGBVPFH.ghCKYtY3vOJ8RLVB0R.dEfDLzCiNlQ3Gb/xf7GRWRA0"
-
-# Fix fstab to use /dev/vda* instead of PARTUUIDs (required for virtio-blk)
-write /etc/fstab "/dev/vda2  /              ext4  defaults,noatime  0  1
-/dev/vda1  /boot/firmware  vfat  defaults          0  2
-"
-
-# Install the Debian arm64 kernel with virtio support.
-# Pi OS is bookworm-based, so the Debian bookworm main repo is compatible.
 command "apt-get update"
 command "DEBIAN_FRONTEND=noninteractive apt-get install -y linux-image-arm64"
-
 GUESTFISH_SCRIPT
+
+  rm -rf "$patch_dir"
 }
 
 setup_uefi_firmware() {
