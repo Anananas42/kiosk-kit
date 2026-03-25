@@ -4,6 +4,7 @@ import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
 import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { getTailscaleClient } from "../services/tailscale.js";
 
 const PROXY_TIMEOUT_MS = 10_000;
 const HEALTH_TIMEOUT_MS = 5_000;
@@ -18,7 +19,7 @@ function getDeviceHost(device: { id: string; tailscaleIp: string | null }): stri
 
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
   if (isDev && deviceId === LOCAL_DEVICE_ID) {
-    return { id: LOCAL_DEVICE_ID, tailscaleIp: null, userId };
+    return { id: LOCAL_DEVICE_ID, tailscaleNodeId: "local-dev", tailscaleIp: null, userId };
   }
 
   const conditions =
@@ -26,7 +27,25 @@ async function getAccessibleDevice(db: Db, deviceId: string, userId: string, rol
       ? eq(devices.id, deviceId)
       : and(eq(devices.id, deviceId), eq(devices.userId, userId));
   const [device] = await db.select().from(devices).where(conditions);
-  return device ?? null;
+
+  if (!device) return null;
+
+  // If tailscaleIp is missing, fetch from Tailscale API and cache it
+  if (!device.tailscaleIp) {
+    try {
+      const ts = getTailscaleClient();
+      const td = await ts.getDevice(device.tailscaleNodeId);
+      const ip = td.addresses.find((a) => a.startsWith("100.")) ?? null;
+      if (ip) {
+        await db.update(devices).set({ tailscaleIp: ip }).where(eq(devices.id, device.id));
+        return { ...device, tailscaleIp: ip };
+      }
+    } catch {
+      // Tailscale API unavailable
+    }
+  }
+
+  return device;
 }
 
 export function deviceProxyRoutes(db: Db) {

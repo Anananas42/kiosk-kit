@@ -45,6 +45,7 @@ function createMockDb(returnValue: unknown[] = []) {
     delete: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
+    // biome-ignore lint/suspicious/noThenProperty: mock db needs thenable for drizzle query chain
     then: (resolve: (v: unknown) => void) => Promise.resolve(returnValue).then(resolve),
   };
   return chainable as unknown as Db;
@@ -60,25 +61,22 @@ function callerFor(user: User | null, db: Db) {
 
 const deviceRow = {
   id: "d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a",
+  tailscaleNodeId: "node-123",
+  tailscaleIp: "100.64.1.5",
   userId: "user-1",
   name: "Kiosk",
-  tailscaleIp: "100.64.1.5",
   createdAt: new Date("2025-01-01T00:00:00Z"),
 };
 
 describe("devices procedures", () => {
   describe("devices.list", () => {
-    it("returns devices for admin with tailscaleIp", async () => {
-      const caller = callerFor(adminUser, createMockDb([deviceRow]));
-      const result = await caller["devices.list"]();
-      expect(result).toHaveLength(1);
-      expect(result[0].tailscaleIp).toBe("100.64.1.5");
-    });
-
-    it("omits tailscaleIp for customers", async () => {
+    it("returns devices for customer from DB (plus local dev device)", async () => {
       const caller = callerFor(customerUser, createMockDb([deviceRow]));
       const result = await caller["devices.list"]();
-      expect(result[0].tailscaleIp).toBeUndefined();
+      // 1 from DB + 1 local dev device (NODE_ENV=development in test)
+      const dbDevice = result.find((d) => d.tailscaleNodeId === "node-123");
+      expect(dbDevice).toBeDefined();
+      expect(dbDevice!.tailscaleIp).toBeUndefined();
     });
 
     it("throws UNAUTHORIZED when not authenticated", async () => {
@@ -88,11 +86,12 @@ describe("devices procedures", () => {
   });
 
   describe("devices.get", () => {
-    it("returns device for admin", async () => {
+    it("returns device for admin with tailscaleIp", async () => {
       const caller = callerFor(adminUser, createMockDb([deviceRow]));
       const result = await caller["devices.get"]({ id: deviceRow.id });
       expect(result.name).toBe("Kiosk");
       expect(result.tailscaleIp).toBe("100.64.1.5");
+      expect(result.tailscaleNodeId).toBe("node-123");
     });
 
     it("omits tailscaleIp for customers", async () => {
@@ -109,13 +108,12 @@ describe("devices procedures", () => {
     });
   });
 
-  describe("devices.create", () => {
-    it("creates device as admin", async () => {
+  describe("devices.update", () => {
+    it("updates device name as admin", async () => {
       const caller = callerFor(adminUser, createMockDb([deviceRow]));
-      const result = await caller["devices.create"]({
-        name: "Kiosk",
-        tailscaleIp: "100.64.1.5",
-        userId: "user-1",
+      const result = await caller["devices.update"]({
+        id: deviceRow.id,
+        name: "New Name",
       });
       expect(result.name).toBe("Kiosk");
     });
@@ -123,45 +121,35 @@ describe("devices procedures", () => {
     it("throws FORBIDDEN for customers", async () => {
       const caller = callerFor(customerUser, createMockDb());
       await expect(
-        caller["devices.create"]({
-          name: "Kiosk",
-          tailscaleIp: "100.64.1.5",
-          userId: "user-1",
-        }),
+        caller["devices.update"]({ id: deviceRow.id, name: "New Name" }),
       ).rejects.toThrow(TRPCError);
     });
+  });
 
-    it("validates IP address", async () => {
-      const caller = callerFor(adminUser, createMockDb());
-      await expect(
-        caller["devices.create"]({
-          name: "Kiosk",
-          tailscaleIp: "not-an-ip",
-          userId: "user-1",
-        }),
-      ).rejects.toThrow();
+  describe("devices.assign", () => {
+    it("assigns user to device as admin", async () => {
+      const caller = callerFor(adminUser, createMockDb([deviceRow]));
+      const result = await caller["devices.assign"]({
+        id: deviceRow.id,
+        userId: "user-2",
+      });
+      expect(result.id).toBe(deviceRow.id);
     });
 
-    it("rejects IP with octets > 255", async () => {
-      const caller = callerFor(adminUser, createMockDb());
-      await expect(
-        caller["devices.create"]({
-          name: "Kiosk",
-          tailscaleIp: "999.999.999.999",
-          userId: "user-1",
-        }),
-      ).rejects.toThrow();
+    it("unassigns user from device as admin", async () => {
+      const caller = callerFor(adminUser, createMockDb([{ ...deviceRow, userId: null }]));
+      const result = await caller["devices.assign"]({
+        id: deviceRow.id,
+        userId: null,
+      });
+      expect(result.userId).toBeNull();
     });
 
-    it("validates name is required", async () => {
-      const caller = callerFor(adminUser, createMockDb());
+    it("throws FORBIDDEN for customers", async () => {
+      const caller = callerFor(customerUser, createMockDb());
       await expect(
-        caller["devices.create"]({
-          name: "",
-          tailscaleIp: "100.64.1.5",
-          userId: "user-1",
-        }),
-      ).rejects.toThrow();
+        caller["devices.assign"]({ id: deviceRow.id, userId: "user-2" }),
+      ).rejects.toThrow(TRPCError);
     });
   });
 

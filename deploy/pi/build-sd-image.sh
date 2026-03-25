@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # build-sd-image.sh — Build a flashable SD card image for KioskKit Pi devices.
 #
-# Uses QEMU system emulation (no sudo, no chroot, no binfmt_misc) to run
-# Ansible provisioning inside a booted Pi OS VM, then restores the native
-# Pi boot state and injects Tailscale first-boot authentication.
+# Uses a three-layer cache so that per-device stamping takes ~30s (no QEMU boot):
+#
+#   Layer 1 (base system, ~25 min):  Pi OS + QEMU patches + Ansible provision (--skip-tags tailscale,app)
+#   Layer 2 (app deploy, ~5 min):    Boot base overlay, run deploy.yml, snapshot app image
+#   Layer 3 (device stamp, ~30 sec): guestfish-only — Tailscale config, first-boot service, cleanup
 #
 # Prerequisites (all provided by the Dockerfile):
 #   qemu-system-aarch64, qemu-img, guestfish (libguestfs-tools),
@@ -12,7 +14,10 @@
 # Usage:
 #   ./build-sd-image.sh --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
 #   ./build-sd-image.sh --device-id 042 --customer-tag acme   # auto-generates key via Tailscale API
-#   ./build-sd-image.sh --dev   # reads PI_DEV_* env vars
+#   ./build-sd-image.sh --dev                   # reads PI_DEV_* env vars
+#   ./build-sd-image.sh --dev --force            # rebuild all layers
+#   ./build-sd-image.sh --dev --app-only         # skip base layer (must exist)
+#   ./build-sd-image.sh --dev --device-only      # stamp device on existing app image (~30s)
 
 set -euo pipefail
 
@@ -66,6 +71,9 @@ RAW_IMAGE="$WORK_DIR/raspios.img"
 DISK_IMAGE="$WORK_DIR/disk.qcow2"
 ANSIBLE_DIR="$REPO_ROOT/deploy/pi/ansible"
 
+BASE_IMAGE="$WORK_DIR/provisioned-base.qcow2"
+APP_IMAGE="$WORK_DIR/app-image.qcow2"
+
 # shellcheck disable=SC2034
 PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2024-11-19/2024-11-19-raspios-bookworm-arm64-lite.img.xz"
 # shellcheck disable=SC2034
@@ -87,6 +95,9 @@ parse_args() {
   DEVICE_ID=""
   CUSTOMER_TAG=""
   TAILSCALE_KEY=""
+  FORCE=0
+  APP_ONLY=0
+  DEVICE_ONLY=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -99,16 +110,23 @@ parse_args() {
         TAILSCALE_KEY="${PI_DEV_TAILSCALE_KEY:-}"
         shift
         ;;
+      --force)       FORCE=1; shift ;;
+      --app-only)    APP_ONLY=1; shift ;;
+      --device-only) DEVICE_ONLY=1; shift ;;
       *) err "Unknown argument: $1" ;;
     esac
   done
 
   [[ -n "$DEVICE_ID" ]]     || err "Missing --device-id (or set PI_DEV_DEVICE_ID with --dev)"
   [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
-
   # If no explicit key provided, auto-generate one via Tailscale API
   if [[ -z "$TAILSCALE_KEY" ]]; then
     generate_tailscale_key
+  fi
+
+  # --device-only implies --app-only (no base rebuild either)
+  if [[ $DEVICE_ONLY -eq 1 ]]; then
+    APP_ONLY=1
   fi
 
   log "Building image for device=$DEVICE_ID customer=$CUSTOMER_TAG"
@@ -119,7 +137,6 @@ parse_args() {
 generate_tailscale_key() {
   # Load .env from repo root if present
   if [[ -f "$REPO_ROOT/.env" ]]; then
-    # Source only TAILSCALE_* vars, ignoring comments and blank lines
     while IFS='=' read -r key value; do
       case "$key" in
         TAILSCALE_API_KEY|TAILSCALE_TAILNET) export "$key=$value" ;;
@@ -195,9 +212,9 @@ EOF
   log "Original boot state saved to $orig_dir"
 }
 
-provision_with_ansible() {
-  log "Running Ansible provisioning..."
-
+# write_inventory — create the Ansible inventory file used by both layers.
+# Called once from main() so the inventory exists even when Layer 1 is cached.
+write_inventory() {
   local inventory_file="$WORK_DIR/inventory.yml"
   cat > "$inventory_file" <<EOF
 ---
@@ -216,32 +233,42 @@ all:
           kioskkit_device_id: "${DEVICE_ID}"
           kioskkit_customer_tag: "${CUSTOMER_TAG}"
 EOF
+}
+
+# provision_base — run provision.yml skipping tailscale and app tags (Layer 1).
+provision_base() {
+  log "Running Ansible base provisioning (--skip-tags tailscale,app)..."
 
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
-    -i "$inventory_file" \
+    -i "$WORK_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
-    --skip-tags tailscale \
+    --skip-tags tailscale,app \
     -e "kioskkit_tailscale_auth_key=skip" \
-    || err "Ansible provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
+    || err "Ansible base provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
+}
+
+# deploy_app — run deploy.yml to sync code and build the application (Layer 2).
+deploy_app() {
+  log "Deploying kiosk application into the VM..."
+
+  ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
+    -i "$WORK_DIR/inventory.yml" \
+    "$ANSIBLE_DIR/playbooks/deploy.yml" \
+    || err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
 restore_pi_boot_state() {
+  local target_image="$1"
   log "Restoring native Pi boot state..."
   local orig_dir="$WORK_DIR/original-boot"
 
   # Restore original fstab (PARTUUID-based) and remove virt kernel files.
-  # The virt kernel modules go under /usr/lib/modules/<virt-kver>/; the Pi's
-  # native kernel modules are under a different version directory and are untouched.
-  #
-  # We need to identify virt kernel modules to remove. They were added by
-  # patch_image_for_virt from the Debian kernel. The Pi's native modules
-  # are from the Raspberry Pi kernel and have a different version string.
   local virt_kver
   virt_kver=$(cat "$WORK_DIR/virt-kernel-version" 2>/dev/null || true)
 
   local gf_cmds="$WORK_DIR/restore-boot.cmd"
   {
-    echo "add $DISK_IMAGE"
+    echo "add $target_image"
     echo "run"
     echo "mount /dev/sda2 /"
     echo "upload $orig_dir/fstab /etc/fstab"
@@ -250,13 +277,9 @@ restore_pi_boot_state() {
       echo "rm-rf /usr/lib/modules/$virt_kver"
     fi
     # Remove virt boot files (vmlinuz-*, config-*, System.map-* from Debian kernel)
-    # These were uploaded to /boot/ by patch_image_for_virt. The Pi's real kernel
-    # lives in /boot/firmware/ on the boot partition (sda1), which we didn't touch.
     echo "glob rm /boot/vmlinuz-*"
     echo "glob rm /boot/config-*"
     echo "glob rm /boot/System.map-*"
-    # Remove ephemeral build SSH key from the image
-    echo "rm-f /home/pi/.ssh/authorized_keys"
   } > "$gf_cmds"
 
   guestfish < "$gf_cmds" || log "WARN: Some restore commands failed (may be OK if files didn't exist)"
@@ -266,6 +289,7 @@ restore_pi_boot_state() {
 }
 
 inject_tailscale_firstboot() {
+  local target_image="$1"
   log "Injecting Tailscale first-boot service..."
 
   local inject_dir="$WORK_DIR/inject-files"
@@ -287,7 +311,7 @@ EOF
     || err "Checksum mismatch for Tailscale .deb"
 
   # Use guestfish to inject everything into the image
-  guestfish --rw -a "$DISK_IMAGE" -m /dev/sda2 <<EOF
+  guestfish --rw -a "$target_image" -m /dev/sda2 <<EOF
 # Tailscale first-boot config
 mkdir-p /etc/kioskkit
 upload $inject_dir/tailscale-firstboot.conf /etc/kioskkit/tailscale-firstboot.conf
@@ -302,9 +326,6 @@ chmod 0755 /opt/kioskkit/system/tailscale-firstboot.sh
 # Enable the first-boot service
 mkdir-p /etc/systemd/system/multi-user.target.wants
 ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service
-
-# Install Tailscale .deb — extract manually since we can't run dpkg (ARM binary).
-# We extract to a temp dir, then copy the files into the image.
 EOF
 
   # Extract Tailscale .deb on the host and copy files into the image
@@ -315,7 +336,7 @@ EOF
   # Build a guestfish command file to copy Tailscale files
   local gf_cmds="$inject_dir/guestfish-ts.cmd"
   {
-    echo "add $DISK_IMAGE"
+    echo "add $target_image"
     echo "run"
     echo "mount /dev/sda2 /"
     # Copy binaries
@@ -346,10 +367,18 @@ EOF
   log "Tailscale first-boot service injected."
 }
 
+remove_build_ssh_key() {
+  local target_image="$1"
+  log "Removing build SSH key from image..."
+  guestfish --rw -a "$target_image" -m /dev/sda2 <<'EOF'
+rm-f /home/pi/.ssh/authorized_keys
+EOF
+}
+
 convert_to_raw() {
   log "Converting qcow2 to raw image..."
   local raw_output="$WORK_DIR/kioskkit-${DEVICE_ID}.img"
-  qemu-img convert -f qcow2 -O raw "$DISK_IMAGE" "$raw_output"
+  qemu-img convert -f qcow2 -O raw "$WORK_DIR/device-${DEVICE_ID}.qcow2" "$raw_output"
   FINAL_IMAGE="$raw_output"
   log "Raw image: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
@@ -374,24 +403,20 @@ shrink_image() {
   log "Image shrunk: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
 
-# --- Main --------------------------------------------------------------------
+# stamp_device — Layer 3: all guestfish operations for per-device customization.
+# No QEMU boot required — operates on a cold disk image.
+stamp_device() {
+  local source_image="$1"
+  log "Stamping device image for device=$DEVICE_ID..."
 
-main() {
-  parse_args "$@"
+  # Create a standalone copy (not overlay — we need raw conversion later)
+  local device_image="$WORK_DIR/device-${DEVICE_ID}.qcow2"
+  cp "$source_image" "$device_image"
 
-  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl jq
-  mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
-
-  download_pios
-  prepare_disk
-  save_original_boot_state
-  patch_image_for_virt
-  boot_qemu
-  provision_with_ansible
-  wait_for_reboot
-  shutdown_qemu
-  restore_pi_boot_state
-  inject_tailscale_firstboot
+  # All operations on the cold image via guestfish
+  restore_pi_boot_state "$device_image"
+  inject_tailscale_firstboot "$device_image"
+  remove_build_ssh_key "$device_image"
   convert_to_raw
   shrink_image
 
@@ -409,6 +434,73 @@ main() {
   log "Flash with:"
   log "  sudo dd if=$output_file of=/dev/sdX bs=4M status=progress"
   log "  # or use balenaEtcher"
+}
+
+# --- Main --------------------------------------------------------------------
+
+main() {
+  parse_args "$@"
+
+  require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl jq
+  mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
+
+  # Set BUILD_SSH_KEY path early so write_inventory can reference it.
+  # The key itself is generated in create_pi_user() during Layer 1; on cached
+  # runs the file already exists on disk.
+  BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
+  write_inventory
+
+  # --- Layer 3 only: stamp device on existing app image ---
+  if [[ $DEVICE_ONLY -eq 1 ]]; then
+    [[ -f "$APP_IMAGE" ]] || err "No app image found at $APP_IMAGE. Run without --device-only first."
+    stamp_device "$APP_IMAGE"
+    return
+  fi
+
+  local ansible_hash app_hash
+  ansible_hash=$(compute_layer_hash "$REPO_ROOT/deploy/pi/ansible")
+  app_hash=$(compute_layer_hash "$REPO_ROOT/packages" "$REPO_ROOT/pnpm-lock.yaml" "$REPO_ROOT/turbo.json")
+
+  # --- Layer 1: Base system ---------------------------------------------------
+  local base_changed=0
+  if [[ $APP_ONLY -eq 1 ]]; then
+    [[ -f "$BASE_IMAGE" ]] || err "No base image found at $BASE_IMAGE. Run without --app-only first."
+    [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --app-only first."
+    log "Skipping base layer (--app-only)."
+  elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$WORK_DIR/base-hash" 2>/dev/null)" == "$ansible_hash" ]] && [[ $FORCE -eq 0 ]]; then
+    log "Base system cached (Ansible unchanged). Skipping to app deployment."
+  else
+    base_changed=1
+    log "Building base system layer..."
+    download_pios
+    prepare_disk
+    save_original_boot_state
+    patch_image_for_virt
+    boot_qemu
+    provision_base
+    wait_for_reboot
+    shutdown_qemu
+    cp "$DISK_IMAGE" "$BASE_IMAGE"
+    echo "$ansible_hash" > "$WORK_DIR/base-hash"
+    log "Base system layer cached."
+  fi
+
+  # --- Layer 2: App deployment ------------------------------------------------
+  if [[ -f "$APP_IMAGE" ]] && [[ "$(cat "$WORK_DIR/app-hash" 2>/dev/null)" == "$app_hash" ]] && [[ $base_changed -eq 0 ]] && [[ $FORCE -eq 0 ]]; then
+    log "App layer cached. Skipping to device stamping."
+  else
+    log "Building app deployment layer..."
+    create_cow_overlay "$BASE_IMAGE" "$DISK_IMAGE"
+    boot_qemu
+    deploy_app
+    shutdown_qemu
+    flatten_overlay "$DISK_IMAGE" "$APP_IMAGE"
+    echo "$app_hash" > "$WORK_DIR/app-hash"
+    log "App layer cached."
+  fi
+
+  # --- Layer 3: Device customization (guestfish only, no QEMU) ----------------
+  stamp_device "$APP_IMAGE"
 }
 
 main "$@"

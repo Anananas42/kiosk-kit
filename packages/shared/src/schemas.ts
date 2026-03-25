@@ -52,42 +52,30 @@ export const CatalogListOutputSchema = z.array(CatalogCategorySchema);
 
 // ── Device schemas ──────────────────────────────────────────────────
 
-const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
-
-export const TailscaleIpSchema = z.string().refine(
-  (ip) => {
-    if (!IP_REGEX.test(ip)) return false;
-    return ip.split(".").every((octet) => {
-      const n = Number(octet);
-      return n >= 0 && n <= 255;
-    });
-  },
-  { message: "Must be a valid IP address" },
-);
-
 export const DeviceSchema = z.object({
   id: z.string().uuid(),
-  userId: z.string(),
+  tailscaleNodeId: z.string(),
+  userId: z.string().nullable(),
   name: z.string(),
-  tailscaleIp: z.string().optional(),
+  tailscaleIp: z.string().nullable().optional(),
+  online: z.boolean(),
+  lastSeen: z.string().nullable(),
+  hostname: z.string(),
   createdAt: z.coerce.string(),
 });
 
 export type Device = z.infer<typeof DeviceSchema>;
 
-export const DeviceCreateInputSchema = z.object({
-  name: z.string().trim().min(1, "name is required"),
-  tailscaleIp: TailscaleIpSchema,
-  userId: z.string().trim().min(1, "userId is required"),
+export const DeviceAssignInputSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().nullable(),
 });
 
-export type DeviceCreateInput = z.infer<typeof DeviceCreateInputSchema>;
+export type DeviceAssignInput = z.infer<typeof DeviceAssignInputSchema>;
 
 export const DeviceUpdateInputSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().trim().min(1).optional(),
-  tailscaleIp: TailscaleIpSchema.optional(),
-  userId: z.string().trim().min(1).optional(),
+  name: z.string().trim().min(1, "name is required"),
 });
 
 export type DeviceUpdateInput = z.infer<typeof DeviceUpdateInputSchema>;
