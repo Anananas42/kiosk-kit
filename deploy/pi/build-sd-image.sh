@@ -9,7 +9,7 @@
 #
 # Prerequisites (all provided by the Dockerfile):
 #   qemu-system-aarch64, qemu-img, guestfish (libguestfs-tools),
-#   ansible-playbook, sshpass, curl, xz, dpkg-deb
+#   ansible-playbook, sshpass, curl, jq, xz, dpkg-deb
 #
 # Usage:
 #   ./build-sd-image.sh --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
@@ -18,6 +18,19 @@
 #   ./build-sd-image.sh --dev --force            # rebuild all layers
 #   ./build-sd-image.sh --dev --app-only         # skip base layer (must exist)
 #   ./build-sd-image.sh --dev --device-only      # stamp device on existing app image (~30s)
+#
+# Options:
+#   --device-id ID         Device identifier (e.g. 042)
+#   --customer-tag TAG     Customer tag for Tailscale ACLs (e.g. acme)
+#   --tailscale-key KEY    Explicit Tailscale auth key; if omitted, auto-generated via API
+#   --dev                  Use PI_DEV_* env vars for device-id, customer-tag, tailscale-key
+#   --force                Rebuild all cached layers from scratch
+#   --app-only             Skip base layer rebuild (must already exist)
+#   --device-only          Only stamp device on existing app image (~30s)
+#
+# Environment variables (for API key auto-generation when --tailscale-key is omitted):
+#   TAILSCALE_API_KEY      Tailscale API key (also read from .env)
+#   TAILSCALE_TAILNET      Tailscale tailnet name (also read from .env)
 
 set -euo pipefail
 
