@@ -5,9 +5,9 @@ import {
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, max } from "drizzle-orm";
 import { z } from "zod";
-import { devices } from "../../db/schema.js";
+import { backups, devices } from "../../db/schema.js";
 import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
 import {
   getCachedDevice,
@@ -151,6 +151,24 @@ export const devicesRouter = router({
 
 // ── Admin list: merge Tailscale API with DB ─────────────────────────
 
+async function getLastBackupMap(db: import("../../db/index.js").Db): Promise<Map<string, string>> {
+  const rows = await db
+    .select({
+      deviceId: backups.deviceId,
+      lastBackupAt: max(backups.createdAt),
+    })
+    .from(backups)
+    .groupBy(backups.deviceId);
+
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    if (r.lastBackupAt) {
+      map.set(r.deviceId, r.lastBackupAt.toISOString());
+    }
+  }
+  return map;
+}
+
 async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[]> {
   let tailscaleDevices: TailscaleDevice[] = [];
   let tailscaleReachable = false;
@@ -162,7 +180,10 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
     // Tailscale API unavailable — fall back to DB-only
   }
 
-  const dbDevices = await db.select().from(devices);
+  const [dbDevices, lastBackupMap] = await Promise.all([
+    db.select().from(devices),
+    getLastBackupMap(db),
+  ]);
   const dbByNodeId = new Map(dbDevices.map((d) => [d.tailscaleNodeId, d]));
 
   const result: Device[] = [];
@@ -202,6 +223,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
       tailscaleIp: tsIp,
       online: td.online,
       lastSeen: td.lastSeen,
+      lastBackupAt: lastBackupMap.get(dbDevice.id) ?? null,
       hostname: td.hostname,
       createdAt: dbDevice.createdAt.toISOString(),
     });
@@ -224,6 +246,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
         tailscaleIp: dbDevice.tailscaleIp,
         online: false,
         lastSeen: dbDevice.lastSeen?.toISOString() ?? null,
+        lastBackupAt: lastBackupMap.get(dbDevice.id) ?? null,
         hostname: dbDevice.name,
         createdAt: dbDevice.createdAt.toISOString(),
       });
@@ -243,7 +266,10 @@ async function listForCustomer(
   db: import("../../db/index.js").Db,
   userId: string,
 ): Promise<Device[]> {
-  const dbDevices = await db.select().from(devices).where(eq(devices.userId, userId));
+  const [dbDevices, lastBackupMap] = await Promise.all([
+    db.select().from(devices).where(eq(devices.userId, userId)),
+    getLastBackupMap(db),
+  ]);
 
   const list: Device[] = await Promise.all(
     dbDevices.map(async (d) => {
@@ -271,6 +297,7 @@ async function listForCustomer(
         name: d.name,
         online,
         lastSeen,
+        lastBackupAt: lastBackupMap.get(d.id) ?? null,
         hostname: d.name,
         createdAt: d.createdAt.toISOString(),
       };

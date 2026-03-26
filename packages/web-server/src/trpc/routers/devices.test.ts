@@ -38,6 +38,7 @@ function createMockDb(returnValue: unknown[] = []) {
   const chainable = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
+    groupBy: vi.fn().mockResolvedValue([]),
     where: vi.fn().mockReturnValue(terminal),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),

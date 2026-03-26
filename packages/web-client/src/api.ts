@@ -27,6 +27,17 @@ export async function fetchDeviceStatus(id: string): Promise<boolean> {
   }
 }
 
+export async function fetchBackups(
+  deviceId: string,
+): Promise<{ id: string; sizeBytes: number; createdAt: string }[]> {
+  return trpc["backups.list"].query({ deviceId });
+}
+
+export async function fetchBackupDownloadUrl(backupId: string): Promise<string> {
+  const { url } = await trpc["backups.getDownloadUrl"].query({ backupId });
+  return url;
+}
+
 export function logout(): Promise<Response> {
   return fetch("/api/auth/logout", { method: "POST" });
 }
