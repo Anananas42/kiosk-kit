@@ -32,6 +32,20 @@
     mode: "0644"
   notify: Reload nftables
 
+- name: Create nftables service override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/nftables.service.d
+    state: directory
+    mode: "0755"
+
+- name: Ensure nftables starts after kernel modules are loaded
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      After=systemd-modules-load.service
+    dest: /etc/systemd/system/nftables.service.d/after-modules.conf
+    mode: "0644"
+
 - name: Enable nftables
   ansible.builtin.systemd:
     name: nftables.service
