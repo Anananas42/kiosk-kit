@@ -165,6 +165,11 @@ setup_wifi_simulation() {
   ssh_pi "sudo modprobe mac80211_hwsim radios=2 2>/dev/null && echo 'mac80211_hwsim loaded' || echo 'WARN: mac80211_hwsim not available — WiFi simulation will be limited'"
 
   ssh_pi "echo 'mac80211_hwsim' | sudo tee /etc/modules-load.d/hwsim.conf >/dev/null; echo 'options mac80211_hwsim radios=2' | sudo tee /etc/modprobe.d/hwsim.conf >/dev/null"
+
+  # Disable wpa_supplicant@wlan0 to prevent boot stalls when mac80211_hwsim
+  # can't load (e.g. inside Docker where the kernel module isn't available).
+  # WiFi scripts still work when the module IS available.
+  ssh_pi "sudo systemctl disable wpa_supplicant@wlan0.service 2>/dev/null || true"
 }
 
 shutdown_and_snapshot() {
