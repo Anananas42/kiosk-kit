@@ -9,7 +9,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { devices } from "../../db/schema.js";
 import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
-import { getTailscaleClient, type TailscaleDevice } from "../../services/tailscale.js";
+import {
+  getCachedDevice,
+  getTailscaleClient,
+  type TailscaleDevice,
+} from "../../services/tailscale.js";
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -38,19 +42,24 @@ export const devicesRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
       }
 
-      // If tailscaleIp is missing, try to fetch from Tailscale API and cache it
+      // Fetch live status from Tailscale API (cached 30s)
+      let online = false;
+      let lastSeen: string | null = device.lastSeen?.toISOString() ?? null;
       let { tailscaleIp } = device;
-      if (!tailscaleIp) {
-        try {
-          const ts = getTailscaleClient();
-          const td = await ts.getDevice(device.tailscaleNodeId);
-          tailscaleIp = tailscaleIpFromDevice(td);
-          if (tailscaleIp) {
-            await ctx.db.update(devices).set({ tailscaleIp }).where(eq(devices.id, device.id));
-          }
-        } catch {
-          // Tailscale API unavailable — return without IP
-        }
+
+      try {
+        const td = await getCachedDevice(device.tailscaleNodeId);
+        online = td.online;
+        lastSeen = td.lastSeen;
+        tailscaleIp = tailscaleIpFromDevice(td) ?? tailscaleIp;
+
+        // Persist lastSeen and tailscaleIp back to DB as fallback
+        await ctx.db
+          .update(devices)
+          .set({ lastSeen: new Date(td.lastSeen), tailscaleIp })
+          .where(eq(devices.id, device.id));
+      } catch {
+        // Tailscale API unavailable — fall back to DB-cached lastSeen, online: false
       }
 
       return {
@@ -59,8 +68,8 @@ export const devicesRouter = router({
         userId: device.userId,
         name: device.name,
         tailscaleIp: ctx.user.role === "admin" ? tailscaleIp : undefined,
-        online: false,
-        lastSeen: null,
+        online,
+        lastSeen,
         hostname: device.name,
         createdAt: device.createdAt.toISOString(),
       };
@@ -173,10 +182,14 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
         })
         .returning();
       dbDevice = inserted;
-    } else if (tsIp && dbDevice.tailscaleIp !== tsIp) {
-      // Update cached IP if changed
-      await db.update(devices).set({ tailscaleIp: tsIp }).where(eq(devices.id, dbDevice.id));
-      dbDevice = { ...dbDevice, tailscaleIp: tsIp };
+    } else {
+      // Update cached IP and lastSeen
+      const updates: Record<string, unknown> = { lastSeen: new Date(td.lastSeen) };
+      if (tsIp && dbDevice.tailscaleIp !== tsIp) {
+        updates.tailscaleIp = tsIp;
+      }
+      await db.update(devices).set(updates).where(eq(devices.id, dbDevice.id));
+      dbDevice = { ...dbDevice, tailscaleIp: tsIp ?? dbDevice.tailscaleIp };
     }
 
     dbByNodeId.delete(td.nodeId);
@@ -210,7 +223,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
         name: dbDevice.name,
         tailscaleIp: dbDevice.tailscaleIp,
         online: false,
-        lastSeen: null,
+        lastSeen: dbDevice.lastSeen?.toISOString() ?? null,
         hostname: dbDevice.name,
         createdAt: dbDevice.createdAt.toISOString(),
       });
@@ -224,7 +237,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
   return result;
 }
 
-// ── Customer list: DB only ──────────────────────────────────────────
+// ── Customer list: DB + Tailscale status ────────────────────────────
 
 async function listForCustomer(
   db: import("../../db/index.js").Db,
@@ -232,16 +245,37 @@ async function listForCustomer(
 ): Promise<Device[]> {
   const dbDevices = await db.select().from(devices).where(eq(devices.userId, userId));
 
-  const list: Device[] = dbDevices.map((d) => ({
-    id: d.id,
-    tailscaleNodeId: d.tailscaleNodeId,
-    userId: d.userId,
-    name: d.name,
-    online: false,
-    lastSeen: null,
-    hostname: d.name,
-    createdAt: d.createdAt.toISOString(),
-  }));
+  const list: Device[] = await Promise.all(
+    dbDevices.map(async (d) => {
+      let online = false;
+      let lastSeen: string | null = d.lastSeen?.toISOString() ?? null;
+
+      try {
+        const td = await getCachedDevice(d.tailscaleNodeId);
+        online = td.online;
+        lastSeen = td.lastSeen;
+
+        // Persist lastSeen back to DB as fallback
+        await db
+          .update(devices)
+          .set({ lastSeen: new Date(td.lastSeen) })
+          .where(eq(devices.id, d.id));
+      } catch {
+        // Tailscale API unavailable — fall back to DB-cached lastSeen, online: false
+      }
+
+      return {
+        id: d.id,
+        tailscaleNodeId: d.tailscaleNodeId,
+        userId: d.userId,
+        name: d.name,
+        online,
+        lastSeen,
+        hostname: d.name,
+        createdAt: d.createdAt.toISOString(),
+      };
+    }),
+  );
 
   if (isDev) {
     list.push(makeLocalDevice(userId));

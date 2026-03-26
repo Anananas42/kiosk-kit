@@ -163,6 +163,22 @@ export class TailscaleClient {
   }
 }
 
+// ── TTL cache for getDevice() ───────────────────────────────────────
+
+const CACHE_TTL_MS = 30_000;
+const deviceCache = new Map<string, { data: TailscaleDevice; expiresAt: number }>();
+
+export async function getCachedDevice(nodeId: string): Promise<TailscaleDevice> {
+  const cached = deviceCache.get(nodeId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
+  }
+  const ts = getTailscaleClient();
+  const data = await ts.getDevice(nodeId);
+  deviceCache.set(nodeId, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  return data;
+}
+
 // ── Singleton ───────────────────────────────────────────────────────
 
 let instance: TailscaleClient | null = null;
