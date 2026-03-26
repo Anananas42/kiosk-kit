@@ -4,7 +4,7 @@
 # Uses a three-layer cache so that per-device stamping takes ~30s (no QEMU boot):
 #
 #   Layer 1 (base system, ~25 min):  Pi OS + QEMU patches + Ansible provision (--skip-tags tailscale,app)
-#   Layer 2 (app deploy, ~1 min):    Host build + QEMU native addon rebuild + system config
+#   Layer 2 (app deploy, ~1 min):    Host build + arm64 cross-compile + rsync into VM + system config
 #   Layer 3 (device stamp, ~30 sec): guestfish-only — Tailscale config, first-boot service, cleanup
 #
 # Prerequisites (all provided by the Dockerfile):
@@ -45,6 +45,8 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker is required when running outside a container" >&2; exit 1; }
 
   # --- Host-side app build (native speed, before Docker) ---
+  command -v aarch64-linux-gnu-gcc >/dev/null 2>&1 \
+    || { echo "ERROR: aarch64 cross-compiler required. Install with: sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu" >&2; exit 1; }
   echo "==> Building application on host (native speed)..."
   APP_STAGE="$SCRIPT_DIR/.work/app-stage"
   rm -rf "$APP_STAGE"
@@ -96,6 +98,16 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
     --filter @kioskkit/kiosk-admin \
     --filter @kioskkit/shared \
     --filter @kioskkit/ui) || { echo "ERROR: Host pnpm prune failed" >&2; exit 1; }
+
+  # Cross-compile better-sqlite3 for arm64 (native x86 speed, seconds vs minutes in QEMU)
+  echo "==> Cross-compiling better-sqlite3 for arm64..."
+  BS3_DIR=$(echo "$APP_STAGE"/node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3)
+  [[ -d "$BS3_DIR" ]] || { echo "ERROR: better-sqlite3 not found in staging dir" >&2; exit 1; }
+  (cd "$BS3_DIR" && rm -rf build && \
+    CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+    CC_host=gcc CXX_host=g++ \
+    npx --yes node-gyp rebuild --arch=arm64) \
+    || { echo "ERROR: better-sqlite3 cross-compilation failed" >&2; exit 1; }
 
   echo "==> Host build complete."
 
@@ -327,10 +339,11 @@ provision_base() {
     || err "Ansible base provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
-# deploy_app — sync pre-built app (from host) into VM, rebuild native arm64 addons.
+# deploy_app — sync pre-built app (from host) into VM, deploy system config.
 #
-# The host build runs before Docker re-exec (native x86 speed). By the time this
-# function runs inside the container, the pre-built app is at $WORK_DIR/app-stage/.
+# The host build runs before Docker re-exec (native x86 speed), including
+# cross-compilation of native arm64 addons. By the time this function runs
+# inside the container, the pre-built app is at $WORK_DIR/app-stage/.
 deploy_app() {
   local stage_dir="$WORK_DIR/app-stage"
   [[ -d "$stage_dir" ]] || err "No pre-built app found at $stage_dir. Host build may have failed."
@@ -350,11 +363,6 @@ deploy_app() {
     "$stage_dir/" "pi@localhost:/var/tmp/app-stage/" \
     || err "rsync into VM failed"
   ssh_pi "sudo rsync -a --exclude=data --exclude=system /var/tmp/app-stage/ $install_dir/ && sudo rm -rf /var/tmp/app-stage && sudo chown -R kiosk:kiosk $install_dir"
-
-  # Rebuild native arm64 addons
-  log "Rebuilding native arm64 addons (better-sqlite3)..."
-  ssh_pi "sudo -u kiosk bash -lc 'cd $install_dir && npm rebuild better-sqlite3'" \
-    || err "Native addon rebuild failed inside VM"
 
   # Deploy ancillary files (systemd service, sway config, display-sleep.py)
   log "Deploying system configuration..."

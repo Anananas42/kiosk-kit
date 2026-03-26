@@ -11,6 +11,10 @@ authenticates, kiosk app starts.
 ## Prerequisites
 
 - Docker (everything else is inside the container)
+- aarch64 cross-compiler for native addon compilation:
+  ```bash
+  sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+  ```
 
 For running without Docker (e.g. in CI):
 
@@ -92,12 +96,12 @@ code in `deploy/pi/lib/pi-image-common.sh`:
 
 **Layer 2 — App deployment (~1 min, cached):**
 
-The app is built on the host at native x86 speed (before Docker), then only
-native arm64 addons are rebuilt inside the QEMU VM:
+The app is built on the host at native x86 speed (before Docker), including
+cross-compilation of native arm64 addons:
 
-9. **Host** (before Docker): builds kiosk packages, prunes to production deps
+9. **Host** (before Docker): builds kiosk packages, prunes to production deps, cross-compiles `better-sqlite3` for arm64
 10. Creates COW overlay on base image, boots QEMU
-11. Rsyncs pre-built app into VM, rebuilds `better-sqlite3` for arm64
+11. Rsyncs pre-built app into VM
 12. Ansible deploys system config (systemd service, sway config, display-sleep)
 13. Shuts down, flattens overlay to `app-image.qcow2`
 
@@ -214,7 +218,7 @@ Verify the Layer 3 device stamp ran successfully — check that the fstab uses P
 | Tailscale version | `TAILSCALE_VERSION`, `TAILSCALE_DEB_URL`, `TAILSCALE_DEB_CHECKSUM` in `build-sd-image.sh` |
 | Shared build logic | Edit `lib/pi-image-common.sh` (used by both emulator and SD builder) |
 | First-boot service | Edit `first-boot/tailscale-firstboot.sh` and/or the `.service` file |
-| New native dependency | Add to `npm rebuild` in `deploy_app()` in `build-sd-image.sh` |
+| New native dependency | Add cross-compile step in host build section of `build-sd-image.sh` |
 
 ## File structure
 
