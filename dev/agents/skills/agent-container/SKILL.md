@@ -163,6 +163,48 @@ The container is the intended runtime for the `cicd-workflow` skill. A typical a
 
 The agent will branch, implement, push via app token, create a PR, and enter the watch loop — all inside the container.
 
+## Database seeding
+
+The container auto-seeds databases on startup. **Never add test data or mock devices in application code** — use the existing seed infrastructure.
+
+### Postgres (web-server)
+
+On container start, the entrypoint automatically:
+1. Pushes the schema via `pnpm --filter @kioskkit/web-server db:push`
+2. Seeds a test admin user via `pnpm --filter @kioskkit/web-server db:seed-test-user`:
+   - Email: `test@kioskkit.local`, role: `admin`
+   - Session token exported as `TEST_SESSION_TOKEN` env var (valid 1 year)
+
+To reset Postgres to a clean state (drop all tables, re-push schema, re-seed):
+
+```bash
+./dev/agents/scripts/db-reset.sh
+```
+
+To add new Postgres seed data, edit `packages/web-server/src/seed-test-user.ts`.
+
+### SQLite (kiosk-server)
+
+kiosk-server uses SQLite and seeds on first run via `packages/kiosk-server/src/seed.ts`:
+- 5 buyers (labels 101–103, 201–202)
+- 3 catalog categories (Drinks, Snacks, Pastries) with items
+- Default kiosk settings (locale, currency, etc.)
+
+To drop and re-seed the kiosk-server SQLite database:
+
+```bash
+pnpm --filter @kioskkit/kiosk-server db:reseed
+```
+
+To add new SQLite seed data, edit `packages/kiosk-server/src/seed.ts`.
+
+### Rules for agents
+
+- **NEVER** hardcode test data, mock devices, or fake users in application code
+- Use `TEST_SESSION_TOKEN` for authenticated requests in tests
+- If you need additional seed data, add it to the appropriate seed script
+- Use `db-reset.sh` or `db:reseed` when you need a clean database state
+
 ## Key files
 
 - `dev/agents/container/Dockerfile` — container image definition
@@ -172,4 +214,5 @@ The agent will branch, implement, push via app token, create a PR, and enter the
 - `dev/agents/scripts/run.sh` — host-side launcher
 - `dev/agents/scripts/github-app-token.sh` — GitHub App token generator
 - `dev/agents/scripts/screenshot.mjs` — Playwright screenshot tool
+- `dev/agents/scripts/db-reset.sh` — Postgres database reset (drop, re-push, re-seed)
 - `.mcp.json` — MCP server configuration (loaded by Claude Code)

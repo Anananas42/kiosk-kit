@@ -162,6 +162,48 @@ else
   exec claude --dangerously-skip-permissions
 fi
 
+# --- Context summary for watch loop re-invocations ---
+AGENT_CONTEXT_FILE="/tmp/agent-context.md"
+
+generate_agent_context() {
+  local pr_number="${1:-}"
+  local pr_title="${2:-}"
+  local branch
+  branch=$(git branch --show-current)
+  {
+    echo "# Agent Context"
+    echo ""
+    echo "## Original Task"
+    echo ""
+    echo "$AGENT_TASK"
+    echo ""
+    echo "## Branch"
+    echo ""
+    echo "$branch"
+    echo ""
+    if [ -n "$pr_number" ]; then
+      echo "## PR"
+      echo ""
+      echo "#$pr_number: $pr_title"
+      echo ""
+    fi
+    echo "## Commits on this branch"
+    echo ""
+    echo '```'
+    git log main..HEAD --oneline 2>/dev/null || echo "(none)"
+    echo '```'
+    echo ""
+    echo "## Changed files"
+    echo ""
+    echo '```'
+    git diff main --name-only 2>/dev/null || echo "(none)"
+    echo '```'
+  } > "$AGENT_CONTEXT_FILE"
+}
+
+# Generate initial context (no PR info yet)
+generate_agent_context
+
 # --- PR watch loop ---
 # After claude finishes its task, poll the PR until it's merged or closed.
 # If something needs attention, re-invoke claude with context.
@@ -226,8 +268,10 @@ if [ -z "$PR_INIT_JSON" ]; then
   sleep infinity
 fi
 
-# Initialize seen comment counts
+# Initialize seen comment counts and update context with PR info
 PR_INIT_NUMBER=$(echo "$PR_INIT_JSON" | jq -r '.number')
+PR_INIT_TITLE=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json title --jq .title 2>/dev/null || echo "")
+generate_agent_context "$PR_INIT_NUMBER" "$PR_INIT_TITLE"
 SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
 SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
 LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -397,10 +441,23 @@ $REVIEW_ACTION"
       continue
     fi
 
-    if ! run_claude "$NEEDS_ACTION"; then
+    CONTEXT_PREFIX=""
+    if [ -f "$AGENT_CONTEXT_FILE" ]; then
+      CONTEXT_PREFIX=$(cat "$AGENT_CONTEXT_FILE")
+    fi
+
+    if ! run_claude "$CONTEXT_PREFIX
+
+---
+
+ACTION NEEDED:
+$NEEDS_ACTION"; then
       echo "==> Watch loop claude invocation failed after retries. Sleeping indefinitely."
       sleep infinity
     fi
+
+    # Update context file with latest commits and changed files
+    generate_agent_context "$PR_NUMBER" "$(echo "$PR_JSON" | jq -r '.title // ""')"
 
     # Update seen comment counts and timestamp so handled comments don't re-trigger
     SEEN_PR_COMMENTS=$PR_COMMENTS
