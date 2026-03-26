@@ -1,11 +1,12 @@
 import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const kioskAdminDevUrl = process.env.KIOSK_ADMIN_DEV_URL;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@kioskkit/shared": path.resolve(__dirname, "../shared/src/index.ts"),
