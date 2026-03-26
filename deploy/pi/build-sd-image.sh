@@ -426,8 +426,6 @@ EOF
 
   # --- Guestfish session 1: read-only (extract PARTUUIDs + sshd_config) ---
 
-  # --- Guestfish session 1: read-only (extract PARTUUIDs + sshd_config) ---
-
   log "Reading image metadata..."
   local read_cmd="$stamp_dir/read.cmd"
   local sshd_cfg="$stamp_dir/sshd_config"
