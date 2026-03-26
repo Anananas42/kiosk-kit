@@ -136,7 +136,7 @@ shutdown_and_snapshot() {
   shutdown_qemu
 
   log "Creating golden image..."
-  cp "$DISK_IMAGE" "$GOLDEN_IMAGE"
+  flatten_overlay "$DISK_IMAGE" "$GOLDEN_IMAGE"
 
   log "Golden image created at: $GOLDEN_IMAGE"
   log "Size: $(du -h "$GOLDEN_IMAGE" | cut -f1)"
