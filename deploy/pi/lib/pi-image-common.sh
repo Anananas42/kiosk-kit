@@ -26,6 +26,7 @@ _PI_IMAGE_COMMON_LOADED=1
 : "${SSH_PORT:=2222}"
 : "${QEMU_RAM:=6G}"
 : "${QEMU_CPUS:=$(( $(nproc) / 2 ))}"
+: "${QEMU_DISK_SIZE:=8G}"
 
 : "${PI_SSH_PASS:=raspberry}"
 
@@ -75,9 +76,9 @@ download_pios() {
 }
 
 prepare_disk() {
-  log "Converting to qcow2 and resizing to 6G..."
+  log "Converting to qcow2 and resizing to ${QEMU_DISK_SIZE}..."
   qemu-img convert -f raw -O qcow2 "$RAW_IMAGE" "$DISK_IMAGE"
-  qemu-img resize "$DISK_IMAGE" 6G
+  qemu-img resize "$DISK_IMAGE" "$QEMU_DISK_SIZE"
 
   # Grow partition 2 to fill the disk, then resize the filesystem
   guestfish --rw -a "$DISK_IMAGE" <<'GROW_SCRIPT'
