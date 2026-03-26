@@ -173,6 +173,7 @@ ATTEMPT_COUNT=0
 MAX_ATTEMPTS=5
 SEEN_PR_COMMENTS=0
 SEEN_ISSUE_COMMENTS=0
+LAST_ACTION_TIMESTAMP=""
 
 # Find the open PR for the current branch
 BRANCH=$(git branch --show-current)
@@ -229,6 +230,7 @@ fi
 PR_INIT_NUMBER=$(echo "$PR_INIT_JSON" | jq -r '.number')
 SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
 SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_INIT_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 while true; do
   GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
@@ -298,6 +300,34 @@ TESTING_EOF
   PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
   ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
 
+  # Save timestamp for command detection before any updates
+  CHECK_SINCE_TIMESTAMP="$LAST_ACTION_TIMESTAMP"
+
+  # --- Check for @continue command (before max attempts check) ---
+  HAS_CONTINUE=false
+  if [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ]; then
+    CONTINUE_COUNT=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$CHECK_SINCE_TIMESTAMP\") and (.body | test(\"@continue\")))] | length" 2>/dev/null || echo "0")
+    if [ "$CONTINUE_COUNT" -gt 0 ]; then
+      echo "==> @continue command detected. Resetting attempt counter."
+      HAS_CONTINUE=true
+      ATTEMPT_COUNT=0
+      SEEN_ISSUE_COMMENTS=$ISSUE_COMMENTS
+      LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    fi
+  fi
+
+  # --- Check for @tester command ---
+  HAS_TESTER=false
+  if [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ] || [ "$HAS_CONTINUE" = true ]; then
+    TESTER_COUNT=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$CHECK_SINCE_TIMESTAMP\" or .updated_at > \"$CHECK_SINCE_TIMESTAMP\") and (.body | test(\"@tester\")))] | length" 2>/dev/null || echo "0")
+    if [ "$TESTER_COUNT" -gt 0 ]; then
+      echo "==> @tester command detected. Will invoke testing agent."
+      HAS_TESTER=true
+      # Reset the testing marker so it runs again
+      rm -f "/tmp/.testing-done-${PR_NUMBER}"
+    fi
+  fi
+
   NEEDS_ACTION=""
 
   if [ "$CI_FAILING" -gt 0 ]; then
@@ -319,27 +349,35 @@ Fix the failing checks, commit, and push."
   fi
 
   if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$PR_COMMENTS" -gt "$SEEN_PR_COMMENTS" ] || [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ]; then
-    REVIEW_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" 2>/dev/null || echo "[]")
-    CONVERSATION_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" 2>/dev/null || echo "[]")
-    REVIEW_ACTION="Review feedback on PR #$PR_NUMBER (branch: $BRANCH).
+    # Only fetch comments newer than LAST_ACTION_TIMESTAMP to avoid re-processing old ones
+    REVIEW_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\"))]" 2>/dev/null || echo "[]")
+    CONVERSATION_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\"))]" 2>/dev/null || echo "[]")
+
+    # Only add review action if there are actually new comments (not just stale CHANGES_REQUESTED)
+    NEW_COMMENT_COUNT=$(echo "$REVIEW_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+    NEW_CONVO_COUNT=$(echo "$CONVERSATION_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+
+    if [ "$NEW_COMMENT_COUNT" -gt 0 ] || [ "$NEW_CONVO_COUNT" -gt 0 ]; then
+      REVIEW_ACTION="Review feedback on PR #$PR_NUMBER (branch: $BRANCH).
 
 Review decision: $REVIEW_DECISION
 
-Inline review comments:
+New inline review comments (since last check):
 $REVIEW_COMMENTS
 
-Conversation comments:
+New conversation comments (since last check):
 $CONVERSATION_COMMENTS
 
 Address the feedback: fix code if needed, push, and reply to each comment."
 
-    if [ -n "$NEEDS_ACTION" ]; then
-      NEEDS_ACTION="$NEEDS_ACTION
+      if [ -n "$NEEDS_ACTION" ]; then
+        NEEDS_ACTION="$NEEDS_ACTION
 
 Additionally:
 $REVIEW_ACTION"
-    else
-      NEEDS_ACTION="$REVIEW_ACTION"
+      else
+        NEEDS_ACTION="$REVIEW_ACTION"
+      fi
     fi
   fi
 
@@ -348,9 +386,15 @@ $REVIEW_ACTION"
     echo "==> Action needed (attempt $ATTEMPT_COUNT/$MAX_ATTEMPTS). Re-invoking claude..."
 
     if [ "$ATTEMPT_COUNT" -gt "$MAX_ATTEMPTS" ]; then
-      echo "==> Max attempts ($MAX_ATTEMPTS) reached. Leaving a comment and sleeping indefinitely."
-      GH_TOKEN="${GH_TOKEN}" gh pr comment "$PR_NUMBER" --body "Agent hit the maximum of $MAX_ATTEMPTS fix attempts. Human help needed." || true
-      sleep infinity
+      echo "==> Max attempts ($MAX_ATTEMPTS) reached. Leaving a comment and polling for @continue..."
+      GH_TOKEN="${GH_TOKEN}" gh pr comment "$PR_NUMBER" --body "Agent hit the maximum of $MAX_ATTEMPTS fix attempts. Human help needed. Comment \`@continue\` to reset the attempt counter and resume." || true
+      # Update seen counts so the bot's own comment doesn't re-trigger
+      SEEN_PR_COMMENTS=$PR_COMMENTS
+      SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+      LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      echo "==> Sleeping ${POLL_INTERVAL}s..."
+      sleep "$POLL_INTERVAL"
+      continue
     fi
 
     if ! run_claude "$NEEDS_ACTION"; then
@@ -358,12 +402,54 @@ $REVIEW_ACTION"
       sleep infinity
     fi
 
-    # Update seen comment counts so handled comments don't re-trigger
+    # Update seen comment counts and timestamp so handled comments don't re-trigger
     SEEN_PR_COMMENTS=$PR_COMMENTS
     SEEN_ISSUE_COMMENTS=$ISSUE_COMMENTS
+    LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   else
     # All clear — reset attempt counter
     ATTEMPT_COUNT=0
+  fi
+
+  # --- Invoke testing agent on @tester command ---
+  if [ "$HAS_TESTER" = true ]; then
+    echo "==> Running testing agent on @tester request for PR #$PR_NUMBER..."
+    TESTING_CMD=$(cat .claude/commands/testing.md 2>/dev/null || echo "")
+    if [ -n "$TESTING_CMD" ]; then
+      PR_BODY=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
+      CHANGED_FILES=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json files --jq '.files[].path' 2>/dev/null || echo "")
+
+      start_log_tailer
+      claude --dangerously-skip-permissions -p "$(cat <<TESTING_EOF
+$TESTING_CMD
+
+---
+
+PR number: $PR_NUMBER
+Branch: $BRANCH
+
+## PR Description
+
+$PR_BODY
+
+## Changed Files
+
+$CHANGED_FILES
+TESTING_EOF
+      )" || true
+
+      echo "==> Testing agent finished for PR #$PR_NUMBER."
+    else
+      echo "==> Warning: .claude/commands/testing.md not found. Skipping testing agent."
+    fi
+
+    touch "/tmp/.testing-done-${PR_NUMBER}"
+
+    # Re-count comments after testing agent (it may have posted comments)
+    GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
+    SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+    SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+    LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   fi
 
   echo "==> Sleeping ${POLL_INTERVAL}s..."
