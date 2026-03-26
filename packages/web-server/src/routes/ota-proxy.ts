@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import type { Db } from "../db/index.js";
 import { devices, releases } from "../db/schema.js";
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 const FETCH_TIMEOUT_MS = 60_000;
 
 function getClientIp(c: { req: { header: (name: string) => string | undefined } }): string | null {
