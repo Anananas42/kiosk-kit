@@ -6,7 +6,7 @@ set -euo pipefail
 DB_URL="${DATABASE_URL:-postgresql://kioskkit:kioskkit@postgres:5432/kioskkit}"
 
 echo "==> Dropping all tables in Postgres..."
-node -e "
+NODE_PATH="packages/web-server/node_modules" node -e "
 const { Client } = require('pg');
 const c = new Client({ connectionString: '${DB_URL}' });
 (async () => {
