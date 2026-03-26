@@ -6,7 +6,6 @@ import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
-import { backupUploadRoute } from "./routes/backup-upload.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { healthRoute } from "./routes/health.js";
 import { createContextFactory } from "./trpc/context.js";
@@ -36,9 +35,6 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
       createContext: createContextFactory(db),
     }),
   );
-
-  // Backup upload uses IP-based auth — mount before session auth middleware
-  app.route("/api/devices", backupUploadRoute(db));
 
   // Auth middleware for protected API routes (exclude health + auth + trpc)
   app.use("/api/*", authMiddleware(db));

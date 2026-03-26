@@ -65,9 +65,7 @@
 
 - name: Write persistent device identity
   ansible.builtin.copy:
-    content: |
-      DEVICE_ID={{ kioskkit_device_id }}
-      WEB_SERVER_URL={{ kioskkit_web_server_url | default('') }}
+    content: "DEVICE_ID={{ kioskkit_device_id }}\n"
     dest: /etc/kioskkit/device.conf
     owner: root
     group: root
