@@ -20,6 +20,14 @@ STATE_FILE="$DATA_DIR/state.json"
 
 log() { echo "[boot-confirm] $*"; }
 
+# Atomic write: write to temp file then mv to avoid corruption on power loss
+write_state() {
+  local tmp
+  tmp=$(mktemp "$DATA_DIR/.state.XXXXXX")
+  echo "$1" > "$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
 # --- Detect tryboot mode ---
 
 is_tryboot() {
@@ -80,9 +88,7 @@ if [[ "$healthy" == "true" ]]; then
   echo "$current_slot" > "$BOOT_SLOT_FILE"
 
   # Update OTA state
-  cat > "$STATE_FILE" <<EOF
-{"status":"idle","slot":"${current_slot}","last_update":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","last_result":"success"}
-EOF
+  write_state "{\"status\":\"idle\",\"slot\":\"${current_slot}\",\"last_update\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"last_result\":\"success\"}"
 
   # Clean up tryboot markers
   rm -f "$DATA_DIR/pending-confirm"
@@ -94,9 +100,7 @@ else
   # Update OTA state to record failure
   current_slot="A"
   [[ -f "$BOOT_SLOT_FILE" ]] && current_slot=$(cat "$BOOT_SLOT_FILE")
-  cat > "$STATE_FILE" <<EOF
-{"status":"idle","slot":"${current_slot}","last_update":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","last_result":"rollback"}
-EOF
+  write_state "{\"status\":\"idle\",\"slot\":\"${current_slot}\",\"last_update\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"last_result\":\"rollback\"}"
 
   # Clean up tryboot markers so fallback boot is normal
   rm -f "$DATA_DIR/pending-confirm"

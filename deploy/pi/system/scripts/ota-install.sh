@@ -15,6 +15,14 @@ STATE_FILE="$DATA_DIR/state.json"
 
 log() { echo "[ota-install] $*"; }
 
+# Atomic write: write to temp file then mv to avoid corruption on power loss
+write_state() {
+  local tmp
+  tmp=$(mktemp "$DATA_DIR/.state.XXXXXX")
+  echo "$1" > "$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
 # --- Determine image to install ---
 
 if [[ $# -ge 1 ]]; then
@@ -62,9 +70,7 @@ log "Image: $IMAGE"
 
 # --- Write image to target partition ---
 
-cat > "$STATE_FILE" <<EOF
-{"status":"installing","target_slot":"${TARGET_SLOT}","target_dev":"${TARGET_DEV}","started":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
-EOF
+write_state "{\"status\":\"installing\",\"target_slot\":\"${TARGET_SLOT}\",\"target_dev\":\"${TARGET_DEV}\",\"started\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 
 if [[ "$IMAGE" == *.zst ]]; then
   log "Decompressing and writing to $TARGET_DEV..."
@@ -93,9 +99,7 @@ if [[ -d /boot/firmware ]]; then
     exit 1
   fi
 
-  cat > "$STATE_FILE" <<EOF
-{"status":"rebooting","target_slot":"${TARGET_SLOT}","method":"tryboot","started":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
-EOF
+  write_state "{\"status\":\"rebooting\",\"target_slot\":\"${TARGET_SLOT}\",\"method\":\"tryboot\",\"started\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 
   log "Rebooting into tryboot..."
   # Pi 4/5 tryboot: reboot with '0 tryboot' argument
@@ -104,9 +108,7 @@ else
   # QEMU: write tryboot file to data partition for initrd to consume
   echo "$TARGET_SLOT" > "$DATA_DIR/tryboot"
 
-  cat > "$STATE_FILE" <<EOF
-{"status":"rebooting","target_slot":"${TARGET_SLOT}","method":"qemu-tryboot","started":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
-EOF
+  write_state "{\"status\":\"rebooting\",\"target_slot\":\"${TARGET_SLOT}\",\"method\":\"qemu-tryboot\",\"started\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 
   log "Rebooting into slot $TARGET_SLOT (QEMU tryboot)..."
   reboot
