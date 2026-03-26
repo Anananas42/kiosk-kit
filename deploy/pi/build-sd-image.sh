@@ -71,6 +71,8 @@ fi
 # shellcheck disable=SC2034
 SSH_PORT=2222
 # shellcheck disable=SC2034
+QEMU_DISK_SIZE=24G
+# shellcheck disable=SC2034
 QEMU_RAM="${SD_BUILD_RAM:-4G}"
 # shellcheck disable=SC2034
 _half_cpus=$(( $(nproc) / 2 ))
@@ -205,7 +207,7 @@ generate_tailscale_key() {
   fi
 
   local description
-  description="kioskkit-${DEVICE_ID} build $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  description="kioskkit-${DEVICE_ID}"
 
   local payload
   payload=$(jq -n \
@@ -213,15 +215,19 @@ generate_tailscale_key() {
     --arg desc "$description" \
     '{capabilities: {devices: {create: {reusable: false, ephemeral: false, tags: $tags}}}, description: $desc}')
 
-  local response curl_err
-  if ! response=$(curl -fsS --max-time 30 \
+  log "Requesting auth key with tags: $tags_json"
+  local response
+  response=$(curl -sS --max-time 30 \
     -H "Authorization: Bearer ${access_token}" \
     -H "Content-Type: application/json" \
     -d "$payload" \
-    "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>/tmp/curl_stderr); then
-    curl_err=$(cat /tmp/curl_stderr)
-    err "Tailscale API call failed: ${response:-$curl_err}"
-  fi
+    "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>&1) \
+    || err "Tailscale API call failed (curl error): $response"
+
+  # Check for API error message in response
+  local api_err
+  api_err=$(printf '%s' "$response" | jq -r '.message // empty' 2>/dev/null)
+  [[ -z "$api_err" ]] || err "Tailscale API error: $api_err"
 
   TAILSCALE_KEY=$(printf '%s' "$response" | jq -r '.key // empty') \
     || err "Failed to parse Tailscale API response"
@@ -406,7 +412,7 @@ EOF
   echo "$TAILSCALE_DEB_CHECKSUM  $ts_deb" | sha256sum -c - \
     || err "Checksum mismatch for Tailscale .deb"
 
-  # Inject first-boot service into rootfs (p2)
+  # Inject first-boot services into rootfs (p2)
   guestfish --rw -a "$target_image" -m /dev/sda2 <<EOF
 # First-boot service and script
 upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-tailscale-firstboot.service /etc/systemd/system/kioskkit-tailscale-firstboot.service
@@ -414,9 +420,16 @@ mkdir-p /opt/kioskkit/system
 upload $REPO_ROOT/deploy/pi/first-boot/tailscale-firstboot.sh /opt/kioskkit/system/tailscale-firstboot.sh
 chmod 0755 /opt/kioskkit/system/tailscale-firstboot.sh
 
-# Enable the first-boot service
+# Data partition expansion service
+upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-expand-data.service /etc/systemd/system/kioskkit-expand-data.service
+upload $REPO_ROOT/deploy/pi/first-boot/expand-data-partition.sh /opt/kioskkit/system/expand-data-partition.sh
+chmod 0755 /opt/kioskkit/system/expand-data-partition.sh
+
+# Enable first-boot services
 mkdir-p /etc/systemd/system/multi-user.target.wants
 ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service
+mkdir-p /etc/systemd/system/local-fs.target.wants
+ln-sf /etc/systemd/system/kioskkit-expand-data.service /etc/systemd/system/local-fs.target.wants/kioskkit-expand-data.service
 EOF
 
   # Stamp device config and Tailscale firstboot config onto data partition (p4)

@@ -83,14 +83,14 @@ prepare_disk() {
 
   # Create 4-partition A/B layout:
   #   p1: boot   (FAT32, 512 MB)  — unchanged from Pi OS image
-  #   p2: rootA  (ext4,  4 GB)    — active root
-  #   p3: rootB  (ext4,  4 GB)    — OTA target (empty)
+  #   p2: rootA  (ext4,  8 GB)    — active root
+  #   p3: rootB  (ext4,  8 GB)    — OTA target (empty)
   #   p4: data   (ext4,  remainder) — persistent state
   #
   # Strategy:
   #   1. Read p2's start offset from the existing partition table
-  #   2. Resize p2 to exactly 4 GB (start + 4G sectors)
-  #   3. Append p3 (4 GB) and p4 (remainder) after p2
+  #   2. Resize p2 to exactly 8 GB (start + 8G sectors)
+  #   3. Append p3 (8 GB) and p4 (remainder) after p2
 
   # Read partition geometry to find where p2 starts
   local part_info
@@ -105,11 +105,11 @@ EOF
   local p2_start_bytes
   p2_start_bytes=$(echo "$part_info" | awk '/\[1\]/{found=1} found && /part_start:/{print $2; exit}')
 
-  local four_gb=$((4 * 1024 * 1024 * 1024))
-  local p2_end_bytes=$(( p2_start_bytes + four_gb - 1 ))
+  local root_size=$((8 * 1024 * 1024 * 1024))
+  local p2_end_bytes=$(( p2_start_bytes + root_size - 1 ))
   local p2_end_sector=$(( p2_end_bytes / 512 ))
 
-  # Resize p2 to exactly 4 GB and shrink its filesystem to fit
+  # Resize p2 to exactly 8 GB and shrink its filesystem to fit
   guestfish --rw -a "$DISK_IMAGE" <<EOF
 run
 part-resize /dev/sda 2 $p2_end_sector
@@ -119,7 +119,7 @@ EOF
 
   # Now add p3 and p4 after the resized p2
   local p3_start_bytes=$(( p2_end_bytes + 1 ))
-  local p3_end_bytes=$(( p3_start_bytes + four_gb - 1 ))
+  local p3_end_bytes=$(( p3_start_bytes + root_size - 1 ))
   local p4_start_bytes=$(( p3_end_bytes + 1 ))
 
   guestfish --rw -a "$DISK_IMAGE" <<EOF

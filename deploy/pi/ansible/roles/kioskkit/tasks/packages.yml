@@ -21,6 +21,7 @@
       - nftables
       - nodejs
       - python3-evdev
+      - cloud-guest-utils
       - rsync
       - wpasupplicant
     state: present
