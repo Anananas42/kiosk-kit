@@ -1,3 +1,4 @@
+import { Box, Card, CardContent, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useDataProvider } from "react-admin";
 
@@ -26,36 +27,32 @@ export function Dashboard() {
   }, [dataProvider]);
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h1>Admin Dashboard</h1>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Admin Dashboard
+      </Typography>
       {stats ? (
-        <div style={{ display: "flex", gap: "2rem", marginTop: "1rem" }}>
-          <div
-            style={{
-              padding: "1.5rem",
-              background: "#f5f5f5",
-              borderRadius: "8px",
-              minWidth: "150px",
-            }}
-          >
-            <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{stats.devices}</div>
-            <div style={{ color: "#666" }}>Devices</div>
-          </div>
-          <div
-            style={{
-              padding: "1.5rem",
-              background: "#f5f5f5",
-              borderRadius: "8px",
-              minWidth: "150px",
-            }}
-          >
-            <div style={{ fontSize: "2rem", fontWeight: "bold" }}>{stats.users}</div>
-            <div style={{ color: "#666" }}>Users</div>
-          </div>
-        </div>
+        <Box sx={{ display: "flex", gap: 3, mt: 2 }}>
+          <Card sx={{ minWidth: 150 }}>
+            <CardContent>
+              <Typography variant="h3" component="div">
+                {stats.devices}
+              </Typography>
+              <Typography color="text.secondary">Devices</Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ minWidth: 150 }}>
+            <CardContent>
+              <Typography variant="h3" component="div">
+                {stats.users}
+              </Typography>
+              <Typography color="text.secondary">Users</Typography>
+            </CardContent>
+          </Card>
+        </Box>
       ) : (
-        <p>Loading...</p>
+        <Typography>Loading...</Typography>
       )}
-    </div>
+    </Box>
   );
 }
