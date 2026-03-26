@@ -98,7 +98,7 @@ case "$PROFILE" in
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     EMU_DIR="$SCRIPT_DIR/../dev/pi-emulator"
 
-    if [[ ! -f "$EMU_DIR/golden.qcow2" ]]; then
+    if [[ ! -f "$EMU_DIR/.output/golden.qcow2" ]]; then
       echo "Error: Golden image not found. Build it first:" >&2
       echo "  ./dev/pi-emulator/build-image.sh" >&2
       exit 1
@@ -107,8 +107,8 @@ case "$PROFILE" in
     cleanup_emu() {
       echo ""
       echo "Shutting down Pi emulator..."
-      if [[ -f "$EMU_DIR/.work/qemu.pid" ]]; then
-        kill "$(cat "$EMU_DIR/.work/qemu.pid")" 2>/dev/null || true
+      if [[ -f "$EMU_DIR/.work/run/qemu.pid" ]]; then
+        kill "$(cat "$EMU_DIR/.work/run/qemu.pid")" 2>/dev/null || true
       fi
     }
     trap cleanup_emu EXIT INT TERM
