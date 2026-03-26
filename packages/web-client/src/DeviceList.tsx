@@ -14,26 +14,19 @@ import {
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { type Device, fetchDeviceStatus, fetchDevices } from "./api.js";
+import { getBackupDotColor } from "./BackupSection.js";
 import { formatRelativeTime } from "./format.js";
 
 function BackupIndicator({ lastBackupAt }: { lastBackupAt?: string | null }) {
+  const dotColor = getBackupDotColor(lastBackupAt);
+
   if (!lastBackupAt) {
     return (
       <span className="flex items-center gap-1.5 text-xs" title="No backups yet">
-        <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
+        <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
         <span className="text-muted-foreground">No backups</span>
       </span>
     );
-  }
-
-  const hoursAgo = (Date.now() - new Date(lastBackupAt).getTime()) / (1000 * 60 * 60);
-  let dotColor: string;
-  if (hoursAgo < 24) {
-    dotColor = "bg-green-500";
-  } else if (hoursAgo < 72) {
-    dotColor = "bg-yellow-500";
-  } else {
-    dotColor = "bg-red-500";
   }
 
   return (

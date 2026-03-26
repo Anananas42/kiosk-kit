@@ -1,14 +1,9 @@
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@kioskkit/ui";
+import { Badge, Card, CardContent } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import {
-  type Device,
-  fetchBackupDownloadUrl,
-  fetchBackups,
-  fetchDevice,
-  fetchDeviceStatus,
-} from "./api.js";
-import { formatFileSize, formatRelativeTime } from "./format.js";
+import { type Device, fetchBackups, fetchDevice, fetchDeviceStatus } from "./api.js";
+import { BackupSection } from "./BackupSection.js";
+import { formatRelativeTime } from "./format.js";
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,8 +15,6 @@ export function DeviceDetail() {
   const [backupList, setBackupList] = useState<
     { id: string; sizeBytes: number; createdAt: string }[]
   >([]);
-  const [showAllBackups, setShowAllBackups] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -37,16 +30,6 @@ export function DeviceDetail() {
       .then(setBackupList)
       .catch(() => {});
   }, [id]);
-
-  async function handleDownload(backupId: string) {
-    setDownloadingId(backupId);
-    try {
-      const url = await fetchBackupDownloadUrl(backupId);
-      window.open(url, "_blank");
-    } finally {
-      setDownloadingId(null);
-    }
-  }
 
   if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
 
@@ -173,55 +156,7 @@ export function DeviceDetail() {
       )}
 
       {/* Backups section */}
-      {!loading && !error && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Backups</CardTitle>
-            {backupList.length > 0 && (
-              <span className="text-muted-foreground text-xs">
-                Last backup: {formatRelativeTime(backupList[0].createdAt)}
-              </span>
-            )}
-          </CardHeader>
-          <CardContent>
-            {backupList.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                No backups yet. Backups run daily when your device is online.
-              </p>
-            ) : (
-              <>
-                <div className="divide-border divide-y">
-                  {(showAllBackups ? backupList : backupList.slice(0, 10)).map((b) => (
-                    <div key={b.id} className="flex items-center justify-between py-2 text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="text-foreground">{formatRelativeTime(b.createdAt)}</span>
-                        <span className="text-muted-foreground">{formatFileSize(b.sizeBytes)}</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={downloadingId === b.id}
-                        onClick={() => handleDownload(b.id)}
-                      >
-                        {downloadingId === b.id ? "Downloading…" : "Download"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                {backupList.length > 10 && (
-                  <button
-                    type="button"
-                    className="text-primary mt-2 text-sm hover:underline"
-                    onClick={() => setShowAllBackups(!showAllBackups)}
-                  >
-                    {showAllBackups ? "Show less" : `Show all (${backupList.length})`}
-                  </button>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {!loading && !error && <BackupSection backups={backupList} />}
     </div>
   );
 }

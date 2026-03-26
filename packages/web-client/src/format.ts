@@ -1,3 +1,8 @@
+/**
+ * Converts an ISO 8601 timestamp into a human-readable relative string
+ * (e.g. "just now", "5 minutes ago", "3 days ago").
+ * Picks the largest whole unit (seconds → minutes → hours → days) that fits.
+ */
 export function formatRelativeTime(isoString: string): string {
   const now = Date.now();
   const then = new Date(isoString).getTime();
@@ -12,6 +17,11 @@ export function formatRelativeTime(isoString: string): string {
   return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 }
 
+/**
+ * Formats a byte count into a human-readable size string using
+ * binary units (KB = 1024 bytes). Returns up to one decimal place
+ * for KB, MB, and GB values.
+ */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
