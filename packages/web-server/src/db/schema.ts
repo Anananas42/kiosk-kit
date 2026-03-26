@@ -1,4 +1,13 @@
-import { index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "customer"]);
 
@@ -42,6 +51,8 @@ export const releases = pgTable("releases", {
   githubAssetUrl: text("github_asset_url").notNull(),
   sha256: text("sha256").notNull(),
   releaseNotes: text("release_notes"),
+  isPublished: boolean("is_published").notNull().default(false),
+  isArchived: boolean("is_archived").notNull().default(false),
   publishedBy: text("published_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

@@ -45,12 +45,24 @@ export const releasesDataProvider: DataProvider = {
     return { data: result };
   },
 
-  update: async () => {
-    throw new Error("Cannot update releases");
+  update: async (_resource, params) => {
+    const { id, releaseNotes, isPublished, isArchived } = params.data as {
+      id: string;
+      releaseNotes?: string;
+      isPublished?: boolean;
+      isArchived?: boolean;
+    };
+    const result = await trpc["releases.update"].mutate({
+      id,
+      releaseNotes,
+      isPublished,
+      isArchived,
+    });
+    return { data: result };
   },
 
   updateMany: async () => {
-    throw new Error("Cannot update releases");
+    throw new Error("Cannot bulk update releases");
   },
 
   delete: async () => {

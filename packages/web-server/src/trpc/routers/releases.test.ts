@@ -31,11 +31,13 @@ const customerUser: User = {
 };
 
 const releaseRow = {
-  id: "r-1",
+  id: "a0000000-0000-4000-a000-000000000001",
   version: "v1.0.0",
   githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
   sha256: "abc123",
   releaseNotes: "First release",
+  isPublished: false,
+  isArchived: false,
   publishedBy: "admin-1",
   publishedAt: new Date("2025-06-01T00:00:00Z"),
 };
@@ -48,11 +50,13 @@ function createMockDb(returnValue: unknown[] = [], insertReturnValue?: unknown[]
   const chainable = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnValue(terminal),
+    where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnValue(terminal),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(insertResult),
     // biome-ignore lint/suspicious/noThenProperty: mock db needs thenable for drizzle query chain
     then: (resolve: (v: unknown) => void) => Promise.resolve(returnValue).then(resolve),
@@ -111,6 +115,49 @@ describe("releases procedures", () => {
     });
   });
 
+  describe("releases.update", () => {
+    it("updates release fields", async () => {
+      const updated = { ...releaseRow, isPublished: true };
+      const db = createMockDb([releaseRow], [updated]);
+      const caller = callerFor(adminUser, db);
+      const result = await caller["releases.update"]({
+        id: "a0000000-0000-4000-a000-000000000001",
+        isPublished: true,
+      });
+
+      expect(result.isPublished).toBe(true);
+    });
+
+    it("throws NOT_FOUND for missing release", async () => {
+      const db = createMockDb([], []);
+      const caller = callerFor(adminUser, db);
+      await expect(
+        caller["releases.update"]({
+          id: "00000000-0000-0000-0000-000000000000",
+          isPublished: true,
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+
+    it("throws BAD_REQUEST when no fields provided", async () => {
+      const db = createMockDb([releaseRow]);
+      const caller = callerFor(adminUser, db);
+      await expect(
+        caller["releases.update"]({ id: "a0000000-0000-4000-a000-000000000001" }),
+      ).rejects.toThrow(TRPCError);
+    });
+
+    it("throws FORBIDDEN for customers", async () => {
+      const caller = callerFor(customerUser, createMockDb());
+      await expect(
+        caller["releases.update"]({
+          id: "a0000000-0000-4000-a000-000000000001",
+          isPublished: true,
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+  });
+
   describe("releases.latest", () => {
     it("returns the most recent release", async () => {
       const caller = callerFor(customerUser, createMockDb([releaseRow]));
@@ -138,7 +185,12 @@ describe("releases procedures", () => {
     it("returns all releases ordered by date", async () => {
       const rows = [
         releaseRow,
-        { ...releaseRow, id: "r-2", version: "v0.9.0", publishedAt: new Date("2025-05-01") },
+        {
+          ...releaseRow,
+          id: "a0000000-0000-4000-a000-000000000002",
+          version: "v0.9.0",
+          publishedAt: new Date("2025-05-01"),
+        },
       ];
       const caller = callerFor(adminUser, createMockDb(rows));
       const result = await caller["releases.list"]();

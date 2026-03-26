@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { releases } from "../../db/schema.js";
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
@@ -44,6 +44,57 @@ export const releasesRouter = router({
         version: release!.version,
         sha256: release!.sha256,
         releaseNotes: release!.releaseNotes,
+        isPublished: release!.isPublished,
+        isArchived: release!.isArchived,
+        publishedAt: release!.publishedAt.toISOString(),
+      };
+    }),
+
+  "releases.update": adminProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        releaseNotes: z.string().optional(),
+        isPublished: z.boolean().optional(),
+        isArchived: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...fields } = input;
+
+      const [existing] = await ctx.db
+        .select({ id: releases.id })
+        .from(releases)
+        .where(eq(releases.id, id));
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Release not found" });
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (fields.releaseNotes !== undefined) updates.releaseNotes = fields.releaseNotes;
+      if (fields.isPublished !== undefined) updates.isPublished = fields.isPublished;
+      if (fields.isArchived !== undefined) updates.isArchived = fields.isArchived;
+
+      if (Object.keys(updates).length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No fields to update" });
+      }
+
+      const [release] = await ctx.db
+        .update(releases)
+        .set(updates)
+        .where(eq(releases.id, id))
+        .returning();
+
+      return {
+        id: release!.id,
+        version: release!.version,
+        githubAssetUrl: release!.githubAssetUrl,
+        sha256: release!.sha256,
+        releaseNotes: release!.releaseNotes,
+        isPublished: release!.isPublished,
+        isArchived: release!.isArchived,
+        publishedBy: release!.publishedBy,
         publishedAt: release!.publishedAt.toISOString(),
       };
     }),
@@ -52,6 +103,7 @@ export const releasesRouter = router({
     const [release] = await ctx.db
       .select()
       .from(releases)
+      .where(and(eq(releases.isPublished, true), eq(releases.isArchived, false)))
       .orderBy(desc(releases.publishedAt))
       .limit(1);
 
@@ -74,6 +126,8 @@ export const releasesRouter = router({
       githubAssetUrl: r.githubAssetUrl,
       sha256: r.sha256,
       releaseNotes: r.releaseNotes,
+      isPublished: r.isPublished,
+      isArchived: r.isArchived,
       publishedBy: r.publishedBy,
       publishedAt: r.publishedAt.toISOString(),
     }));

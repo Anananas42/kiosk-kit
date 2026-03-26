@@ -1,6 +1,9 @@
 import {
+  BooleanField,
+  BooleanInput,
   Create,
   Datagrid,
+  Edit,
   FunctionField,
   List,
   ReferenceField,
@@ -14,10 +17,12 @@ import { formatRelativeTime } from "./shared.js";
 export function ReleaseList() {
   return (
     <List>
-      <Datagrid>
+      <Datagrid rowClick="edit" bulkActionButtons={false}>
         <TextField source="version" />
+        <BooleanField source="isPublished" label="Published" />
+        <BooleanField source="isArchived" label="Archived" />
         <FunctionField
-          label="Published"
+          label="Created"
           render={(record: { publishedAt?: string }) => (
             <span title={record.publishedAt ? new Date(record.publishedAt).toLocaleString() : ""}>
               {formatRelativeTime(record.publishedAt)}
@@ -71,5 +76,28 @@ export function ReleaseCreate() {
         <TextInput source="releaseNotes" label="Release Notes" multiline rows={4} fullWidth />
       </SimpleForm>
     </Create>
+  );
+}
+
+export function ReleaseEdit() {
+  return (
+    <Edit>
+      <SimpleForm>
+        <TextInput source="version" disabled />
+        <TextInput source="githubAssetUrl" label="GitHub Asset URL" disabled fullWidth />
+        <TextInput source="sha256" label="SHA256 Checksum" disabled fullWidth />
+        <TextInput source="releaseNotes" label="Release Notes" multiline rows={4} fullWidth />
+        <BooleanInput
+          source="isPublished"
+          label="Published"
+          helperText="When enabled, this release is visible to customers and available for device updates"
+        />
+        <BooleanInput
+          source="isArchived"
+          label="Archived"
+          helperText="Archived releases are hidden from the active list but not deleted"
+        />
+      </SimpleForm>
+    </Edit>
   );
 }
