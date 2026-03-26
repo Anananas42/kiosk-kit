@@ -623,19 +623,28 @@ EOF
   local p3_start
   p3_start=$(echo "$part_info" | awk '/\[2\]/{found=1} found && /part_start:/{print $2; exit}')
 
-  # Calculate new end positions (add 1 MB margin for filesystem metadata)
+  # Calculate new partition sizes (add 1 MB margin for filesystem metadata)
   local margin=$((1024 * 1024))
-  local p3_new_end_sector=$(( (p3_start + p3_bytes + margin) / 512 ))
-  local p4_new_start=$(( (p3_new_end_sector + 1) * 512 ))
-  local p4_new_end_sector=$(( (p4_new_start + p4_bytes + margin) / 512 ))
+  local p3_new_size=$(( p3_bytes + margin ))
+  local p4_new_size=$(( p4_bytes + margin ))
+  local p3_new_end_sector=$(( (p3_start + p3_new_size) / 512 ))
+  local p4_new_start_sector=$(( p3_new_end_sector + 1 ))
+  local p4_new_end_sector=$(( p4_new_start_sector + p4_new_size / 512 ))
 
-  # Resize partitions and truncate
-  guestfish --rw -a "$FINAL_IMAGE" <<EOF
-run
-part-resize /dev/sda 3 $p3_new_end_sector
-part-del /dev/sda 4
-part-add /dev/sda p $(( p4_new_start / 512 )) $p4_new_end_sector
-EOF
+  # Use sfdisk to rewrite partitions 3 and 4 (no confirmation prompts)
+  # Dump current table, modify p3 and p4 sizes, apply
+  local sfdisk_dump
+  sfdisk_dump=$(sfdisk -d "$FINAL_IMAGE")
+
+  # Replace p3 and p4 lines with new sizes
+  local p3_start_sector=$(( p3_start / 512 ))
+  local p3_sectors=$(( p3_new_size / 512 ))
+  local p4_sectors=$(( p4_new_size / 512 ))
+  sfdisk_dump=$(echo "$sfdisk_dump" | sed \
+    -e "s|^\(${FINAL_IMAGE}3.*start= *\)[0-9]*\(.*size= *\)[0-9]*|\1${p3_start_sector}\2${p3_sectors}|" \
+    -e "s|^\(${FINAL_IMAGE}4.*start= *\)[0-9]*\(.*size= *\)[0-9]*|\1${p4_new_start_sector}\2${p4_sectors}|")
+
+  echo "$sfdisk_dump" | sfdisk --no-reread --force "$FINAL_IMAGE" >/dev/null 2>&1
 
   # Truncate the file to just past the last partition
   local truncate_bytes=$(( (p4_new_end_sector + 1) * 512 ))
