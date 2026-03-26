@@ -8,6 +8,7 @@ import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { healthRoute } from "./routes/health.js";
+import { otaProxyRoutes } from "./routes/ota-proxy.js";
 import { createContextFactory } from "./trpc/context.js";
 import { appRouter } from "./trpc/router.js";
 
@@ -35,6 +36,9 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
       createContext: createContextFactory(db),
     }),
   );
+
+  // OTA image proxy uses Tailscale IP auth — mount before session auth middleware
+  app.route("/api/ota/image", otaProxyRoutes(db));
 
   // Auth middleware for protected API routes (exclude health + auth + trpc)
   app.use("/api/*", authMiddleware(db));
