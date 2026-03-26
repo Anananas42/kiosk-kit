@@ -1,6 +1,20 @@
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@kioskkit/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@kioskkit/ui";
 import { useState } from "react";
-import { fetchBackupDownloadUrl } from "./api.js";
+import { fetchBackupDownloadUrl, restoreBackup } from "./api.js";
 import { formatFileSize, formatRelativeTime } from "./format.js";
 
 /**
@@ -29,9 +43,20 @@ interface Backup {
   createdAt: string;
 }
 
-export function BackupSection({ backups }: { backups: Backup[] }) {
+interface BackupSectionProps {
+  backups: Backup[];
+  deviceName?: string;
+  deviceOnline?: boolean;
+}
+
+export function BackupSection({ backups, deviceName, deviceOnline }: BackupSectionProps) {
   const [showAll, setShowAll] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [restoreResult, setRestoreResult] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   async function handleDownload(backupId: string) {
     setDownloadingId(backupId);
@@ -40,6 +65,20 @@ export function BackupSection({ backups }: { backups: Backup[] }) {
       window.open(url, "_blank");
     } finally {
       setDownloadingId(null);
+    }
+  }
+
+  async function handleRestore(backupId: string) {
+    setRestoringId(backupId);
+    setRestoreResult(null);
+    try {
+      await restoreBackup(backupId);
+      setRestoreResult({ type: "success", message: "Backup restored successfully." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Restore failed";
+      setRestoreResult({ type: "error", message });
+    } finally {
+      setRestoringId(null);
     }
   }
 
@@ -54,6 +93,17 @@ export function BackupSection({ backups }: { backups: Backup[] }) {
         )}
       </CardHeader>
       <CardContent>
+        {restoreResult && (
+          <div
+            className={`mb-3 rounded-md px-3 py-2 text-sm ${
+              restoreResult.type === "success"
+                ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                : "bg-destructive/10 text-destructive"
+            }`}
+          >
+            {restoreResult.message}
+          </div>
+        )}
         {backups.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No backups yet. Backups run daily when your device is online.
@@ -67,14 +117,47 @@ export function BackupSection({ backups }: { backups: Backup[] }) {
                     <span className="text-foreground">{formatRelativeTime(b.createdAt)}</span>
                     <span className="text-muted-foreground">{formatFileSize(b.sizeBytes)}</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={downloadingId === b.id}
-                    onClick={() => handleDownload(b.id)}
-                  >
-                    {downloadingId === b.id ? "Downloading\u2026" : "Download"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deviceOnline === false || restoringId !== null}
+                        >
+                          {restoringId === b.id ? "Restoring\u2026" : "Restore"}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Restore backup?</DialogTitle>
+                          <DialogDescription>
+                            This will replace all data on {deviceName ?? "the device"} with the
+                            backup from {formatRelativeTime(b.createdAt)}. The current data will be
+                            backed up automatically before the restore.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                          </DialogClose>
+                          <DialogClose asChild>
+                            <Button variant="destructive" onClick={() => handleRestore(b.id)}>
+                              Restore
+                            </Button>
+                          </DialogClose>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={downloadingId === b.id}
+                      onClick={() => handleDownload(b.id)}
+                    >
+                      {downloadingId === b.id ? "Downloading\u2026" : "Download"}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

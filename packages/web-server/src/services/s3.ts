@@ -63,6 +63,20 @@ export async function deleteFile(key: string): Promise<void> {
   );
 }
 
+export async function downloadFile(key: string): Promise<Buffer> {
+  const s3 = getClient();
+  const response = await s3.client.send(
+    new GetObjectCommand({
+      Bucket: s3.bucket,
+      Key: key,
+    }),
+  );
+  if (!response.Body) {
+    throw new Error(`S3 object ${key} has no body`);
+  }
+  return Buffer.from(await response.Body.transformToByteArray());
+}
+
 export async function getSignedDownloadUrl(key: string, expiresInSeconds: number): Promise<string> {
   const s3 = getClient();
   return getSignedUrl(

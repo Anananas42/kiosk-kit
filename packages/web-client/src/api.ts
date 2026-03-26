@@ -38,6 +38,10 @@ export async function fetchBackupDownloadUrl(backupId: string): Promise<string> 
   return url;
 }
 
+export async function restoreBackup(backupId: string): Promise<void> {
+  await trpc["backups.restore"].mutate({ backupId });
+}
+
 export function logout(): Promise<Response> {
   return fetch("/api/auth/logout", { method: "POST" });
 }

@@ -156,7 +156,13 @@ export function DeviceDetail() {
       )}
 
       {/* Backups section */}
-      {!loading && !error && <BackupSection backups={backupList} />}
+      {!loading && !error && (
+        <BackupSection
+          backups={backupList}
+          deviceName={device?.name}
+          deviceOnline={reachable ?? undefined}
+        />
+      )}
     </div>
   );
 }
