@@ -4,6 +4,8 @@
 - name: Deploy KioskKit update
   hosts: kiosks
   become: true
+  vars_files:
+    - ../roles/kioskkit/defaults/main.yml
   tasks:
     - name: Sync application files
       ansible.posix.synchronize:
