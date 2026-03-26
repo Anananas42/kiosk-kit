@@ -36,6 +36,18 @@ export const backups = pgTable(
   (table) => [index("backups_device_id_created_at_idx").on(table.deviceId, table.createdAt.desc())],
 );
 
+export const releases = pgTable("releases", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  version: text("version").notNull().unique(),
+  githubAssetUrl: text("github_asset_url").notNull(),
+  sha256: text("sha256").notNull(),
+  releaseNotes: text("release_notes"),
+  publishedBy: text("published_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   userId: text("user_id")

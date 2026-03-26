@@ -329,3 +329,14 @@ export const ItemCountInputSchema = z.object({
   itemId: z.string().optional(),
   preorder: z.boolean().optional(),
 });
+
+// ── Release schemas ─────────────────────────────────────────────────
+
+export const ReleaseInfoSchema = z.object({
+  version: z.string(),
+  sha256: z.string(),
+  releaseNotes: z.string().nullable(),
+  publishedAt: z.string(),
+});
+
+export type ReleaseInfo = z.infer<typeof ReleaseInfoSchema>;

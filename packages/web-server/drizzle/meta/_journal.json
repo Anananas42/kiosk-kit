@@ -43,6 +43,13 @@
       "when": 1774527759312,
       "tag": "0005_lovely_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774528705362,
+      "tag": "0006_charming_menace",
+      "breakpoints": true
     }
   ]
 }
