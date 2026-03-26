@@ -543,9 +543,10 @@ wait_for_ssh() {
 }
 
 wait_for_reboot() {
+  log "Rebooting VM..."
+  ssh_pi "sudo reboot" 2>/dev/null || true
+  sleep 15
   log "Waiting for VM to come back after reboot..."
-  # After Ansible reboot, SSH will drop. Wait for it to return.
-  sleep 10
   wait_for_ssh "$SSH_PORT" 300
 }
 

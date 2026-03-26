@@ -6,8 +6,5 @@
   become: true
   roles:
     - kioskkit
-  post_tasks:
-    - name: Reboot to apply all changes
-      ansible.builtin.reboot:
-        reboot_timeout: 600
-        msg: "KioskKit provisioning complete — rebooting"
+  # Reboot is handled by the build script (wait_for_reboot + shutdown_qemu)
+  # rather than Ansible, since QEMU virt doesn't support ACPI reboot reliably.
