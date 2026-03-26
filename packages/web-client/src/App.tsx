@@ -6,7 +6,7 @@ import { DeviceList } from "./DeviceList.js";
 import { useAuth } from "./useAuth.js";
 
 export function App() {
-  const { user, setUser, loading } = useAuth();
+  const { user, setUser, loading, error } = useAuth();
 
   if (loading) {
     return (
@@ -20,6 +20,7 @@ export function App() {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-6 p-4">
         <h1 className="text-3xl font-bold tracking-tight">KioskKit</h1>
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <Button variant="outline" asChild>
           <a href="/api/auth/google">Sign in with Google</a>
         </Button>
