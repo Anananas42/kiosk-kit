@@ -6,7 +6,6 @@ import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { authRoutes } from "./routes/auth.js";
-import { backupUploadRoute } from "./routes/backup-upload.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";

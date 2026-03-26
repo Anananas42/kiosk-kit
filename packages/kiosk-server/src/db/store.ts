@@ -255,6 +255,11 @@ export class Store {
     };
   }
 
+  getSetting(key: string): string | null {
+    const row = this.db.select().from(settings).where(eq(settings.key, key)).get();
+    return row?.value ?? null;
+  }
+
   putSetting(key: string, value: string): void {
     this.db
       .insert(settings)
