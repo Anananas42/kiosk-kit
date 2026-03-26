@@ -1,17 +1,15 @@
-import { Box, Button, ButtonGroup, Chip } from "@mui/material";
-import { useMemo, useState } from "react";
 import {
   Datagrid,
   DateField,
   Edit,
   FunctionField,
   List,
+  NullableBooleanInput,
   ReferenceField,
   ReferenceInput,
   SimpleForm,
   TextField,
   TextInput,
-  useListContext,
 } from "react-admin";
 
 function formatRelativeTime(dateString: string | null | undefined): string {
@@ -49,111 +47,58 @@ function OnlineStatusField({ record }: { record?: { online?: boolean } }) {
   );
 }
 
-type StatusFilter = "all" | "online" | "offline";
-
-function DeviceStatusFilter({
-  value,
-  onChange,
-}: {
-  value: StatusFilter;
-  onChange: (filter: StatusFilter) => void;
-}) {
-  const { data } = useListContext();
-  const counts = useMemo(() => {
-    const all = data?.length ?? 0;
-    const online = data?.filter((d: { online?: boolean }) => d.online).length ?? 0;
-    return { all, online, offline: all - online };
-  }, [data]);
-
-  return (
-    <Box sx={{ mb: 2 }}>
-      <ButtonGroup size="small" variant="outlined">
-        <Button
-          onClick={() => onChange("all")}
-          variant={value === "all" ? "contained" : "outlined"}
-        >
-          All <Chip label={counts.all} size="small" sx={{ ml: 0.5 }} />
-        </Button>
-        <Button
-          onClick={() => onChange("online")}
-          variant={value === "online" ? "contained" : "outlined"}
-          color="success"
-        >
-          Online <Chip label={counts.online} size="small" sx={{ ml: 0.5 }} />
-        </Button>
-        <Button
-          onClick={() => onChange("offline")}
-          variant={value === "offline" ? "contained" : "outlined"}
-          color="error"
-        >
-          Offline <Chip label={counts.offline} size="small" sx={{ ml: 0.5 }} />
-        </Button>
-      </ButtonGroup>
-    </Box>
-  );
-}
-
-function FilteredDatagrid({ statusFilter }: { statusFilter: StatusFilter }) {
-  const { data, isLoading } = useListContext();
-
-  const filteredData = useMemo(() => {
-    if (!data || statusFilter === "all") return data;
-    return data.filter((d: { online?: boolean }) =>
-      statusFilter === "online" ? d.online : !d.online,
-    );
-  }, [data, statusFilter]);
-
-  if (isLoading) return null;
-
-  return (
-    <Datagrid rowClick="edit" data={filteredData}>
-      <TextField source="hostname" />
-      <TextField source="name" />
-      <TextField source="tailscaleIp" label="Tailscale IP" />
-      <FunctionField
-        label="Status"
-        render={(record: { online?: boolean }) => <OnlineStatusField record={record} />}
-      />
-      <FunctionField
-        label="Last Seen"
-        render={(record: { lastSeen?: string | null }) => (
-          <span title={record.lastSeen ? new Date(record.lastSeen).toLocaleString() : ""}>
-            {formatRelativeTime(record.lastSeen)}
-          </span>
-        )}
-      />
-      <FunctionField
-        label="User"
-        render={(record: { userId?: string | null }) =>
-          record.userId ? (
-            <ReferenceField source="userId" reference="users" link="show">
-              <TextField source="name" />
-            </ReferenceField>
-          ) : (
-            <span
-              style={{
-                color: "#ff9800",
-                fontStyle: "italic",
-                fontSize: "0.85em",
-              }}
-            >
-              Unassigned
-            </span>
-          )
-        }
-      />
-      <DateField source="createdAt" label="Created" />
-    </Datagrid>
-  );
-}
+const deviceFilters = [
+  <NullableBooleanInput
+    key="online"
+    source="online"
+    label="Status"
+    falseLabel="Offline"
+    trueLabel="Online"
+    alwaysOn
+  />,
+];
 
 export function DeviceList() {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-
   return (
-    <List>
-      <DeviceStatusFilter value={statusFilter} onChange={setStatusFilter} />
-      <FilteredDatagrid statusFilter={statusFilter} />
+    <List filters={deviceFilters}>
+      <Datagrid rowClick="edit">
+        <TextField source="hostname" />
+        <TextField source="name" />
+        <TextField source="tailscaleIp" label="Tailscale IP" />
+        <FunctionField
+          label="Status"
+          render={(record: { online?: boolean }) => <OnlineStatusField record={record} />}
+        />
+        <FunctionField
+          label="Last Seen"
+          render={(record: { lastSeen?: string | null }) => (
+            <span title={record.lastSeen ? new Date(record.lastSeen).toLocaleString() : ""}>
+              {formatRelativeTime(record.lastSeen)}
+            </span>
+          )}
+        />
+        <FunctionField
+          label="User"
+          render={(record: { userId?: string | null }) =>
+            record.userId ? (
+              <ReferenceField source="userId" reference="users" link="show">
+                <TextField source="name" />
+              </ReferenceField>
+            ) : (
+              <span
+                style={{
+                  color: "#ff9800",
+                  fontStyle: "italic",
+                  fontSize: "0.85em",
+                }}
+              >
+                Unassigned
+              </span>
+            )
+          }
+        />
+        <DateField source="createdAt" label="Created" />
+      </Datagrid>
     </List>
   );
 }

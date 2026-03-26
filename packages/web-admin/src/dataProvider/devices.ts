@@ -6,8 +6,17 @@ function toStringId(id: Identifier): string {
 }
 
 export const devicesDataProvider: DataProvider = {
-  getList: async () => {
-    const data = await trpc["devices.list"].query();
+  getList: async (_resource, params) => {
+    const all = await trpc["devices.list"].query();
+    let data = all;
+    const filter = params?.filter;
+    if (filter) {
+      for (const [key, value] of Object.entries(filter)) {
+        if (value !== undefined && value !== null && value !== "") {
+          data = data.filter((d) => d[key as keyof typeof d] === value);
+        }
+      }
+    }
     return { data, total: data.length };
   },
 
