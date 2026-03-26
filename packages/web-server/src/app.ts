@@ -37,9 +37,6 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
     }),
   );
 
-  // Backup upload uses IP-based auth — mount before session auth middleware
-  app.route("/api/devices", backupUploadRoute(db));
-
   // OTA image proxy uses Tailscale IP auth — mount before session auth middleware
   app.route("/api/ota/image", otaProxyRoutes(db));
 
