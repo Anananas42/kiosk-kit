@@ -97,9 +97,16 @@ When a task is provided via `AGENT_TASK`, the container does not exit after clau
 2. Checks CI status and review comments
 3. If CI is failing or reviews need attention → re-invokes claude with full context (logs, comments)
 4. If PR is merged or closed → container exits cleanly
-5. After 5 consecutive failed fix attempts → posts a comment asking for human help and exits
+5. After 5 consecutive failed fix attempts → posts a comment asking for human help and continues polling for `@continue`
 
 Use `--no-loop` to skip the watch loop (useful for testing). Interactive sessions also skip it.
+
+### PR comment commands
+
+The watch loop recognizes special commands in PR comments from non-bot users:
+
+- **`@continue`** — Resets the attempt counter to 0 and resumes the polling loop. Use this after the agent has hit the max attempts limit and a human has provided guidance or fixed the underlying issue. The agent will pick up any pending CI failures or review comments on the next iteration.
+- **`@tester`** — Invokes the testing agent on demand, even if it already ran once for this PR. Useful for re-testing after additional changes. If `@tester` appears alongside other review feedback, the agent addresses the feedback first, then runs the testing agent.
 
 ## Testing agent
 
