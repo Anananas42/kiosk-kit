@@ -6,10 +6,19 @@ import { cors } from "hono/cors";
 import { backupRoute } from "./backup.js";
 import type { Store } from "./db/store.js";
 import { otaUploadRoute } from "./ota-upload.js";
+import { restoreRoute } from "./restore.js";
 import { healthRoute } from "./routes/health.js";
 import { appRouter } from "./trpc/router.js";
 
-export function createApp(store: Store, sqlite: SQLiteDatabase) {
+/** Mutable holder so all routes always see the latest db references after a restore. */
+export interface AppContext {
+  sqlite: SQLiteDatabase;
+  store: Store;
+}
+
+export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string) {
+  const ctx: AppContext = { sqlite, store };
+
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -20,15 +29,16 @@ export function createApp(store: Store, sqlite: SQLiteDatabase) {
   app.use("/api/*", cors());
 
   app.route("/api/health", healthRoute());
-  app.route("/api/backup", backupRoute(sqlite, store));
+  app.route("/api/backup", backupRoute(ctx));
   app.route("/api/ota/upload", otaUploadRoute());
+  app.route("/api/restore", restoreRoute(ctx, dataDir));
 
   app.use(
     "/api/trpc/*",
     trpcServer({
       router: appRouter,
       endpoint: "/api/trpc",
-      createContext: () => ({ store }),
+      createContext: () => ({ store: ctx.store }),
     }),
   );
 

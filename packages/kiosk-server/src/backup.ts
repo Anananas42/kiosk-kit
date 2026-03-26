@@ -4,7 +4,7 @@ import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 import type { Database as SQLiteDatabase } from "better-sqlite3";
 import { Hono } from "hono";
-import type { Store } from "./db/store.js";
+import type { AppContext } from "./app.js";
 
 /**
  * Creates a gzipped SQLite backup and returns it as a buffer.
@@ -26,13 +26,13 @@ async function createBackupBuffer(sqlite: SQLiteDatabase): Promise<Buffer> {
 }
 
 /** GET /api/backup — returns a gzipped SQLite snapshot of the local database. */
-export function backupRoute(sqlite: SQLiteDatabase, store: Store) {
+export function backupRoute(ctx: AppContext) {
   const app = new Hono();
 
   app.get("/", async () => {
-    const body = await createBackupBuffer(sqlite);
+    const body = await createBackupBuffer(ctx.sqlite);
 
-    store.putSetting("lastBackupAt", new Date().toISOString());
+    ctx.store.putSetting("lastBackupAt", new Date().toISOString());
 
     return new Response(new Uint8Array(body), {
       headers: {
