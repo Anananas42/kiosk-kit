@@ -27,7 +27,7 @@ _PI_IMAGE_COMMON_LOADED=1
 : "${QEMU_RAM:=6G}"
 _half_cpus=$(( $(nproc) / 2 ))
 : "${QEMU_CPUS:=$(( _half_cpus > 8 ? 8 : _half_cpus ))}"
-: "${QEMU_DISK_SIZE:=8G}"
+: "${QEMU_DISK_SIZE:=10G}"
 
 : "${PI_SSH_PASS:=raspberry}"
 
@@ -81,14 +81,77 @@ prepare_disk() {
   qemu-img convert -f raw -O qcow2 "$RAW_IMAGE" "$DISK_IMAGE"
   qemu-img resize "$DISK_IMAGE" "$QEMU_DISK_SIZE"
 
-  # Grow partition 2 to fill the disk, then resize the filesystem
-  guestfish --rw -a "$DISK_IMAGE" <<'GROW_SCRIPT'
+  # Create 4-partition A/B layout:
+  #   p1: boot   (FAT32, 512 MB)  — unchanged from Pi OS image
+  #   p2: rootA  (ext4,  4 GB)    — active root
+  #   p3: rootB  (ext4,  4 GB)    — OTA target (empty)
+  #   p4: data   (ext4,  remainder) — persistent state
+  #
+  # Strategy:
+  #   1. Read p2's start offset from the existing partition table
+  #   2. Resize p2 to exactly 4 GB (start + 4G sectors)
+  #   3. Append p3 (4 GB) and p4 (remainder) after p2
+
+  # Read partition geometry to find where p2 starts
+  local part_info
+  part_info=$(guestfish --ro -a "$DISK_IMAGE" <<'EOF'
 run
-list-partitions
-part-resize /dev/sda 2 -1
+part-list /dev/sda
+EOF
+  )
+
+  # part-list returns entries like [1] with part_start: NNNNN (bytes).
+  # [0] is p1 (boot), [1] is p2 (root).
+  local p2_start_bytes
+  p2_start_bytes=$(echo "$part_info" | awk '/\[1\]/{found=1} found && /part_start:/{print $2; exit}')
+
+  local four_gb=$((4 * 1024 * 1024 * 1024))
+  local p2_end_bytes=$(( p2_start_bytes + four_gb - 1 ))
+  local p2_end_sector=$(( p2_end_bytes / 512 ))
+
+  # Resize p2 to exactly 4 GB and shrink its filesystem to fit
+  guestfish --rw -a "$DISK_IMAGE" <<EOF
+run
+part-resize /dev/sda 2 $p2_end_sector
 e2fsck-f /dev/sda2
 resize2fs /dev/sda2
-GROW_SCRIPT
+EOF
+
+  # Now add p3 and p4 after the resized p2
+  local p3_start_bytes=$(( p2_end_bytes + 1 ))
+  local p3_end_bytes=$(( p3_start_bytes + four_gb - 1 ))
+  local p4_start_bytes=$(( p3_end_bytes + 1 ))
+
+  guestfish --rw -a "$DISK_IMAGE" <<EOF
+run
+
+# Add rootB partition (p3) — 4 GB
+part-add /dev/sda p $((p3_start_bytes / 512)) $((p3_end_bytes / 512))
+
+# Add data partition (p4) — remainder of disk
+part-add /dev/sda p $((p4_start_bytes / 512)) -1
+
+# Create filesystems on the new partitions
+mkfs ext4 /dev/sda3
+mkfs ext4 /dev/sda4
+
+# Label partitions for fstab references
+set-e2label /dev/sda3 kioskkit-rootB
+set-e2label /dev/sda4 kioskkit-data
+
+# Create the base directory structure on the data partition
+mount /dev/sda4 /
+mkdir-p /kioskkit
+mkdir-p /tailscale
+mkdir-p /wpa
+mkdir-p /kioskkit-config
+mkdir-p /journal
+mkdir-p /ssh
+mkdir-p /ota
+mkdir-p /ota/pending
+EOF
+
+  log "4-partition layout created (boot + rootA + rootB + data)."
 }
 
 # --- Kernel download & extraction --------------------------------------------
@@ -150,8 +213,15 @@ patch_image_for_virt() {
   # fstab for virtio-blk (/dev/vda* instead of PARTUUIDs).
   # Boot partition omitted — kernel is loaded directly by QEMU, and pi user/SSH
   # are set up in the image directly (no need for boot partition userconf/ssh flag).
+  # Root device is a placeholder — the initrd selects the active A/B slot at boot.
   cat > "$patch_dir/fstab" <<'FSTAB'
-/dev/vda2  /  ext4  defaults,noatime  0  1
+/dev/vda2             /                ext4  defaults,noatime  0  1
+LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  2
+/data/kioskkit        /opt/kioskkit/data   none  bind          0  0
+/data/tailscale       /var/lib/tailscale   none  bind          0  0
+/data/wpa             /etc/wpa_supplicant  none  bind          0  0
+/data/kioskkit-config /etc/kioskkit        none  bind          0  0
+/data/journal         /var/log/journal     none  bind          0  0
 FSTAB
 
   # Download and extract the Debian arm64 kernel
@@ -166,6 +236,13 @@ FSTAB
     echo "list-partitions"
     echo "mount /dev/sda2 /"
     echo "upload $patch_dir/fstab /etc/fstab"
+    # Create bind mount target directories for the data partition
+    echo "mkdir-p /data"
+    echo "mkdir-p /opt/kioskkit/data"
+    echo "mkdir-p /var/lib/tailscale"
+    echo "mkdir-p /etc/wpa_supplicant"
+    echo "mkdir-p /etc/kioskkit"
+    echo "mkdir-p /var/log/journal"
     # Copy kernel modules to /usr/lib/modules/ (not /lib/ which is a symlink on Pi OS).
     # copy-in of /lib/ would replace the symlink with a directory, breaking the OS.
     echo "mkdir-p /usr/lib/modules"
@@ -279,7 +356,7 @@ build_initrd() {
 
   local initrd_dir="$BUILD_DIR/initrd-build"
   rm -rf "$initrd_dir"
-  mkdir -p "$initrd_dir"/{bin,sbin,proc,sys,dev,lib/modules,etc,newroot}
+  mkdir -p "$initrd_dir"/{bin,sbin,proc,sys,dev,lib/modules,etc,newroot,data}
 
   # Find the kernel version from the modules directory
   local kver
@@ -309,11 +386,15 @@ build_initrd() {
   cp "$bb_extract/bin/busybox" "$initrd_dir/bin/busybox"
   rm -rf "$bb_extract" "$bb_deb"
   # Create minimal symlinks
-  for cmd in sh mount umount insmod mkdir switch_root; do
+  for cmd in sh mount umount insmod mkdir switch_root cat rm sleep; do
     ln -s busybox "$initrd_dir/bin/$cmd"
   done
 
-  # Create init script
+  # Create init script with A/B slot selection.
+  # Reads boot slot from data partition (/dev/vda4):
+  #   - ota/tryboot (one-shot, consumed on read) takes priority
+  #   - ota/boot-slot (persistent, "A" or "B") is the fallback
+  # Maps slot A -> /dev/vda2, slot B -> /dev/vda3
   cat > "$initrd_dir/init" <<'INIT_SCRIPT'
 #!/bin/sh
 /bin/mount -t proc proc /proc
@@ -329,26 +410,68 @@ for name in virtio virtio_ring vp_modern vp_legacy virtio_pci_modern_dev virtio_
   done
 done
 
-# Wait for /dev/vda2 to appear
+# Wait for /dev/vda4 (data partition) to appear
 n=0
-while [ ! -b /dev/vda2 ] && [ $n -lt 50 ]; do
-  sleep 0.1
+while [ ! -b /dev/vda4 ] && [ $n -lt 50 ]; do
+  /bin/sleep 0.1
   n=$((n+1))
 done
 
-if [ ! -b /dev/vda2 ]; then
-  echo "FATAL: /dev/vda2 not found after loading virtio modules"
+# --- A/B slot selection ---
+SLOT="A"
+TRYBOOT=0
+
+if [ -b /dev/vda4 ]; then
+  /bin/mount -t ext4 -o rw /dev/vda4 /data 2>/dev/null
+  if [ $? -eq 0 ]; then
+    # Check for one-shot tryboot file (consumed on read)
+    if [ -f /data/ota/tryboot ]; then
+      SLOT=$(/bin/cat /data/ota/tryboot)
+      /bin/rm -f /data/ota/tryboot
+      TRYBOOT=1
+      # Write a marker so boot-confirm.sh knows this is a tryboot
+      echo "1" > /data/ota/pending-confirm
+      echo "initrd: tryboot slot=$SLOT (one-shot consumed)"
+    elif [ -f /data/ota/boot-slot ]; then
+      SLOT=$(/bin/cat /data/ota/boot-slot)
+      echo "initrd: committed slot=$SLOT"
+    fi
+    /bin/umount /data
+  else
+    echo "WARN: could not mount /dev/vda4, defaulting to slot A"
+  fi
+else
+  echo "WARN: /dev/vda4 not found, defaulting to slot A"
+fi
+
+# Map slot to device
+case "$SLOT" in
+  B|b) ROOT_DEV=/dev/vda3 ;;
+  *)   ROOT_DEV=/dev/vda2 ;;
+esac
+
+echo "initrd: mounting root from $ROOT_DEV (slot $SLOT)"
+
+# Wait for the root device
+n=0
+while [ ! -b "$ROOT_DEV" ] && [ $n -lt 50 ]; do
+  /bin/sleep 0.1
+  n=$((n+1))
+done
+
+if [ ! -b "$ROOT_DEV" ]; then
+  echo "FATAL: $ROOT_DEV not found after loading virtio modules"
   echo "Available block devices:"
   ls -la /dev/vd* 2>/dev/null || echo "  (none)"
   echo "Loaded modules:"
-  cat /proc/modules
+  /bin/cat /proc/modules
   exec /bin/sh
 fi
 
-/bin/mount -t ext4 -o rw /dev/vda2 /newroot || {
-  echo "FATAL: failed to mount /dev/vda2"
+/bin/mount -t ext4 -o rw "$ROOT_DEV" /newroot || {
+  echo "FATAL: failed to mount $ROOT_DEV"
   ls -la /dev/vda* 2>/dev/null
-  cat /proc/filesystems
+  /bin/cat /proc/filesystems
   exec /bin/sh
 }
 
@@ -384,7 +507,7 @@ boot_qemu() {
     -M virt -cpu cortex-a72 -m "$QEMU_RAM" -smp "$QEMU_CPUS"
     -kernel "$KERNEL"
     -initrd "$INITRD"
-    -append "root=/dev/vda2 rw console=ttyAMA0 earlycon=pl011,0x09000000 panic=-1"
+    -append "rw console=ttyAMA0 earlycon=pl011,0x09000000 panic=-1"
     -drive "if=virtio,file=$DISK_IMAGE,format=qcow2"
     -nic "user,model=virtio,hostfwd=tcp::${SSH_PORT}-:22"
     -display none -serial "file:$BUILD_DIR/qemu-console.log"

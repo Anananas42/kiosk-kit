@@ -1,4 +1,67 @@
 ---
+- name: Create /data mount point
+  ansible.builtin.file:
+    path: /data
+    state: directory
+    mode: "0755"
+
+- name: Mount data partition by label
+  ansible.posix.mount:
+    path: /data
+    src: LABEL=kioskkit-data
+    fstype: ext4
+    opts: "defaults,noatime"
+    state: present
+
+- name: Create data partition subdirectories
+  ansible.builtin.file:
+    path: "/data/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - kioskkit
+    - tailscale
+    - wpa
+    - kioskkit-config
+    - journal
+    - ssh
+    - ota
+    - ota/pending
+
+- name: Set kioskkit data directory ownership
+  ansible.builtin.file:
+    path: /data/kioskkit
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Create bind mount target directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/kioskkit/data
+    - /var/lib/tailscale
+    - /etc/wpa_supplicant
+    - /etc/kioskkit
+    - /var/log/journal
+
+- name: Add bind mount entries to fstab
+  ansible.posix.mount:
+    path: "{{ item.path }}"
+    src: "{{ item.src }}"
+    fstype: none
+    opts: bind
+    state: present
+  loop:
+    - { src: /data/kioskkit, path: /opt/kioskkit/data }
+    - { src: /data/tailscale, path: /var/lib/tailscale }
+    - { src: /data/wpa, path: /etc/wpa_supplicant }
+    - { src: /data/kioskkit-config, path: /etc/kioskkit }
+    - { src: /data/journal, path: /var/log/journal }
+
 - name: Mount tmpfs on /tmp
   ansible.posix.mount:
     path: /tmp

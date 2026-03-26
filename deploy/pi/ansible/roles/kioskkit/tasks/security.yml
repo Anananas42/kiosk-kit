@@ -44,3 +44,14 @@
     regexp: "^#?PermitRootLogin"
     line: "PermitRootLogin no"
   notify: Restart sshd
+
+- name: Point SSH host keys to data partition
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?HostKey /etc/ssh/ssh_host_{{ item }}_key"
+    line: "HostKey /data/ssh/ssh_host_{{ item }}_key"
+  loop:
+    - rsa
+    - ecdsa
+    - ed25519
+  notify: Restart sshd

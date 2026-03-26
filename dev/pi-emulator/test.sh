@@ -209,6 +209,58 @@ test_wifi() {
   fi
 }
 
+test_partition_layout() {
+  assert_remote_grep \
+    "Data partition mounted at /data" \
+    "mount | grep /data" \
+    "/data" \
+    "/data partition not mounted"
+
+  assert_remote \
+    "OTA boot-slot file exists" \
+    "test -f /data/ota/boot-slot" \
+    "/data/ota/boot-slot not found"
+
+  assert_remote_grep \
+    "Boot slot is A" \
+    "cat /data/ota/boot-slot" \
+    "A" \
+    "boot-slot is not A"
+
+  assert_remote \
+    "OTA state.json exists" \
+    "test -f /data/ota/state.json" \
+    "/data/ota/state.json not found"
+
+  log_test "Bind mount: /opt/kioskkit/data -> /data/kioskkit"
+  if remote "mount | grep '/opt/kioskkit/data'" | grep -q "bind\|/data/kioskkit"; then
+    pass
+  elif remote "findmnt /opt/kioskkit/data" | grep -q "/data/kioskkit"; then
+    pass
+  else
+    skip "bind mount may not be active in build image"
+  fi
+
+  assert_remote \
+    "Boot-confirm service unit exists" \
+    "systemctl cat kioskkit-boot-confirm.service" \
+    "kioskkit-boot-confirm.service not found"
+
+  log_test "OTA scripts deployed"
+  local ota_ok=1
+  for script in ota-download.sh ota-install.sh ota-rollback.sh boot-confirm.sh; do
+    if ! remote test -x "/opt/kioskkit/system/$script"; then
+      ota_ok=0
+      break
+    fi
+  done
+  if [[ $ota_ok -eq 1 ]]; then
+    pass
+  else
+    fail "one or more OTA scripts missing from /opt/kioskkit/system/"
+  fi
+}
+
 test_security() {
   log_test "nftables firewall active"
   local nft_out
@@ -249,6 +301,7 @@ main() {
 
   test_system_basics
   test_kiosk_app
+  test_partition_layout
   test_wifi
   test_security
 

@@ -235,7 +235,9 @@ save_original_boot_state() {
   local orig_dir="$WORK_DIR/original-boot"
   mkdir -p "$orig_dir"
 
-  # Save original fstab and list boot firmware contents
+  # Save original fstab and list boot firmware contents.
+  # At this point the image still has the original 2-partition Pi OS layout;
+  # prepare_disk() has not yet expanded it to 4 partitions.
   guestfish --ro -a "$DISK_IMAGE" <<EOF
 run
 mount /dev/sda2 /
@@ -303,7 +305,42 @@ restore_pi_boot_state() {
   log "Restoring native Pi boot state..."
   local orig_dir="$WORK_DIR/original-boot"
 
-  # Restore original fstab (PARTUUID-based) and remove virt kernel files.
+  # Build a Pi-native fstab with PARTUUID references and data partition bind mounts.
+  # We read the PARTUUIDs from the image and construct the fstab.
+  local fstab_dir="$WORK_DIR/pi-fstab"
+  mkdir -p "$fstab_dir"
+
+  # Get PARTUUIDs from the image
+  local partuuid_p1 partuuid_p2
+  partuuid_p1=$(guestfish --ro -a "$target_image" <<'EOF'
+run
+blkid /dev/sda1
+EOF
+  )
+  partuuid_p1=$(echo "$partuuid_p1" | grep -oP 'PARTUUID=\K[^ "]+' || true)
+
+  partuuid_p2=$(guestfish --ro -a "$target_image" <<'EOF'
+run
+blkid /dev/sda2
+EOF
+  )
+  partuuid_p2=$(echo "$partuuid_p2" | grep -oP 'PARTUUID=\K[^ "]+' || true)
+
+  # Build fstab — use original PARTUUIDs for boot+root, LABEL for data
+  cat > "$fstab_dir/fstab" <<FSTAB
+proc                  /proc            proc  defaults          0  0
+PARTUUID=${partuuid_p1}  /boot/firmware  vfat  defaults          0  2
+PARTUUID=${partuuid_p2}  /               ext4  defaults,noatime  0  1
+LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  2
+/data/kioskkit        /opt/kioskkit/data   none  bind          0  0
+/data/tailscale       /var/lib/tailscale   none  bind          0  0
+/data/wpa             /etc/wpa_supplicant  none  bind          0  0
+/data/kioskkit-config /etc/kioskkit        none  bind          0  0
+/data/journal         /var/log/journal     none  bind          0  0
+tmpfs                 /tmp             tmpfs defaults,nosuid,nodev,size=64M 0 0
+FSTAB
+
+  # Restore fstab and remove virt kernel files.
   local virt_kver
   virt_kver=$(cat "$WORK_DIR/virt-kernel-version" 2>/dev/null || true)
 
@@ -312,7 +349,14 @@ restore_pi_boot_state() {
     echo "add $target_image"
     echo "run"
     echo "mount /dev/sda2 /"
-    echo "upload $orig_dir/fstab /etc/fstab"
+    echo "upload $fstab_dir/fstab /etc/fstab"
+    # Create bind mount target directories
+    echo "mkdir-p /data"
+    echo "mkdir-p /opt/kioskkit/data"
+    echo "mkdir-p /var/lib/tailscale"
+    echo "mkdir-p /etc/wpa_supplicant"
+    echo "mkdir-p /etc/kioskkit"
+    echo "mkdir-p /var/log/journal"
     # Remove virt kernel modules if we know the version
     if [[ -n "$virt_kver" ]]; then
       echo "rm-rf /usr/lib/modules/$virt_kver"
@@ -325,6 +369,7 @@ restore_pi_boot_state() {
 
   guestfish < "$gf_cmds" || log "WARN: Some restore commands failed (may be OK if files didn't exist)"
   rm -f "$gf_cmds"
+  rm -rf "$fstab_dir"
 
   log "Pi boot state restored."
 }
@@ -343,9 +388,10 @@ CUSTOMER_TAG=${CUSTOMER_TAG}
 TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
 EOF
 
-  # Persistent device identity (survives first-boot cleanup)
+  # Write device config for the data partition (persists across OTA updates)
   cat > "$inject_dir/device.conf" <<EOF
 DEVICE_ID=${DEVICE_ID}
+CUSTOMER_TAG=${CUSTOMER_TAG}
 EOF
 
   # Download Tailscale arm64 .deb for offline installation
@@ -356,17 +402,8 @@ EOF
   echo "$TAILSCALE_DEB_CHECKSUM  $ts_deb" | sha256sum -c - \
     || err "Checksum mismatch for Tailscale .deb"
 
-  # Use guestfish to inject everything into the image
+  # Inject first-boot service into rootfs (p2)
   guestfish --rw -a "$target_image" -m /dev/sda2 <<EOF
-# Tailscale first-boot config
-mkdir-p /etc/kioskkit
-upload $inject_dir/tailscale-firstboot.conf /etc/kioskkit/tailscale-firstboot.conf
-chmod 0600 /etc/kioskkit/tailscale-firstboot.conf
-
-# Persistent device identity (not deleted after first boot)
-upload $inject_dir/device.conf /etc/kioskkit/device.conf
-chmod 0644 /etc/kioskkit/device.conf
-
 # First-boot service and script
 upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-tailscale-firstboot.service /etc/systemd/system/kioskkit-tailscale-firstboot.service
 mkdir-p /opt/kioskkit/system
@@ -378,7 +415,48 @@ mkdir-p /etc/systemd/system/multi-user.target.wants
 ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service
 EOF
 
-  # Extract Tailscale .deb on the host and copy files into the image
+  # Stamp device config and Tailscale firstboot config onto data partition (p4)
+  guestfish --rw -a "$target_image" -m /dev/sda4 <<EOF
+# Device config on data partition
+mkdir-p /kioskkit-config
+upload $inject_dir/device.conf /kioskkit-config/device.conf
+chmod 0644 /kioskkit-config/device.conf
+
+# Tailscale firstboot config on data partition
+upload $inject_dir/tailscale-firstboot.conf /kioskkit-config/tailscale-firstboot.conf
+chmod 0600 /kioskkit-config/tailscale-firstboot.conf
+
+# Initialize OTA state
+mkdir-p /ota
+mkdir-p /ota/pending
+write /ota/boot-slot "A"
+write /ota/state.json "{\"status\":\"idle\",\"slot\":\"A\"}"
+EOF
+
+  # Generate SSH host keys on the data partition
+  log "Generating SSH host keys on data partition..."
+  local ssh_dir="$inject_dir/ssh-keys"
+  mkdir -p "$ssh_dir"
+  ssh-keygen -t rsa -b 4096 -f "$ssh_dir/ssh_host_rsa_key" -N "" -q
+  ssh-keygen -t ecdsa -b 521 -f "$ssh_dir/ssh_host_ecdsa_key" -N "" -q
+  ssh-keygen -t ed25519 -f "$ssh_dir/ssh_host_ed25519_key" -N "" -q
+
+  local gf_ssh="$inject_dir/guestfish-ssh.cmd"
+  {
+    echo "add $target_image"
+    echo "run"
+    echo "mount /dev/sda4 /"
+    echo "mkdir-p /ssh"
+    for keytype in rsa ecdsa ed25519; do
+      echo "upload $ssh_dir/ssh_host_${keytype}_key /ssh/ssh_host_${keytype}_key"
+      echo "chmod 0600 /ssh/ssh_host_${keytype}_key"
+      echo "upload $ssh_dir/ssh_host_${keytype}_key.pub /ssh/ssh_host_${keytype}_key.pub"
+      echo "chmod 0644 /ssh/ssh_host_${keytype}_key.pub"
+    done
+  } > "$gf_ssh"
+  guestfish < "$gf_ssh"
+
+  # Extract Tailscale .deb on the host and copy files into the rootfs image
   local ts_root="$inject_dir/tailscale-root"
   mkdir -p "$ts_root"
   dpkg-deb -x "$ts_deb" "$ts_root"

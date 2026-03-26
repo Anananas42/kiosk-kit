@@ -30,7 +30,7 @@
     group: "{{ kioskkit_user }}"
     recurse: true
 
-- name: Create data directory
+- name: Create data directory (bind mount from /data/kioskkit)
   ansible.builtin.file:
     path: "{{ kioskkit_install_dir }}/data"
     state: directory

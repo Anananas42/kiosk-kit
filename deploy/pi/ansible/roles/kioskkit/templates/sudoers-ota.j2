@@ -1,0 +1,3 @@
+# Managed by Ansible — do not edit manually.
+# Allow kiosk user to run OTA scripts as root without password.
+{{ kioskkit_user }} ALL=(root) NOPASSWD: {{ kioskkit_install_dir }}/system/ota-download.sh, {{ kioskkit_install_dir }}/system/ota-install.sh, {{ kioskkit_install_dir }}/system/ota-rollback.sh

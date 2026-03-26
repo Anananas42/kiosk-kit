@@ -35,6 +35,10 @@
   ansible.builtin.import_tasks: wifi.yml
   tags: [wifi]
 
+- name: Configure OTA updates
+  ansible.builtin.import_tasks: ota.yml
+  tags: [ota]
+
 - name: Configure Tailscale
   ansible.builtin.import_tasks: tailscale.yml
   tags: [tailscale]
