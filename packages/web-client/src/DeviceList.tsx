@@ -1,33 +1,8 @@
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@kioskkit/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@kioskkit/ui";
 import { Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { type Device, fetchDeviceStatus, fetchDevices } from "./api.js";
-
-function formatRelativeTime(dateString: string): string {
-  const now = Date.now();
-  const then = new Date(dateString).getTime();
-  const diffSeconds = Math.round((now - then) / 1000);
-
-  if (diffSeconds < 60) return "just now";
-
-  const units: { unit: Intl.RelativeTimeFormatUnit; seconds: number }[] = [
-    { unit: "year", seconds: 31536000 },
-    { unit: "month", seconds: 2592000 },
-    { unit: "week", seconds: 604800 },
-    { unit: "day", seconds: 86400 },
-    { unit: "hour", seconds: 3600 },
-    { unit: "minute", seconds: 60 },
-  ];
-
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-  for (const { unit, seconds } of units) {
-    const value = Math.floor(diffSeconds / seconds);
-    if (value >= 1) return rtf.format(-value, unit);
-  }
-
-  return "just now";
-}
 
 export function DeviceList() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -72,38 +47,27 @@ export function DeviceList() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {devices.map((d) => {
-        const online = statuses[d.id];
-        return (
-          <Link key={d.id} to={`/devices/${d.id}`} className="group">
-            <Card className="transition-colors group-hover:border-primary">
-              <CardHeader>
-                <CardTitle className="text-base">{d.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-block h-2.5 w-2.5 rounded-full ${online ? "bg-green-500" : "bg-muted-foreground"}`}
-                  />
-                  <span className="text-sm">{online ? "Online" : "Offline"}</span>
-                </div>
-
-                {d.lastSeen && (
-                  <p className="text-xs text-muted-foreground">
-                    Last seen {formatRelativeTime(d.lastSeen)}
-                  </p>
-                )}
-
-                {/* TODO: Wire up real backup status from KIO-87 */}
-                <Badge variant="secondary" className="w-fit text-xs">
-                  No backups
-                </Badge>
-              </CardContent>
-            </Card>
-          </Link>
-        );
-      })}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Devices</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-0">
+        {devices.map((d) => {
+          const online = statuses[d.id];
+          return (
+            <Link
+              key={d.id}
+              to={`/devices/${d.id}`}
+              className="flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-muted"
+            >
+              <span
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${online ? "bg-green-500" : "bg-muted-foreground"}`}
+              />
+              <span className="text-sm font-medium">{d.name}</span>
+            </Link>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

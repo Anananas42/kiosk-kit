@@ -32,7 +32,7 @@ describe("App", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders device cards when authenticated", async () => {
+  it("renders device list when authenticated", async () => {
     const devices = [
       {
         id: "00000000-0000-0000-0000-000000000001",
@@ -58,7 +58,6 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByText("Lobby Kiosk")).toBeInTheDocument();
     });
-    expect(screen.getByText("Online")).toBeInTheDocument();
     fetchSpy.mockRestore();
   });
 });
