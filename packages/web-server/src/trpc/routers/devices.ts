@@ -86,10 +86,6 @@ export const devicesRouter = router({
     .input(DeviceAssignInputSchema)
     .output(DeviceSchema)
     .mutation(async ({ ctx, input }) => {
-      if (isDev && input.id === LOCAL_DEVICE_ID) {
-        return makeLocalDevice(input.userId);
-      }
-
       const [device] = await ctx.db
         .update(devices)
         .set({ userId: input.userId })
@@ -117,10 +113,6 @@ export const devicesRouter = router({
     .input(DeviceUpdateInputSchema)
     .output(DeviceSchema)
     .mutation(async ({ ctx, input }) => {
-      if (isDev && input.id === LOCAL_DEVICE_ID) {
-        return { ...makeLocalDevice(null), name: input.name };
-      }
-
       const [device] = await ctx.db
         .update(devices)
         .set({ name: input.name })
@@ -147,10 +139,6 @@ export const devicesRouter = router({
   "devices.delete": adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      if (isDev && input.id === LOCAL_DEVICE_ID) {
-        return { ok: true };
-      }
-
       const [deleted] = await ctx.db.delete(devices).where(eq(devices.id, input.id)).returning();
 
       if (!deleted) {
