@@ -240,31 +240,6 @@ generate_tailscale_key() {
 
 # --- SD image specific functions ---------------------------------------------
 
-save_original_boot_state() {
-  log "Saving original Pi boot state for later restoration..."
-  local orig_dir="$WORK_DIR/original-boot"
-  mkdir -p "$orig_dir"
-
-  # Save original fstab and list boot firmware contents.
-  # At this point the image still has the original 2-partition Pi OS layout;
-  # prepare_disk() has not yet expanded it to 4 partitions.
-  guestfish --ro -a "$DISK_IMAGE" <<EOF
-run
-mount /dev/sda2 /
-mount /dev/sda1 /boot/firmware
-download /etc/fstab $orig_dir/fstab
-# List boot firmware files so we know what belongs to Pi vs. virt kernel
-ls /boot/firmware
-EOF
-  # Also save the partition info for reference
-  guestfish --ro -a "$DISK_IMAGE" <<'EOF' > "$orig_dir/boot-files.txt"
-run
-mount /dev/sda1 /
-ls /
-EOF
-  log "Original boot state saved to $orig_dir"
-}
-
 # write_inventory — create the Ansible inventory file used by both layers.
 # Called once from main() so the inventory exists even when Layer 1 is cached.
 write_inventory() {
@@ -310,34 +285,82 @@ deploy_app() {
     || err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
-restore_pi_boot_state() {
+# customize_device_image — Layer 3 device customization via guestfish.
+# Restores Pi boot state, injects Tailscale + first-boot services,
+# stamps device config, generates SSH host keys, removes build SSH key.
+customize_device_image() {
   local target_image="$1"
-  log "Restoring native Pi boot state..."
-  local orig_dir="$WORK_DIR/original-boot"
+  log "Customizing device image (boot state, Tailscale, SSH keys)..."
 
-  # Build a Pi-native fstab with PARTUUID references and data partition bind mounts.
-  # We read the PARTUUIDs from the image and construct the fstab.
-  local fstab_dir="$WORK_DIR/pi-fstab"
-  mkdir -p "$fstab_dir"
+  local stamp_dir="$WORK_DIR/stamp-files"
+  rm -rf "$stamp_dir"
+  mkdir -p "$stamp_dir"
 
-  # Get PARTUUIDs from the image
+  # --- Host-side prep (no guestfish) ---
+
+  # Generate SSH host keys
+  local ssh_dir="$stamp_dir/ssh-keys"
+  mkdir -p "$ssh_dir"
+  ssh-keygen -t rsa -b 4096 -f "$ssh_dir/ssh_host_rsa_key" -N "" -q
+  ssh-keygen -t ecdsa -b 521 -f "$ssh_dir/ssh_host_ecdsa_key" -N "" -q
+  ssh-keygen -t ed25519 -f "$ssh_dir/ssh_host_ed25519_key" -N "" -q
+
+  # Write device config files
+  cat > "$stamp_dir/tailscale-firstboot.conf" <<EOF
+DEVICE_ID=${DEVICE_ID}
+CUSTOMER_TAG=${CUSTOMER_TAG}
+TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
+EOF
+
+  cat > "$stamp_dir/device.conf" <<EOF
+DEVICE_ID=${DEVICE_ID}
+CUSTOMER_TAG=${CUSTOMER_TAG}
+EOF
+
+  # Download Tailscale arm64 .deb (cached across device stamps)
+  local ts_deb="$CACHE_DIR/tailscale-${TAILSCALE_VERSION}_arm64.deb"
+  if [[ ! -f "$ts_deb" ]]; then
+    log "Downloading Tailscale arm64 .deb..."
+    mkdir -p "$CACHE_DIR"
+    curl -fSL -o "$ts_deb" "$TAILSCALE_DEB_URL" \
+      || err "Failed to download Tailscale .deb from $TAILSCALE_DEB_URL"
+    echo "$TAILSCALE_DEB_CHECKSUM  $ts_deb" | sha256sum -c - \
+      || err "Checksum mismatch for Tailscale .deb"
+  fi
+
+  # Extract Tailscale .deb on host
+  local ts_root="$stamp_dir/tailscale-root"
+  mkdir -p "$ts_root"
+  dpkg-deb -x "$ts_deb" "$ts_root"
+
+  # --- Guestfish session 1: read-only (extract PARTUUIDs + sshd_config) ---
+
+  # --- Guestfish session 1: read-only (extract PARTUUIDs + sshd_config) ---
+
+  log "Reading image metadata..."
+  local read_cmd="$stamp_dir/read.cmd"
+  local sshd_cfg="$stamp_dir/sshd_config"
+  {
+    echo "add $target_image"
+    echo "run"
+    echo "blkid /dev/sda1"
+    echo "blkid /dev/sda2"
+    echo "mount /dev/sda2 /"
+    echo "download /etc/ssh/sshd_config $sshd_cfg"
+  } > "$read_cmd"
+
+  local blkid_lines
+  blkid_lines=$(guestfish < "$read_cmd")
+
   local partuuid_p1 partuuid_p2
-  partuuid_p1=$(guestfish --ro -a "$target_image" <<'EOF'
-run
-blkid /dev/sda1
-EOF
-  )
-  partuuid_p1=$(echo "$partuuid_p1" | grep -oP 'PARTUUID=\K[^ "]+' || true)
+  partuuid_p1=$(echo "$blkid_lines" | grep -oP 'PARTUUID=\K[^ "]+' | head -1 || true)
+  partuuid_p2=$(echo "$blkid_lines" | grep -oP 'PARTUUID=\K[^ "]+' | tail -1 || true)
 
-  partuuid_p2=$(guestfish --ro -a "$target_image" <<'EOF'
-run
-blkid /dev/sda2
-EOF
-  )
-  partuuid_p2=$(echo "$partuuid_p2" | grep -oP 'PARTUUID=\K[^ "]+' || true)
+  # Patch sshd_config to use host keys on data partition
+  sed -i -E 's|^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key|HostKey /data/ssh/ssh_host_\1_key|' "$sshd_cfg"
 
-  # Build fstab — use original PARTUUIDs for boot+root, LABEL for data
-  cat > "$fstab_dir/fstab" <<FSTAB
+  # Build Pi-native fstab with PARTUUIDs
+  cat > "$stamp_dir/fstab" <<FSTAB
 proc                  /proc            proc  defaults          0  0
 PARTUUID=${partuuid_p1}  /boot/firmware  vfat  defaults          0  2
 PARTUUID=${partuuid_p2}  /               ext4  defaults,noatime  0  1
@@ -350,148 +373,49 @@ LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  2
 tmpfs                 /tmp             tmpfs defaults,nosuid,nodev,size=64M 0 0
 FSTAB
 
-  # Restore fstab and remove virt kernel files.
+  # --- Guestfish session 2: read-write (all modifications in one pass) ---
+
+  log "Writing all device customizations..."
   local virt_kver
   virt_kver=$(cat "$WORK_DIR/virt-kernel-version" 2>/dev/null || true)
 
-  local gf_cmds="$WORK_DIR/restore-boot.cmd"
+  local write_cmd="$stamp_dir/write.cmd"
   {
     echo "add $target_image"
     echo "run"
+
+    # === rootfs (p2) ===
     echo "mount /dev/sda2 /"
-    echo "upload $fstab_dir/fstab /etc/fstab"
-    # Create bind mount target directories
+
+    # Restore Pi boot state: fstab, bind mount dirs, remove virt kernel
+    echo "upload $stamp_dir/fstab /etc/fstab"
     echo "mkdir-p /data"
     echo "mkdir-p /opt/kioskkit/data"
     echo "mkdir-p /var/lib/tailscale"
     echo "mkdir-p /etc/wpa_supplicant"
     echo "mkdir-p /etc/kioskkit"
     echo "mkdir-p /var/log/journal"
-    # Remove virt kernel modules if we know the version
     if [[ -n "$virt_kver" ]]; then
       echo "rm-rf /usr/lib/modules/$virt_kver"
     fi
-    # Remove virt boot files (vmlinuz-*, config-*, System.map-* from Debian kernel)
     echo "glob rm /boot/vmlinuz-*"
     echo "glob rm /boot/config-*"
     echo "glob rm /boot/System.map-*"
-  } > "$gf_cmds"
 
-  guestfish < "$gf_cmds" || log "WARN: Some restore commands failed (may be OK if files didn't exist)"
-  rm -f "$gf_cmds"
-  rm -rf "$fstab_dir"
+    # First-boot services
+    echo "upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-tailscale-firstboot.service /etc/systemd/system/kioskkit-tailscale-firstboot.service"
+    echo "mkdir-p /opt/kioskkit/system"
+    echo "upload $REPO_ROOT/deploy/pi/first-boot/tailscale-firstboot.sh /opt/kioskkit/system/tailscale-firstboot.sh"
+    echo "chmod 0755 /opt/kioskkit/system/tailscale-firstboot.sh"
+    echo "upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-expand-data.service /etc/systemd/system/kioskkit-expand-data.service"
+    echo "upload $REPO_ROOT/deploy/pi/first-boot/expand-data-partition.sh /opt/kioskkit/system/expand-data-partition.sh"
+    echo "chmod 0755 /opt/kioskkit/system/expand-data-partition.sh"
+    echo "mkdir-p /etc/systemd/system/multi-user.target.wants"
+    echo "ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service"
+    echo "mkdir-p /etc/systemd/system/local-fs.target.wants"
+    echo "ln-sf /etc/systemd/system/kioskkit-expand-data.service /etc/systemd/system/local-fs.target.wants/kioskkit-expand-data.service"
 
-  log "Pi boot state restored."
-}
-
-inject_tailscale_firstboot() {
-  local target_image="$1"
-  log "Injecting Tailscale first-boot service..."
-
-  local inject_dir="$WORK_DIR/inject-files"
-  mkdir -p "$inject_dir/etc/kioskkit"
-
-  # Write config file with device-specific values
-  cat > "$inject_dir/tailscale-firstboot.conf" <<EOF
-DEVICE_ID=${DEVICE_ID}
-CUSTOMER_TAG=${CUSTOMER_TAG}
-TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
-EOF
-
-  # Write device config for the data partition (persists across OTA updates)
-  cat > "$inject_dir/device.conf" <<EOF
-DEVICE_ID=${DEVICE_ID}
-CUSTOMER_TAG=${CUSTOMER_TAG}
-EOF
-
-  # Download Tailscale arm64 .deb for offline installation
-  log "Downloading Tailscale arm64 .deb..."
-  local ts_deb="$inject_dir/tailscale.deb"
-  curl -fSL -o "$ts_deb" "$TAILSCALE_DEB_URL" \
-    || err "Failed to download Tailscale .deb from $TAILSCALE_DEB_URL"
-  echo "$TAILSCALE_DEB_CHECKSUM  $ts_deb" | sha256sum -c - \
-    || err "Checksum mismatch for Tailscale .deb"
-
-  # Inject first-boot services into rootfs (p2)
-  guestfish --rw -a "$target_image" -m /dev/sda2 <<EOF
-# First-boot service and script
-upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-tailscale-firstboot.service /etc/systemd/system/kioskkit-tailscale-firstboot.service
-mkdir-p /opt/kioskkit/system
-upload $REPO_ROOT/deploy/pi/first-boot/tailscale-firstboot.sh /opt/kioskkit/system/tailscale-firstboot.sh
-chmod 0755 /opt/kioskkit/system/tailscale-firstboot.sh
-
-# Data partition expansion service
-upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-expand-data.service /etc/systemd/system/kioskkit-expand-data.service
-upload $REPO_ROOT/deploy/pi/first-boot/expand-data-partition.sh /opt/kioskkit/system/expand-data-partition.sh
-chmod 0755 /opt/kioskkit/system/expand-data-partition.sh
-
-# Enable first-boot services
-mkdir-p /etc/systemd/system/multi-user.target.wants
-ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service
-mkdir-p /etc/systemd/system/local-fs.target.wants
-ln-sf /etc/systemd/system/kioskkit-expand-data.service /etc/systemd/system/local-fs.target.wants/kioskkit-expand-data.service
-EOF
-
-  # Stamp device config and Tailscale firstboot config onto data partition (p4)
-  guestfish --rw -a "$target_image" -m /dev/sda4 <<EOF
-# Device config on data partition
-mkdir-p /kioskkit-config
-upload $inject_dir/device.conf /kioskkit-config/device.conf
-chmod 0644 /kioskkit-config/device.conf
-
-# Tailscale firstboot config on data partition
-upload $inject_dir/tailscale-firstboot.conf /kioskkit-config/tailscale-firstboot.conf
-chmod 0600 /kioskkit-config/tailscale-firstboot.conf
-
-# Initialize OTA state
-mkdir-p /ota
-mkdir-p /ota/pending
-write /ota/boot-slot "A"
-write /ota/state.json "{\"status\":\"idle\",\"slot\":\"A\"}"
-EOF
-
-  # Generate SSH host keys on the data partition
-  log "Generating SSH host keys on data partition..."
-  local ssh_dir="$inject_dir/ssh-keys"
-  mkdir -p "$ssh_dir"
-  ssh-keygen -t rsa -b 4096 -f "$ssh_dir/ssh_host_rsa_key" -N "" -q
-  ssh-keygen -t ecdsa -b 521 -f "$ssh_dir/ssh_host_ecdsa_key" -N "" -q
-  ssh-keygen -t ed25519 -f "$ssh_dir/ssh_host_ed25519_key" -N "" -q
-
-  local gf_ssh="$inject_dir/guestfish-ssh.cmd"
-  {
-    echo "add $target_image"
-    echo "run"
-    echo "mount /dev/sda4 /"
-    echo "mkdir-p /ssh"
-    for keytype in rsa ecdsa ed25519; do
-      echo "upload $ssh_dir/ssh_host_${keytype}_key /ssh/ssh_host_${keytype}_key"
-      echo "chmod 0600 /ssh/ssh_host_${keytype}_key"
-      echo "upload $ssh_dir/ssh_host_${keytype}_key.pub /ssh/ssh_host_${keytype}_key.pub"
-      echo "chmod 0644 /ssh/ssh_host_${keytype}_key.pub"
-    done
-  } > "$gf_ssh"
-  guestfish < "$gf_ssh"
-
-  # Point sshd_config to host keys on data partition
-  log "Relocating SSH host key paths in sshd_config..."
-  local sshd_cfg="$inject_dir/sshd_config"
-  guestfish --ro -a "$target_image" -m /dev/sda2 download /etc/ssh/sshd_config "$sshd_cfg"
-  sed -i -E 's|^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key|HostKey /data/ssh/ssh_host_\1_key|' "$sshd_cfg"
-  guestfish --rw -a "$target_image" -m /dev/sda2 upload "$sshd_cfg" /etc/ssh/sshd_config
-
-  # Extract Tailscale .deb on the host and copy files into the rootfs image
-  local ts_root="$inject_dir/tailscale-root"
-  mkdir -p "$ts_root"
-  dpkg-deb -x "$ts_deb" "$ts_root"
-
-  # Build a guestfish command file to copy Tailscale files
-  local gf_cmds="$inject_dir/guestfish-ts.cmd"
-  {
-    echo "add $target_image"
-    echo "run"
-    echo "mount /dev/sda2 /"
-    # Copy binaries
+    # Tailscale binaries
     if [ -f "$ts_root/usr/bin/tailscale" ]; then
       echo "upload $ts_root/usr/bin/tailscale /usr/bin/tailscale"
       echo "chmod 0755 /usr/bin/tailscale"
@@ -500,31 +424,54 @@ EOF
       echo "upload $ts_root/usr/sbin/tailscaled /usr/sbin/tailscaled"
       echo "chmod 0755 /usr/sbin/tailscaled"
     fi
-    # Copy systemd service
     if [ -f "$ts_root/lib/systemd/system/tailscaled.service" ]; then
       echo "upload $ts_root/lib/systemd/system/tailscaled.service /usr/lib/systemd/system/tailscaled.service"
-      echo "mkdir-p /etc/systemd/system/multi-user.target.wants"
       echo "ln-sf /usr/lib/systemd/system/tailscaled.service /etc/systemd/system/multi-user.target.wants/tailscaled.service"
     fi
-    # Copy defaults file if present
     if [ -f "$ts_root/etc/default/tailscaled" ]; then
       echo "mkdir-p /etc/default"
       echo "upload $ts_root/etc/default/tailscaled /etc/default/tailscaled"
     fi
-  } > "$gf_cmds"
 
-  guestfish < "$gf_cmds"
-  rm -rf "$inject_dir"
+    # Patched sshd_config
+    echo "upload $sshd_cfg /etc/ssh/sshd_config"
 
-  log "Tailscale first-boot service injected."
-}
+    # Remove build SSH key
+    echo "rm-f /home/pi/.ssh/authorized_keys"
 
-remove_build_ssh_key() {
-  local target_image="$1"
-  log "Removing build SSH key from image..."
-  guestfish --rw -a "$target_image" -m /dev/sda2 <<'EOF'
-rm-f /home/pi/.ssh/authorized_keys
-EOF
+    # === data partition (p4) ===
+    echo "umount /"
+    echo "mount /dev/sda4 /"
+
+    # Device config
+    echo "mkdir-p /kioskkit-config"
+    echo "upload $stamp_dir/device.conf /kioskkit-config/device.conf"
+    echo "chmod 0644 /kioskkit-config/device.conf"
+
+    # Tailscale firstboot config
+    echo "upload $stamp_dir/tailscale-firstboot.conf /kioskkit-config/tailscale-firstboot.conf"
+    echo "chmod 0600 /kioskkit-config/tailscale-firstboot.conf"
+
+    # OTA state
+    echo "mkdir-p /ota"
+    echo "mkdir-p /ota/pending"
+    echo "write /ota/boot-slot \"A\""
+    echo "write /ota/state.json \"{\\\"status\\\":\\\"idle\\\",\\\"slot\\\":\\\"A\\\"}\""
+
+    # SSH host keys
+    echo "mkdir-p /ssh"
+    for keytype in rsa ecdsa ed25519; do
+      echo "upload $ssh_dir/ssh_host_${keytype}_key /ssh/ssh_host_${keytype}_key"
+      echo "chmod 0600 /ssh/ssh_host_${keytype}_key"
+      echo "upload $ssh_dir/ssh_host_${keytype}_key.pub /ssh/ssh_host_${keytype}_key.pub"
+      echo "chmod 0644 /ssh/ssh_host_${keytype}_key.pub"
+    done
+  } > "$write_cmd"
+
+  guestfish < "$write_cmd" || log "WARN: Some guestfish commands failed (may be OK if files didn't exist)"
+  rm -rf "$stamp_dir"
+
+  log "Device image customized."
 }
 
 convert_to_raw() {
@@ -565,10 +512,8 @@ stamp_device() {
   local device_image="$WORK_DIR/device-${DEVICE_ID}.qcow2"
   cp "$source_image" "$device_image"
 
-  # All operations on the cold image via guestfish
-  restore_pi_boot_state "$device_image"
-  inject_tailscale_firstboot "$device_image"
-  remove_build_ssh_key "$device_image"
+  # All guestfish operations on the cold image
+  customize_device_image "$device_image"
   convert_to_raw
   shrink_image
 
@@ -609,9 +554,23 @@ main() {
     return
   fi
 
-  local ansible_hash app_hash
-  ansible_hash=$(compute_layer_hash "$REPO_ROOT/deploy/pi/ansible")
-  app_hash=$(compute_layer_hash "$REPO_ROOT/packages" "$REPO_ROOT/pnpm-lock.yaml" "$REPO_ROOT/turbo.json")
+  local base_hash app_hash
+  # Base hash covers the provisioning role (minus app.yml/deploy.yml which are Layer 2).
+  # Layer 1 runs provision.yml --skip-tags tailscale,app, so only role tasks
+  # for packages, security, display, filesystem, etc. matter.
+  base_hash=$(find "$REPO_ROOT/deploy/pi/ansible" -type f \
+    -not -name 'deploy.yml' \
+    -not -name 'app.yml' \
+    -not -path "*/node_modules/*" \
+    -not -path "*/dist/*" \
+    -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+  # App hash covers deploy.yml, app.yml, application code, and lockfile.
+  app_hash=$(compute_layer_hash \
+    "$REPO_ROOT/deploy/pi/ansible/playbooks/deploy.yml" \
+    "$REPO_ROOT/deploy/pi/ansible/roles/kioskkit/tasks/app.yml" \
+    "$REPO_ROOT/packages" \
+    "$REPO_ROOT/pnpm-lock.yaml" \
+    "$REPO_ROOT/turbo.json")
 
   # --- Layer 1: Base system ---------------------------------------------------
   local base_changed=0
@@ -619,21 +578,20 @@ main() {
     [[ -f "$BASE_IMAGE" ]] || err "No base image found at $BASE_IMAGE. Run without --app-only first."
     [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --app-only first."
     log "Skipping base layer (--app-only)."
-  elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$WORK_DIR/base-hash" 2>/dev/null)" == "$ansible_hash" ]] && [[ $FORCE -eq 0 ]]; then
+  elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$WORK_DIR/base-hash" 2>/dev/null)" == "$base_hash" ]] && [[ $FORCE -eq 0 ]]; then
     log "Base system cached (Ansible unchanged). Skipping to app deployment."
   else
     base_changed=1
     log "Building base system layer..."
     download_pios
     prepare_disk
-    save_original_boot_state
     patch_image_for_virt
     boot_qemu
     provision_base
     wait_for_reboot
     shutdown_qemu
     cp "$DISK_IMAGE" "$BASE_IMAGE"
-    echo "$ansible_hash" > "$WORK_DIR/base-hash"
+    echo "$base_hash" > "$WORK_DIR/base-hash"
     log "Base system layer cached."
   fi
 

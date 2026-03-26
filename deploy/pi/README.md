@@ -79,18 +79,30 @@ sudo dd if=deploy/pi/.output/kioskkit-042.img of=/dev/sdX bs=4M status=progress
 Uses the same QEMU system emulation approach as the Pi emulator, with shared
 code in `deploy/pi/lib/pi-image-common.sh`:
 
+**Layer 1 — Base system (~25 min, cached):**
+
 1. Downloads Raspberry Pi OS Lite (arm64, Bookworm) with checksum verification
-2. Converts to qcow2, grows partition and filesystem via guestfish
-3. Saves original Pi boot state (fstab, boot partition listing)
-4. Patches image for QEMU virt (Debian arm64 kernel, virtio initrd, temporary fstab)
-5. Creates pi user with ephemeral SSH key for build-time access
-6. Boots in QEMU with direct kernel boot
-7. Runs `ansible-playbook provision.yml` over SSH (skips tailscale only — security and watchdog are included)
-8. Reboots (Ansible reconnects via SSH key since password auth is now disabled)
-9. Shuts down QEMU
-10. Restores native Pi boot state (original PARTUUID fstab, removes virt kernel)
-11. Injects Tailscale: arm64 .deb (offline install) + first-boot auth service with device credentials
-12. Removes ephemeral SSH key from the image
+2. Converts to qcow2, creates 4-partition A/B layout (boot + rootA + rootB + data) via guestfish
+3. Patches image for QEMU virt (Debian arm64 kernel, virtio initrd, temporary fstab)
+4. Creates pi user with ephemeral SSH key for build-time access
+5. Boots in QEMU with direct kernel boot
+6. Runs `ansible-playbook provision.yml --skip-tags tailscale,app` over SSH
+7. Reboots (reconnects via SSH key since password auth is now disabled)
+8. Shuts down, snapshots as `provisioned-base.qcow2`
+
+**Layer 2 — App deployment (~5 min, cached):**
+
+9. Creates COW overlay on base image, boots QEMU
+10. Runs `ansible-playbook deploy.yml` — syncs kiosk packages (kiosk-client, kiosk-server, kiosk-admin, shared, ui), installs dependencies, builds
+11. Shuts down, flattens overlay to `app-image.qcow2`
+
+**Layer 3 — Device stamp (~30 sec, per device):**
+
+12. Copies app image, customizes via guestfish (no QEMU boot):
+    - Restores native Pi boot state (PARTUUID fstab, removes virt kernel)
+    - Injects Tailscale arm64 binary + first-boot auth service with device credentials
+    - Generates unique SSH host keys on data partition
+    - Removes ephemeral build SSH key
 13. Converts qcow2 to raw .img and shrinks with virt-sparsify or PiShrink
 
 ## What the image contains
@@ -101,7 +113,7 @@ The full Ansible provisioning playbook runs inside the VM:
 |-----------|---------|
 | **OS packages** | Node.js 24, sway, Chromium, nftables, wpa_supplicant |
 | **Kiosk user** | Locked system user, autologin on tty1, no SSH password access |
-| **Application** | Full pnpm install + build of kiosk-server, kiosk-client, kiosk-admin |
+| **Application** | kiosk-server, kiosk-client, kiosk-admin, shared, ui (other packages excluded) |
 | **Systemd services** | kioskkit.service, nftables, wpa_supplicant |
 | **Security** | nftables firewall (drop-all except Tailscale/DHCP), SSH password auth disabled, USB storage blocked, sysctl hardening |
 | **Display** | Sway compositor, Chromium kiosk mode, hidden cursor |
@@ -185,7 +197,7 @@ ssh -i $WORK_DIR/build-ssh-key -p 2222 pi@localhost
 
 ### Image doesn't boot on Pi
 
-Verify `restore_pi_boot_state` ran successfully — check that the original fstab (PARTUUID-based) was restored and virt kernel files were removed from `/boot/`.
+Verify the Layer 3 device stamp ran successfully — check that the fstab uses PARTUUIDs (not `/dev/vda*`) and that virt kernel files were removed from `/boot/`.
 
 ## Maintainability
 
@@ -207,8 +219,10 @@ deploy/pi/
   lib/
     pi-image-common.sh          # Shared functions (emulator + SD builder)
   first-boot/
-    kioskkit-tailscale-firstboot.service  # Systemd one-shot unit
-    tailscale-firstboot.sh               # First-boot auth script
+    kioskkit-tailscale-firstboot.service  # Tailscale auth one-shot unit
+    tailscale-firstboot.sh               # Tailscale first-boot auth script
+    kioskkit-expand-data.service          # Data partition expansion one-shot unit
+    expand-data-partition.sh             # Expands data partition to fill SD card
   ansible/                      # Ansible playbooks and roles
   .output/                      # Built images (gitignored)
   .work/                        # Build cache (gitignored)

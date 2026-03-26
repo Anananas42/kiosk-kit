@@ -161,15 +161,15 @@ dev/pi-emulator/
 ├── .output/                # Build output (gitignored)
 │   └── golden.qcow2       # Golden image (~5G)
 └── .work/                  # Intermediate files (gitignored)
+    ├── virt-kernel-version # Virt kernel version (used by SD builder for cleanup)
     ├── cache/              # Downloaded assets and layer caches
     │   ├── raspios.img     # Downloaded Pi OS image
     │   ├── provisioned-base.qcow2  # Layer 1 base image cache
-    │   ├── base-hash       # Cache invalidation hash (Ansible)
-    │   └── app-hash        # Cache invalidation hash (app code)
+    │   ├── base-hash       # Cache invalidation hash (provisioning role)
+    │   └── app-hash        # Cache invalidation hash (deploy.yml + app code)
     ├── boot/               # Kernel and initrd for direct boot
     │   ├── vmlinuz         # Debian arm64 virt kernel
-    │   ├── initrd.img      # Custom initrd with virtio modules
-    │   └── virt-kernel-version  # Saved for restore_pi_boot_state
+    │   └── initrd.img      # Custom initrd with virtio modules
     ├── build/              # Ephemeral build artifacts
     │   ├── disk.qcow2      # Working disk (temporary)
     │   ├── build-ssh-key   # Ephemeral SSH key

@@ -125,7 +125,7 @@ EOF
   guestfish --rw -a "$DISK_IMAGE" <<EOF
 run
 
-# Add rootB partition (p3) — 4 GB
+# Add rootB partition (p3) — 8 GB
 part-add /dev/sda p $((p3_start_bytes / 512)) $((p3_end_bytes / 512))
 
 # Add data partition (p4) — remainder of disk
@@ -265,7 +265,7 @@ FSTAB
   cp "$KERNEL_ROOT"/boot/vmlinuz-* "$KERNEL"
 
   # Save the virt kernel version for later cleanup (used by restore_pi_boot_state)
-  ls "$KERNEL_ROOT/lib/modules/" | head -1 > "$BOOT_DIR/virt-kernel-version"
+  ls "$KERNEL_ROOT/lib/modules/" | head -1 > "$WORK_DIR/virt-kernel-version"
 
   # Build a minimal initrd with virtio modules so the kernel can mount /dev/vda2.
   # The Debian arm64 kernel has virtio as modules, not built-in.
