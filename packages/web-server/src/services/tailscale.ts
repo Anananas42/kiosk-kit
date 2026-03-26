@@ -3,6 +3,16 @@ const KIOSKKIT_TAG = "tag:kioskkit";
 
 // ── Tailscale API response types ────────────────────────────────────
 
+interface RawTailscaleDevice {
+  nodeId: string;
+  name: string;
+  addresses: string[];
+  tags?: string[];
+  connectedToControl: boolean;
+  lastSeen: string;
+  hostname: string;
+}
+
 export interface TailscaleDevice {
   nodeId: string;
   name: string;
@@ -14,7 +24,7 @@ export interface TailscaleDevice {
 }
 
 interface TailscaleDevicesResponse {
-  devices: TailscaleDevice[];
+  devices: RawTailscaleDevice[];
 }
 
 export interface TailscaleAuthKey {
@@ -42,6 +52,11 @@ interface OAuthTokenResponse {
   access_token: string;
   token_type: string;
   expires_in: number;
+}
+
+function mapDevice(raw: RawTailscaleDevice): TailscaleDevice {
+  const { connectedToControl, ...rest } = raw;
+  return { ...rest, online: connectedToControl };
 }
 
 // ── Client ──────────────────────────────────────────────────────────
@@ -110,12 +125,13 @@ export class TailscaleClient {
     const data = await this.request<TailscaleDevicesResponse>(
       `/api/v2/tailnet/${this.tailnet}/devices`,
     );
-    return data.devices.filter((d) => d.tags?.includes(KIOSKKIT_TAG));
+    return data.devices.filter((d) => d.tags?.includes(KIOSKKIT_TAG)).map(mapDevice);
   }
 
   /** Get a single device by its node ID */
   async getDevice(nodeId: string): Promise<TailscaleDevice> {
-    return this.request<TailscaleDevice>(`/api/v2/device/${nodeId}`);
+    const raw = await this.request<RawTailscaleDevice>(`/api/v2/device/${nodeId}`);
+    return mapDevice(raw);
   }
 
   /** Create a single-use auth key tagged with tag:kioskkit (+ additional tags) */

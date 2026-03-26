@@ -119,6 +119,9 @@ deploy_app() {
     sleep 5
   done
 
+  log "Dumping kioskkit.service status and logs for debugging..."
+  ssh_pi "systemctl status kioskkit.service" || true
+  ssh_pi "journalctl -u kioskkit.service --no-pager -n 30" || true
   err "Kiosk server health check failed after $retries attempts"
 }
 
