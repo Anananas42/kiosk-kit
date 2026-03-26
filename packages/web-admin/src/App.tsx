@@ -3,6 +3,7 @@ import { authProvider } from "./authProvider.js";
 import { Dashboard } from "./Dashboard.js";
 import { dataProvider } from "./dataProvider/index.js";
 import { DeviceEdit, DeviceList } from "./resources/devices.js";
+import { ReleaseCreate, ReleaseList } from "./resources/releases.js";
 import { UserList, UserShow } from "./resources/users.js";
 
 export function App() {
@@ -16,6 +17,7 @@ export function App() {
     >
       <Resource name="devices" list={DeviceList} edit={DeviceEdit} />
       <Resource name="users" list={UserList} show={UserShow} recordRepresentation="name" />
+      <Resource name="releases" list={ReleaseList} create={ReleaseCreate} />
     </Admin>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { type Device, fetchBackups, fetchDevice, fetchDeviceStatus } from "./api.js";
 import { BackupSection } from "./BackupSection.js";
+import { OtaUpdateCard } from "./components/OtaUpdateCard.js";
 import { formatRelativeTime } from "./format.js";
 
 export function DeviceDetail() {
@@ -154,6 +155,9 @@ export function DeviceDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* OTA update card — only when device is online */}
+      {!loading && !error && online && id && <OtaUpdateCard deviceId={id} />}
 
       {/* Backups section */}
       {!loading && !error && <BackupSection backups={backupList} />}

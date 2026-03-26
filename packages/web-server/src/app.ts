@@ -9,6 +9,7 @@ import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";
+import { otaPushRoutes } from "./routes/ota-push.js";
 import { createContextFactory } from "./trpc/context.js";
 import { appRouter } from "./trpc/router.js";
 
@@ -43,6 +44,7 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
   // Auth middleware for protected API routes (exclude health + auth + trpc)
   app.use("/api/*", authMiddleware(db));
 
+  app.route("/api/devices", otaPushRoutes(db));
   app.route("/api/devices", deviceProxyRoutes(db));
 
   // Host-based static serving: admin.* → web-admin, everything else → web-client
