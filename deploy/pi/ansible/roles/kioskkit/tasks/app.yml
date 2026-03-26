@@ -70,7 +70,14 @@
 
 - name: Install dependencies and build
   ansible.builtin.command:
-    cmd: bash -lc "cd {{ kioskkit_install_dir }} && pnpm install --no-frozen-lockfile --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui && pnpm --filter @kioskkit/shared --filter @kioskkit/ui --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin build"
+    cmd: bash -lc "cd {{ kioskkit_install_dir }} && pnpm install --no-frozen-lockfile --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui && NODE_ENV=production pnpm --filter @kioskkit/shared --filter @kioskkit/ui --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin build"
+  become: true
+  become_user: "{{ kioskkit_user }}"
+  changed_when: true
+
+- name: Prune devDependencies after build
+  ansible.builtin.command:
+    cmd: bash -lc "cd {{ kioskkit_install_dir }} && pnpm install --no-frozen-lockfile --prod --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui"
   become: true
   become_user: "{{ kioskkit_user }}"
   changed_when: true

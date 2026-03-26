@@ -93,7 +93,11 @@ code in `deploy/pi/lib/pi-image-common.sh`:
 **Layer 2 — App deployment (~5 min, cached):**
 
 9. Creates COW overlay on base image, boots QEMU
-10. Runs `ansible-playbook deploy.yml` — syncs kiosk packages (kiosk-client, kiosk-server, kiosk-admin, shared, ui), installs dependencies, builds
+10. Runs `ansible-playbook deploy.yml`:
+    - Remounts `/tmp` to 512M (default 64M tmpfs is too small for node-gyp)
+    - Syncs only kiosk packages (kiosk-client, kiosk-server, kiosk-admin, shared, ui)
+    - Strips root devDependencies from `package.json` (turbo, biome, playwright, etc. not needed on Pi)
+    - Runs filtered `pnpm install` and `pnpm build`
 11. Shuts down, flattens overlay to `app-image.qcow2`
 
 **Layer 3 — Device stamp (~30 sec, per device):**

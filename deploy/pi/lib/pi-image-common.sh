@@ -264,7 +264,7 @@ FSTAB
   # Save kernel to WORK_DIR for direct boot (used by run.sh too)
   cp "$KERNEL_ROOT"/boot/vmlinuz-* "$KERNEL"
 
-  # Save the virt kernel version for later cleanup (used by restore_pi_boot_state)
+  # Save the virt kernel version for later cleanup (used by customize_device_image)
   ls "$KERNEL_ROOT/lib/modules/" | head -1 > "$WORK_DIR/virt-kernel-version"
 
   # Build a minimal initrd with virtio modules so the kernel can mount /dev/vda2.

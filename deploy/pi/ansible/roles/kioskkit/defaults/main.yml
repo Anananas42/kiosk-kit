@@ -17,5 +17,5 @@ kioskkit_customer_tag: ""
 
 # System
 kioskkit_cpu_governor: performance
-kioskkit_tmpfs_size: 64M
+kioskkit_tmpfs_size: 64M  # runtime size; deploy.yml remounts to 512M during build
 kioskkit_watchdog_timeout_secs: 15
