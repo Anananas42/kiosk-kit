@@ -11,6 +11,10 @@ primary_region = "fra"
 [env]
   COOKIE_DOMAIN = ".kioskk.net"
 
+[mounts]
+  source = "tailscale_state"
+  destination = "/var/lib/tailscale"
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "512mb"
