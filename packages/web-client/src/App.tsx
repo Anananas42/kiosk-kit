@@ -1,8 +1,9 @@
 import { Button } from "@kioskkit/ui";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Link, Route, Routes } from "react-router";
 import { logout } from "./api.js";
 import { DeviceDetail } from "./DeviceDetail.js";
 import { DeviceList } from "./DeviceList.js";
+import { ReleasesAdmin } from "./ReleasesAdmin.js";
 import { useAuth } from "./useAuth.js";
 
 export function App() {
@@ -31,7 +32,17 @@ export function App() {
     <BrowserRouter>
       <div className="flex h-full flex-col items-center p-4">
         <header className="flex w-full max-w-4xl items-center justify-between gap-4 border-b pb-4">
-          <h1 className="text-xl font-bold tracking-tight">KioskKit</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold tracking-tight">KioskKit</h1>
+            {user.role === "admin" && (
+              <Link
+                to="/releases"
+                className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+              >
+                Releases
+              </Link>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
               {user.name} ({user.email})
@@ -45,6 +56,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<DeviceList />} />
             <Route path="/devices/:id" element={<DeviceDetail />} />
+            <Route path="/releases" element={<ReleasesAdmin />} />
           </Routes>
         </main>
       </div>

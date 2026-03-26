@@ -2,6 +2,7 @@ import { Badge, Card, CardContent } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { type Device, fetchDevice, fetchDeviceStatus } from "./api.js";
+import { OtaUpdateCard } from "./components/OtaUpdateCard.js";
 
 function formatRelativeTime(isoString: string): string {
   const now = Date.now();
@@ -140,6 +141,9 @@ export function DeviceDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* OTA update card (when online) */}
+      {!loading && !error && online && id && <OtaUpdateCard deviceId={id} />}
 
       {/* Iframe for online device */}
       {!loading && !error && online && (
