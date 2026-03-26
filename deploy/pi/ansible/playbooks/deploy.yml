@@ -20,6 +20,7 @@
           - "--exclude=dev/"
           - "--exclude=plans/"
           - "--exclude=.env"
+          - "--exclude=system/"
 
     - name: Set application ownership
       ansible.builtin.file:

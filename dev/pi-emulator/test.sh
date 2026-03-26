@@ -50,7 +50,7 @@ remote() {
 assert_remote() {
   local name=$1 cmd=$2 fail_msg=$3
   log_test "$name"
-  if remote bash -c "$cmd"; then
+  if remote "$cmd"; then
     pass
   else
     fail "$fail_msg"
@@ -61,7 +61,7 @@ assert_remote() {
 assert_remote_grep() {
   local name=$1 cmd=$2 pattern=$3 fail_msg=$4
   log_test "$name"
-  if remote bash -c "$cmd" | grep -qi "$pattern"; then
+  if remote "$cmd" | grep -qi "$pattern"; then
     pass
   else
     fail "$fail_msg"
@@ -173,7 +173,7 @@ test_kiosk_app() {
 test_wifi() {
   assert_remote \
     "wpa_supplicant installed" \
-    "which wpa_supplicant" \
+    "dpkg -l wpasupplicant | grep -q ^ii" \
     "wpa_supplicant not found"
 
   log_test "WiFi management scripts deployed"
@@ -211,8 +211,12 @@ test_wifi() {
 
 test_security() {
   log_test "nftables firewall active"
-  if remote sudo nft list ruleset 2>/dev/null | grep -q "table"; then
+  local nft_out
+  nft_out=$(remote "sudo nft list ruleset 2>&1") || true
+  if echo "$nft_out" | grep -q "table"; then
     pass
+  elif echo "$nft_out" | grep -qi "not supported\|Protocol not supported"; then
+    skip "nftables not supported in QEMU virt kernel"
   else
     fail "nftables has no rules loaded"
   fi
