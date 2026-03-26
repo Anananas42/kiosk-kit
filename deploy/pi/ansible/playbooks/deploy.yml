@@ -60,7 +60,7 @@
 
     - name: Prune devDependencies after build
       ansible.builtin.command:
-        cmd: "bash -lc 'cd {{ kioskkit_install_dir | default('/opt/kioskkit') }} && pnpm install --no-frozen-lockfile --prod --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui'"
+        cmd: "bash -lc 'cd {{ kioskkit_install_dir | default('/opt/kioskkit') }} && CI=true pnpm install --no-frozen-lockfile --prod --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui'"
       become: true
       become_user: "{{ kioskkit_user | default('kiosk') }}"
       changed_when: true
