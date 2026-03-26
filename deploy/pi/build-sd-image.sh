@@ -29,8 +29,9 @@
 #   --device-only          Only stamp device on existing app image (~30s)
 #
 # Environment variables (for API key auto-generation when --tailscale-key is omitted):
-#   TAILSCALE_API_KEY      Tailscale API key (also read from .env)
-#   TAILSCALE_TAILNET      Tailscale tailnet name (also read from .env)
+#   TAILSCALE_OAUTH_CLIENT_ID      Tailscale OAuth client ID (also read from .env)
+#   TAILSCALE_OAUTH_CLIENT_SECRET  Tailscale OAuth client secret (also read from .env)
+#   TAILSCALE_TAILNET              Tailscale tailnet name (also read from .env)
 
 set -euo pipefail
 
@@ -47,6 +48,14 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   echo "==> Re-executing inside container..."
   exec docker run --rm \
     -e KIOSKKIT_IN_CONTAINER=1 \
+    ${PI_DEV_DEVICE_ID:+-e PI_DEV_DEVICE_ID="$PI_DEV_DEVICE_ID"} \
+    ${PI_DEV_CUSTOMER_TAG:+-e PI_DEV_CUSTOMER_TAG="$PI_DEV_CUSTOMER_TAG"} \
+    ${PI_DEV_TAILSCALE_KEY:+-e PI_DEV_TAILSCALE_KEY="$PI_DEV_TAILSCALE_KEY"} \
+    ${TAILSCALE_OAUTH_CLIENT_ID:+-e TAILSCALE_OAUTH_CLIENT_ID="$TAILSCALE_OAUTH_CLIENT_ID"} \
+    ${TAILSCALE_OAUTH_CLIENT_SECRET:+-e TAILSCALE_OAUTH_CLIENT_SECRET="$TAILSCALE_OAUTH_CLIENT_SECRET"} \
+    ${TAILSCALE_TAILNET:+-e TAILSCALE_TAILNET="$TAILSCALE_TAILNET"} \
+    ${SD_BUILD_RAM:+-e SD_BUILD_RAM="$SD_BUILD_RAM"} \
+    ${SD_BUILD_CPUS:+-e SD_BUILD_CPUS="$SD_BUILD_CPUS"} \
     -v "$REPO_ROOT:/workspace:ro" \
     -v "$SCRIPT_DIR/.output:/output" \
     kioskkit-sd-builder "$@"
@@ -152,18 +161,33 @@ generate_tailscale_key() {
   if [[ -f "$REPO_ROOT/.env" ]]; then
     while IFS='=' read -r key value; do
       case "$key" in
-        TAILSCALE_API_KEY|TAILSCALE_TAILNET) export "$key=$value" ;;
+        TAILSCALE_OAUTH_CLIENT_ID|TAILSCALE_OAUTH_CLIENT_SECRET|TAILSCALE_TAILNET) export "$key=$value" ;;
       esac
-    done < <(grep -E '^TAILSCALE_(API_KEY|TAILNET)=' "$REPO_ROOT/.env")
+    done < <(grep -E '^TAILSCALE_(OAUTH_CLIENT_ID|OAUTH_CLIENT_SECRET|TAILNET)=' "$REPO_ROOT/.env")
   fi
 
-  if [[ -z "${TAILSCALE_API_KEY:-}" ]] || [[ -z "${TAILSCALE_TAILNET:-}" ]]; then
-    err "No --tailscale-key provided and TAILSCALE_API_KEY/TAILSCALE_TAILNET not set.
-  Either pass --tailscale-key tskey-auth-XXXX explicitly, or set both
-  TAILSCALE_API_KEY and TAILSCALE_TAILNET in environment or .env file."
+  if [[ -z "${TAILSCALE_OAUTH_CLIENT_ID:-}" ]] || [[ -z "${TAILSCALE_OAUTH_CLIENT_SECRET:-}" ]] || [[ -z "${TAILSCALE_TAILNET:-}" ]]; then
+    err "No --tailscale-key provided and Tailscale OAuth credentials not set.
+  Either pass --tailscale-key tskey-auth-XXXX explicitly, or set
+  TAILSCALE_OAUTH_CLIENT_ID, TAILSCALE_OAUTH_CLIENT_SECRET, and TAILSCALE_TAILNET in environment or .env file."
   fi
 
   log "Generating single-use Tailscale auth key via API..."
+
+  # Get OAuth access token
+  local token_response
+  if ! token_response=$(curl -fsS --max-time 30 \
+    -d "client_id=${TAILSCALE_OAUTH_CLIENT_ID}" \
+    -d "client_secret=${TAILSCALE_OAUTH_CLIENT_SECRET}" \
+    "https://api.tailscale.com/api/v2/oauth/token" 2>/tmp/curl_stderr); then
+    curl_err=$(cat /tmp/curl_stderr)
+    err "Tailscale OAuth token exchange failed: ${token_response:-$curl_err}"
+  fi
+
+  local access_token
+  access_token=$(printf '%s' "$token_response" | jq -r '.access_token // empty') \
+    || err "Failed to parse OAuth token response"
+  [[ -n "$access_token" ]] || err "OAuth token exchange returned empty token. Response: $token_response"
 
   # Build tags array: always include tag:kioskkit, add customer tag if set
   local tags_json
@@ -183,7 +207,7 @@ generate_tailscale_key() {
 
   local response curl_err
   if ! response=$(curl -fsS --max-time 30 \
-    -u "${TAILSCALE_API_KEY}:" \
+    -H "Authorization: Bearer ${access_token}" \
     -H "Content-Type: application/json" \
     -d "$payload" \
     "https://api.tailscale.com/api/v2/tailnet/${TAILSCALE_TAILNET}/keys" 2>/tmp/curl_stderr); then

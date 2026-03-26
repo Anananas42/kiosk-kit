@@ -38,23 +38,60 @@ interface CreateAuthKeyRequest {
   expirySeconds?: number;
 }
 
+interface OAuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
 // ── Client ──────────────────────────────────────────────────────────
 
 export class TailscaleClient {
-  private apiKey: string;
+  private clientId: string;
+  private clientSecret: string;
   private tailnet: string;
+  private accessToken: string | null = null;
+  private tokenExpiresAt = 0;
 
-  constructor(apiKey: string, tailnet: string) {
-    this.apiKey = apiKey;
+  constructor(clientId: string, clientSecret: string, tailnet: string) {
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
     this.tailnet = tailnet;
   }
 
+  private async getAccessToken(): Promise<string> {
+    // Refresh 5 minutes before expiry
+    if (this.accessToken && Date.now() < this.tokenExpiresAt - 5 * 60 * 1000) {
+      return this.accessToken;
+    }
+
+    const res = await fetch(`${BASE_URL}/api/v2/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Tailscale OAuth token exchange failed ${res.status}: ${body}`);
+    }
+
+    const data = (await res.json()) as OAuthTokenResponse;
+    this.accessToken = data.access_token;
+    this.tokenExpiresAt = Date.now() + data.expires_in * 1000;
+    return this.accessToken;
+  }
+
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
+    const token = await this.getAccessToken();
     const url = `${BASE_URL}${path}`;
     const res = await fetch(url, {
       ...init,
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
         ...init?.headers,
       },
@@ -113,12 +150,15 @@ let instance: TailscaleClient | null = null;
 
 export function getTailscaleClient(): TailscaleClient {
   if (!instance) {
-    const apiKey = process.env.TAILSCALE_API_KEY;
+    const clientId = process.env.TAILSCALE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.TAILSCALE_OAUTH_CLIENT_SECRET;
     const tailnet = process.env.TAILSCALE_TAILNET;
-    if (!apiKey || !tailnet) {
-      throw new Error("TAILSCALE_API_KEY and TAILSCALE_TAILNET env vars are required");
+    if (!clientId || !clientSecret || !tailnet) {
+      throw new Error(
+        "TAILSCALE_OAUTH_CLIENT_ID, TAILSCALE_OAUTH_CLIENT_SECRET, and TAILSCALE_TAILNET env vars are required",
+      );
     }
-    instance = new TailscaleClient(apiKey, tailnet);
+    instance = new TailscaleClient(clientId, clientSecret, tailnet);
   }
   return instance;
 }

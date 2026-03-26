@@ -38,7 +38,8 @@ Tailscale API. Set the required credentials in `.env` or as environment variable
 
 ```bash
 # .env (or export these)
-TAILSCALE_API_KEY=tskey-api-XXXX
+TAILSCALE_OAUTH_CLIENT_ID=your-client-id
+TAILSCALE_OAUTH_CLIENT_SECRET=tskey-client-XXXX
 TAILSCALE_TAILNET=your-tailnet.ts.net
 
 ./deploy/pi/build-sd-image.sh \
@@ -122,7 +123,7 @@ On first power-on with ethernet connected:
    - On failure: exits non-zero, retries on next boot (safe to reboot without ethernet)
 4. Device appears in Tailscale admin console, accessible remotely
 
-The Tailscale auth key is embedded in the image between flash and first successful boot. When no explicit key is provided, the script auto-generates a single-use key via the Tailscale API (requires `TAILSCALE_API_KEY` and `TAILSCALE_TAILNET`).
+The Tailscale auth key is embedded in the image between flash and first successful boot. When no explicit key is provided, the script auto-generates a single-use key via the Tailscale API (requires `TAILSCALE_OAUTH_CLIENT_ID`, `TAILSCALE_OAUTH_CLIENT_SECRET`, and `TAILSCALE_TAILNET`).
 
 ## SSH access
 
@@ -149,8 +150,9 @@ Environment variables for tuning:
 - `SD_BUILD_RAM` — QEMU guest RAM (default: 4G)
 - `SD_BUILD_CPUS` — QEMU guest CPUs (default: half of host cores)
 
-Environment variables for Tailscale API key auto-generation (when `--tailscale-key` is omitted):
-- `TAILSCALE_API_KEY` — Tailscale API key (or set in `.env`)
+Environment variables for Tailscale auth key auto-generation (when `--tailscale-key` is omitted):
+- `TAILSCALE_OAUTH_CLIENT_ID` — Tailscale OAuth client ID (or set in `.env`)
+- `TAILSCALE_OAUTH_CLIENT_SECRET` — Tailscale OAuth client secret (or set in `.env`)
 - `TAILSCALE_TAILNET` — Tailscale tailnet name (or set in `.env`)
 
 ## Shared library
