@@ -53,11 +53,15 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   rsync -a --delete \
     --exclude=node_modules \
     --exclude=.git \
+    --exclude=.venv \
     --exclude=data/ \
     --exclude=deploy/ \
     --exclude=dev/ \
     --exclude=plans/ \
+    --exclude=docs/ \
+    --exclude=credentials/ \
     --exclude=.env \
+    --exclude=.screenshots/ \
     --exclude=packages/web-client/ \
     --exclude=packages/web-server/ \
     --exclude=packages/web-admin/ \
@@ -333,8 +337,9 @@ deploy_app() {
 
   local install_dir="/opt/kioskkit"
 
-  # rsync the pre-built app into the VM
+  # rsync the pre-built app into the VM (via temp dir, then move as root)
   log "Syncing pre-built application into VM..."
+  ssh_pi "sudo mkdir -p /var/tmp/app-stage && sudo chown pi:pi /var/tmp/app-stage"
   local ssh_key_opt=""
   if [[ -n "${BUILD_SSH_KEY:-}" && -f "${BUILD_SSH_KEY:-}" ]]; then
     ssh_key_opt="-i $BUILD_SSH_KEY"
@@ -342,12 +347,12 @@ deploy_app() {
   # shellcheck disable=SC2086
   rsync -az --delete \
     -e "ssh ${ssh_key_opt:+$ssh_key_opt }-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $SSH_PORT" \
-    "$stage_dir/" "pi@localhost:${install_dir}/" \
+    "$stage_dir/" "pi@localhost:/var/tmp/app-stage/" \
     || err "rsync into VM failed"
+  ssh_pi "sudo rsync -a --delete --exclude=data /var/tmp/app-stage/ $install_dir/ && sudo rm -rf /var/tmp/app-stage && sudo chown -R kiosk:kiosk $install_dir"
 
-  # Set ownership and rebuild native arm64 addons
+  # Rebuild native arm64 addons
   log "Rebuilding native arm64 addons (better-sqlite3)..."
-  ssh_pi "sudo chown -R kiosk:kiosk $install_dir"
   ssh_pi "sudo -u kiosk bash -lc 'cd $install_dir && npm rebuild better-sqlite3'" \
     || err "Native addon rebuild failed inside VM"
 
