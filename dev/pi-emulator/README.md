@@ -30,7 +30,7 @@ pip install ansible
 open http://localhost:3001
 
 # 4. SSH into it (in another terminal)
-ssh -i .work/build-ssh-key -p 2222 pi@localhost
+ssh -i .work/build/build-ssh-key -p 2222 pi@localhost
 
 # 5. Run smoke tests (boots a fresh overlay and tests automatically)
 ./test.sh
@@ -136,17 +136,17 @@ Boots a fresh overlay and runs smoke tests covering:
 ## SSH access
 
 Build-time SSH uses an ephemeral ed25519 keypair generated during image build
-and stored at `.work/build-ssh-key`. Password authentication is disabled by
+and stored at `.work/build/build-ssh-key`. Password authentication is disabled by
 the security hardening tasks — only key auth works.
 
 ```bash
-ssh -i .work/build-ssh-key -p 2222 pi@localhost
+ssh -i .work/build/build-ssh-key -p 2222 pi@localhost
 ```
 
 ## Golden image management
 
-- `golden.qcow2` is gitignored (~5G, built locally)
-- `.work/` contains intermediate files (Pi OS download, kernel, initrd, SSH key) — also gitignored
+- `.output/golden.qcow2` is gitignored (~5G, built locally)
+- `.work/` contains intermediate and runtime files — also gitignored
 - Rebuild trigger: Ansible playbook changes, application code changes
 - The golden image includes the fully provisioned system with security hardening, firewall, and the built kiosk application
 
@@ -154,16 +154,30 @@ ssh -i .work/build-ssh-key -p 2222 pi@localhost
 
 ```
 dev/pi-emulator/
-├── build-image.sh     # Build the golden image (sources shared library)
-├── run.sh             # Boot for interactive use
-├── test.sh            # Run smoke tests
-├── README.md          # This file
-├── golden.qcow2       # Golden image (gitignored, built locally)
-└── .work/             # Intermediate files (gitignored)
-    ├── raspios.img    # Downloaded Pi OS image
-    ├── disk.qcow2     # Working disk during build
-    ├── vmlinuz        # Debian arm64 kernel (for direct boot)
-    ├── initrd.img     # Custom initrd with virtio modules
-    ├── build-ssh-key  # Ephemeral SSH key for build-time access
-    └── qemu-console.log  # Serial console output (for debugging)
+├── build-image.sh          # Build the golden image (sources shared library)
+├── run.sh                  # Boot for interactive use
+├── test.sh                 # Run smoke tests
+├── README.md               # This file
+├── .output/                # Build output (gitignored)
+│   └── golden.qcow2       # Golden image (~5G)
+└── .work/                  # Intermediate files (gitignored)
+    ├── cache/              # Downloaded assets and layer caches
+    │   ├── raspios.img     # Downloaded Pi OS image
+    │   ├── provisioned-base.qcow2  # Layer 1 base image cache
+    │   ├── base-hash       # Cache invalidation hash (Ansible)
+    │   └── app-hash        # Cache invalidation hash (app code)
+    ├── boot/               # Kernel and initrd for direct boot
+    │   ├── vmlinuz         # Debian arm64 virt kernel
+    │   ├── initrd.img      # Custom initrd with virtio modules
+    │   └── virt-kernel-version  # Saved for restore_pi_boot_state
+    ├── build/              # Ephemeral build artifacts
+    │   ├── disk.qcow2      # Working disk (temporary)
+    │   ├── build-ssh-key   # Ephemeral SSH key
+    │   ├── build-ssh-key.pub
+    │   ├── inventory.yml   # Ansible inventory
+    │   ├── qemu.pid        # Build-time QEMU PID file
+    │   └── qemu-console.log  # Serial console output
+    └── run/                # Runtime overlay and state
+        ├── overlay.qcow2   # COW overlay from run.sh (temporary)
+        └── qemu.pid        # Runtime QEMU PID file
 ```

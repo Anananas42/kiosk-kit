@@ -30,7 +30,7 @@ skip()     { printf '\033[1;33mSKIP\033[0m — %s\n' "$*"; SKIP=$((SKIP + 1)); }
 
 export SSH_ASKPASS=""
 export SSH_ASKPASS_REQUIRE=never
-BUILD_SSH_KEY="$SCRIPT_DIR/.work/build-ssh-key"
+BUILD_SSH_KEY="$SCRIPT_DIR/.work/build/build-ssh-key"
 SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5)
 
 remote() {
@@ -81,9 +81,9 @@ wait_for_ssh() {
 }
 
 cleanup_qemu() {
-  if [[ "${BOOT_MANAGED:-0}" -eq 1 && -f "$SCRIPT_DIR/.work/qemu.pid" ]]; then
+  if [[ "${BOOT_MANAGED:-0}" -eq 1 && -f "$SCRIPT_DIR/.work/run/qemu.pid" ]]; then
     local pid
-    pid=$(cat "$SCRIPT_DIR/.work/qemu.pid")
+    pid=$(cat "$SCRIPT_DIR/.work/run/qemu.pid")
     if kill -0 "$pid" 2>/dev/null; then
       log "Shutting down QEMU (PID $pid)..."
       kill "$pid" 2>/dev/null || true

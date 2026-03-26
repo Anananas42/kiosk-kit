@@ -14,10 +14,14 @@ _PI_IMAGE_COMMON_LOADED=1
 # --- Default configuration (override before sourcing) ------------------------
 
 : "${WORK_DIR:=.work}"
-: "${DISK_IMAGE:=$WORK_DIR/disk.qcow2}"
-: "${KERNEL:=$WORK_DIR/vmlinuz}"
-: "${INITRD:=$WORK_DIR/initrd.img}"
-: "${RAW_IMAGE:=$WORK_DIR/raspios.img}"
+: "${CACHE_DIR:=$WORK_DIR/cache}"
+: "${BOOT_DIR:=$WORK_DIR/boot}"
+: "${BUILD_DIR:=$WORK_DIR/build}"
+: "${RUN_DIR:=$WORK_DIR/run}"
+: "${DISK_IMAGE:=$BUILD_DIR/disk.qcow2}"
+: "${KERNEL:=$BOOT_DIR/vmlinuz}"
+: "${INITRD:=$BOOT_DIR/initrd.img}"
+: "${RAW_IMAGE:=$CACHE_DIR/raspios.img}"
 
 : "${SSH_PORT:=2222}"
 : "${QEMU_RAM:=6G}"
@@ -60,8 +64,9 @@ QEMU_PID=""
 
 download_pios() {
   [[ -f "$RAW_IMAGE" ]] && return 0
+  mkdir -p "$(dirname "$RAW_IMAGE")"
   log "Downloading Raspberry Pi OS Lite..."
-  local local_xz="$WORK_DIR/raspios.img.xz"
+  local local_xz="${RAW_IMAGE}.xz"
   curl -fL -o "$local_xz" "$PIOS_URL"
   log "Verifying checksum..."
   echo "$PIOS_CHECKSUM  $local_xz" | sha256sum -c - || err "Checksum mismatch for downloaded image"
@@ -136,7 +141,8 @@ download_and_extract_kernel() {
 patch_image_for_virt() {
   log "Patching image for QEMU virt machine (this takes a few minutes)..."
 
-  local patch_dir="$WORK_DIR/patch-files"
+  mkdir -p "$BOOT_DIR" "$BUILD_DIR"
+  local patch_dir="$BUILD_DIR/patch-files"
   mkdir -p "$patch_dir"
 
   # fstab for virtio-blk (/dev/vda* instead of PARTUUIDs).
@@ -180,7 +186,7 @@ FSTAB
   cp "$KERNEL_ROOT"/boot/vmlinuz-* "$KERNEL"
 
   # Save the virt kernel version for later cleanup (used by restore_pi_boot_state)
-  ls "$KERNEL_ROOT/lib/modules/" | head -1 > "$WORK_DIR/virt-kernel-version"
+  ls "$KERNEL_ROOT/lib/modules/" | head -1 > "$BOOT_DIR/virt-kernel-version"
 
   # Build a minimal initrd with virtio modules so the kernel can mount /dev/vda2.
   # The Debian arm64 kernel has virtio as modules, not built-in.
@@ -194,7 +200,7 @@ FSTAB
 create_pi_user() {
   log "Creating pi user in image..."
 
-  local user_dir="$WORK_DIR/user-setup"
+  local user_dir="$BUILD_DIR/user-setup"
   mkdir -p "$user_dir"
 
   # Password hash for "raspberry": openssl passwd -6 -salt rpi raspberry
@@ -203,7 +209,7 @@ create_pi_user() {
   # Generate an ephemeral SSH keypair for build-time access.
   # Password auth is disabled by the security tasks after reboot,
   # so post-reboot SSH (wait_for_reboot, wifi setup, etc.) needs key auth.
-  BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
+  : "${BUILD_SSH_KEY:=$BUILD_DIR/build-ssh-key}"
   rm -f "$BUILD_SSH_KEY" "${BUILD_SSH_KEY}.pub"
   ssh-keygen -t ed25519 -f "$BUILD_SSH_KEY" -N "" -q
 
@@ -269,7 +275,7 @@ build_initrd() {
   local packages_file="$2"
   log "Building minimal initrd with virtio modules..."
 
-  local initrd_dir="$WORK_DIR/initrd-build"
+  local initrd_dir="$BUILD_DIR/initrd-build"
   rm -rf "$initrd_dir"
   mkdir -p "$initrd_dir"/{bin,sbin,proc,sys,dev,lib/modules,etc,newroot}
 
@@ -369,6 +375,7 @@ INIT_SCRIPT
 
 boot_qemu() {
   log "Booting QEMU for Ansible provisioning..."
+  mkdir -p "$BUILD_DIR"
   [[ -f "$KERNEL" ]] || err "Kernel not found at $KERNEL — patch_image_for_virt failed?"
 
   local -a qemu_args=(
@@ -378,12 +385,12 @@ boot_qemu() {
     -append "root=/dev/vda2 rw console=ttyAMA0 earlycon=pl011,0x09000000 panic=-1"
     -drive "if=virtio,file=$DISK_IMAGE,format=qcow2"
     -nic "user,model=virtio,hostfwd=tcp::${SSH_PORT}-:22"
-    -display none -serial "file:$WORK_DIR/qemu-console.log"
-    -daemonize -pidfile "$WORK_DIR/qemu.pid"
+    -display none -serial "file:$BUILD_DIR/qemu-console.log"
+    -daemonize -pidfile "$BUILD_DIR/qemu.pid"
   )
   qemu-system-aarch64 "${qemu_args[@]}"
 
-  QEMU_PID=$(cat "$WORK_DIR/qemu.pid")
+  QEMU_PID=$(cat "$BUILD_DIR/qemu.pid")
   log "QEMU started (PID $QEMU_PID)"
   wait_for_ssh "$SSH_PORT" 300
 }
@@ -396,7 +403,7 @@ wait_for_ssh() {
     # Bail early if QEMU died (kernel panic, etc.)
     if [[ -n "${QEMU_PID:-}" ]] && ! kill -0 "$QEMU_PID" 2>/dev/null; then
       log "QEMU process exited unexpectedly. Console log:"
-      tail -15 "$WORK_DIR/qemu-console.log" 2>/dev/null
+      tail -15 "$BUILD_DIR/qemu-console.log" 2>/dev/null
       err "QEMU died before SSH became available"
     fi
     if ssh_pi true 2>/dev/null; then
@@ -423,7 +430,7 @@ shutdown_qemu() {
 
   # Wait for QEMU to exit after guest shutdown
   local pid
-  pid=$(cat "$WORK_DIR/qemu.pid" 2>/dev/null || echo "")
+  pid=$(cat "$BUILD_DIR/qemu.pid" 2>/dev/null || echo "")
   if [[ -n "$pid" ]]; then
     local wait_secs=0
     while kill -0 "$pid" 2>/dev/null && (( wait_secs < 60 )); do

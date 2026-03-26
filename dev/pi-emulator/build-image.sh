@@ -33,17 +33,26 @@ QEMU_RAM="${PI_EMU_RAM:-6G}"
 QEMU_CPUS="${PI_EMU_CPUS:-$(( $(nproc) / 2 ))}"
 
 WORK_DIR="$SCRIPT_DIR/.work"
-GOLDEN_IMAGE="$SCRIPT_DIR/golden.qcow2"
+OUTPUT_DIR="$SCRIPT_DIR/.output"
+GOLDEN_IMAGE="$OUTPUT_DIR/golden.qcow2"
 # shellcheck disable=SC2034
-KERNEL="$WORK_DIR/vmlinuz"
+CACHE_DIR="$WORK_DIR/cache"
 # shellcheck disable=SC2034
-INITRD="$WORK_DIR/initrd.img"
+BOOT_DIR="$WORK_DIR/boot"
 # shellcheck disable=SC2034
-RAW_IMAGE="$WORK_DIR/raspios.img"
-DISK_IMAGE="$WORK_DIR/disk.qcow2"
+BUILD_DIR="$WORK_DIR/build"
+# shellcheck disable=SC2034
+RUN_DIR="$WORK_DIR/run"
+# shellcheck disable=SC2034
+KERNEL="$BOOT_DIR/vmlinuz"
+# shellcheck disable=SC2034
+INITRD="$BOOT_DIR/initrd.img"
+# shellcheck disable=SC2034
+RAW_IMAGE="$CACHE_DIR/raspios.img"
+DISK_IMAGE="$BUILD_DIR/disk.qcow2"
 ANSIBLE_DIR="$REPO_ROOT/deploy/pi/ansible"
 
-BASE_IMAGE="$WORK_DIR/provisioned-base.qcow2"
+BASE_IMAGE="$CACHE_DIR/provisioned-base.qcow2"
 
 # shellcheck source=../../deploy/pi/lib/pi-image-common.sh
 source "$REPO_ROOT/deploy/pi/lib/pi-image-common.sh"
@@ -55,7 +64,7 @@ trap cleanup_qemu EXIT
 # write_inventory — create the Ansible inventory file used by both layers.
 # Called once from main() so the inventory exists even when Layer 1 is cached.
 write_inventory() {
-  local inventory_file="$WORK_DIR/inventory.yml"
+  local inventory_file="$BUILD_DIR/inventory.yml"
   cat > "$inventory_file" <<EOF
 ---
 all:
@@ -81,7 +90,7 @@ provision_base() {
   log "Running Ansible base provisioning (--skip-tags tailscale,app)..."
 
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
-    -i "$WORK_DIR/inventory.yml" \
+    -i "$BUILD_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/provision.yml" \
     --skip-tags tailscale,app \
     -e "kioskkit_tailscale_auth_key=skip" \
@@ -93,7 +102,7 @@ deploy_app() {
   log "Deploying kiosk application into the VM..."
 
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
-    -i "$WORK_DIR/inventory.yml" \
+    -i "$BUILD_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/deploy.yml" \
     || { err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."; }
 
@@ -149,12 +158,12 @@ main() {
   done
 
   require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook
-  mkdir -p "$WORK_DIR"
+  mkdir -p "$CACHE_DIR" "$BOOT_DIR" "$BUILD_DIR" "$RUN_DIR" "$OUTPUT_DIR"
 
   # Set BUILD_SSH_KEY path early so write_inventory can reference it.
   # The key itself is generated in create_pi_user() during Layer 1; on cached
   # runs the file already exists on disk.
-  BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
+  BUILD_SSH_KEY="$BUILD_DIR/build-ssh-key"
   write_inventory
 
   local ansible_hash app_hash
@@ -167,7 +176,7 @@ main() {
     [[ -f "$BASE_IMAGE" ]] || err "No base image found at $BASE_IMAGE. Run without --app-only first."
     [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --app-only first."
     log "Skipping base layer (--app-only)."
-  elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$WORK_DIR/base-hash" 2>/dev/null)" == "$ansible_hash" ]] && [[ $force -eq 0 ]]; then
+  elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$CACHE_DIR/base-hash" 2>/dev/null)" == "$ansible_hash" ]] && [[ $force -eq 0 ]]; then
     log "Base system cached (Ansible unchanged). Skipping to app deployment."
   else
     base_changed=1
@@ -181,12 +190,12 @@ main() {
     setup_wifi_simulation
     shutdown_qemu
     cp "$DISK_IMAGE" "$BASE_IMAGE"
-    echo "$ansible_hash" > "$WORK_DIR/base-hash"
+    echo "$ansible_hash" > "$CACHE_DIR/base-hash"
     log "Base system layer cached."
   fi
 
   # --- Layer 2: App deployment ------------------------------------------------
-  if [[ -f "$GOLDEN_IMAGE" ]] && [[ "$(cat "$WORK_DIR/app-hash" 2>/dev/null)" == "$app_hash" ]] && [[ $base_changed -eq 0 ]] && [[ $force -eq 0 ]]; then
+  if [[ -f "$GOLDEN_IMAGE" ]] && [[ "$(cat "$CACHE_DIR/app-hash" 2>/dev/null)" == "$app_hash" ]] && [[ $base_changed -eq 0 ]] && [[ $force -eq 0 ]]; then
     log "App layer cached. Golden image is up to date."
   else
     log "Building app deployment layer..."
@@ -194,7 +203,7 @@ main() {
     boot_qemu
     deploy_app
     shutdown_and_snapshot
-    echo "$app_hash" > "$WORK_DIR/app-hash"
+    echo "$app_hash" > "$CACHE_DIR/app-hash"
   fi
 }
 

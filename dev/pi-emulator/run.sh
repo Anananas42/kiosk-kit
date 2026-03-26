@@ -15,17 +15,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- Configuration -----------------------------------------------------------
 
-GOLDEN_IMAGE="$SCRIPT_DIR/golden.qcow2"
+GOLDEN_IMAGE="$SCRIPT_DIR/.output/golden.qcow2"
 WORK_DIR="$SCRIPT_DIR/.work"
-OVERLAY="$WORK_DIR/overlay.qcow2"
+RUN_DIR="$WORK_DIR/run"
+OVERLAY="$RUN_DIR/overlay.qcow2"
 
 SSH_PORT="${PI_EMU_SSH_PORT:-2222}"
 KIOSK_PORT="${PI_EMU_KIOSK_PORT:-3001}"
 QEMU_RAM="${PI_EMU_RAM:-2G}"
 QEMU_CPUS="${PI_EMU_CPUS:-4}"
 
-KERNEL="$WORK_DIR/vmlinuz"
-INITRD="$WORK_DIR/initrd.img"
+KERNEL="$WORK_DIR/boot/vmlinuz"
+INITRD="$WORK_DIR/boot/initrd.img"
 
 # --- Helpers ------------------------------------------------------------------
 
@@ -53,7 +54,7 @@ command -v qemu-system-aarch64 >/dev/null 2>&1 || err "qemu-system-aarch64 not f
 
 # --- Create overlay -----------------------------------------------------------
 
-mkdir -p "$WORK_DIR"
+mkdir -p "$RUN_DIR"
 
 if [[ -f "$OVERLAY" && $PERSIST -eq 0 ]]; then
   rm -f "$OVERLAY"
@@ -76,9 +77,9 @@ QEMU_ARGS=(
 )
 
 if [[ $DAEMONIZE -eq 1 ]]; then
-  QEMU_ARGS+=(-display none -serial null -daemonize -pidfile "$WORK_DIR/qemu.pid")
+  QEMU_ARGS+=(-display none -serial null -daemonize -pidfile "$RUN_DIR/qemu.pid")
   qemu-system-aarch64 "${QEMU_ARGS[@]}"
-  QEMU_PID=$(cat "$WORK_DIR/qemu.pid")
+  QEMU_PID=$(cat "$RUN_DIR/qemu.pid")
   log "QEMU running in background (PID $QEMU_PID)"
 else
   QEMU_ARGS+=(-nographic)
