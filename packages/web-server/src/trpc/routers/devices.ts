@@ -144,9 +144,11 @@ export const devicesRouter = router({
 
 async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[]> {
   let tailscaleDevices: TailscaleDevice[] = [];
+  let tailscaleReachable = false;
   try {
     const ts = getTailscaleClient();
     tailscaleDevices = await ts.listDevices();
+    tailscaleReachable = true;
   } catch {
     // Tailscale API unavailable — fall back to DB-only
   }
@@ -193,7 +195,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
   }
 
   // Remove DB devices no longer in Tailscale (only if API was reachable)
-  if (tailscaleDevices.length > 0) {
+  if (tailscaleReachable) {
     const staleIds = [...dbByNodeId.values()].map((d) => d.id);
     if (staleIds.length > 0) {
       await db.delete(devices).where(inArray(devices.id, staleIds));
