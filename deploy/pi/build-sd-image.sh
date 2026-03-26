@@ -473,6 +473,13 @@ EOF
   } > "$gf_ssh"
   guestfish < "$gf_ssh"
 
+  # Point sshd_config to host keys on data partition
+  log "Relocating SSH host key paths in sshd_config..."
+  local sshd_cfg="$inject_dir/sshd_config"
+  guestfish --ro -a "$target_image" -m /dev/sda2 download /etc/ssh/sshd_config "$sshd_cfg"
+  sed -i -E 's|^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key|HostKey /data/ssh/ssh_host_\1_key|' "$sshd_cfg"
+  guestfish --rw -a "$target_image" -m /dev/sda2 upload "$sshd_cfg" /etc/ssh/sshd_config
+
   # Extract Tailscale .deb on the host and copy files into the rootfs image
   local ts_root="$inject_dir/tailscale-root"
   mkdir -p "$ts_root"
