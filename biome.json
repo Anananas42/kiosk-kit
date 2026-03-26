@@ -13,5 +13,15 @@
     },
     "domains": { "react": "all" }
   },
+  "overrides": [
+    {
+      "includes": ["packages/ui/src/components/**", "packages/ui/src/stories/**"],
+      "linter": {
+        "rules": {
+          "style": { "useComponentExportOnlyModules": "off" }
+        }
+      }
+    }
+  ],
   "assist": { "actions": { "source": { "organizeImports": "on" } } }
 }
