@@ -11,12 +11,14 @@ COPY packages/web-server/package.json packages/web-server/
 COPY packages/web-client/package.json packages/web-client/
 COPY packages/web-admin/package.json packages/web-admin/
 COPY packages/shared/package.json packages/shared/
+COPY packages/ui/package.json packages/ui/
 RUN pnpm install --frozen-lockfile
 
 # --- build ---
 FROM deps AS build
 COPY turbo.json tsconfig.base.json ./
 COPY packages/shared packages/shared
+COPY packages/ui packages/ui
 COPY packages/web-server packages/web-server
 COPY packages/web-client packages/web-client
 COPY packages/web-admin packages/web-admin
