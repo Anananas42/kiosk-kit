@@ -43,6 +43,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | Git identity | `kiosk-kit-agent[bot]`, no GPG signing, HTTPS remote |
 | GitHub CLI | `gh`, authenticated via app token from `dev/agents/scripts/github-app-token.sh` |
 | gh-attach | `gh attach` extension for uploading screenshots to PR comments |
+| shellcheck | Pre-installed for `pnpm lint:shell` |
 | Playwright | Chromium pre-installed for screenshot verification |
 | Docker CLI | Available in image; connects to DinD sidecar when `--docker` flag is used |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
