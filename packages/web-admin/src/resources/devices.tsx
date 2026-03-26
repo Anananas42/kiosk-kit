@@ -4,7 +4,6 @@ import {
   Edit,
   FunctionField,
   List,
-  NullableBooleanInput,
   ReferenceField,
   ReferenceInput,
   SimpleForm,
@@ -47,20 +46,9 @@ function OnlineStatusField({ record }: { record?: { online?: boolean } }) {
   );
 }
 
-const deviceFilters = [
-  <NullableBooleanInput
-    key="online"
-    source="online"
-    label="Status"
-    falseLabel="Offline"
-    trueLabel="Online"
-    alwaysOn
-  />,
-];
-
 export function DeviceList() {
   return (
-    <List filters={deviceFilters}>
+    <List>
       <Datagrid rowClick="edit">
         <TextField source="hostname" />
         <TextField source="name" />
