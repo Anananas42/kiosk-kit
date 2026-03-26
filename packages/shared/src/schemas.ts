@@ -329,3 +329,34 @@ export const ItemCountInputSchema = z.object({
   itemId: z.string().optional(),
   preorder: z.boolean().optional(),
 });
+
+// ── OTA schemas ─────────────────────────────────────────────────────
+
+export const OtaStatusSchema = z.object({
+  status: z.enum(["idle", "downloading", "downloaded", "installing", "confirming", "rollback"]),
+  activeSlot: z.enum(["A", "B"]),
+  committedSlot: z.enum(["A", "B"]),
+  currentVersion: z.string().nullable(),
+  download: z
+    .object({
+      version: z.string(),
+      progress: z.number(),
+      bytesDownloaded: z.number(),
+      bytesTotal: z.number(),
+    })
+    .nullable(),
+  lastUpdate: z.string().nullable(),
+  lastResult: z
+    .enum(["success", "failed_health_check", "failed_download", "failed_install"])
+    .nullable(),
+});
+
+export type OtaStatus = z.infer<typeof OtaStatusSchema>;
+
+export const OtaDownloadInputSchema = z.object({
+  url: z.string().url(),
+  version: z.string(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+});
+
+export type OtaDownloadInput = z.infer<typeof OtaDownloadInputSchema>;
