@@ -18,6 +18,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# --- Docker re-exec ---------------------------------------------------------
+# If not inside a container, rebuild and re-exec inside Docker.
+
+if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
+  command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker is required when running outside a container" >&2; exit 1; }
+  echo "==> Building pi-emulator Docker image..."
+  docker build -t kioskkit-pi-emulator "$REPO_ROOT/deploy/pi"
+  echo "==> Re-executing inside container..."
+  DOCKER_TTY_FLAG=""
+  if [ -t 0 ]; then DOCKER_TTY_FLAG="-it"; fi
+  # shellcheck disable=SC2086
+  exec docker run --rm $DOCKER_TTY_FLAG \
+    -e KIOSKKIT_IN_CONTAINER=1 \
+    ${PI_EMU_RAM:+-e PI_EMU_RAM="$PI_EMU_RAM"} \
+    ${PI_EMU_CPUS:+-e PI_EMU_CPUS="$PI_EMU_CPUS"} \
+    -v "$REPO_ROOT:/workspace:ro" \
+    -v pi-emu-cache:/build/cache \
+    -v pi-emu-boot:/build/boot \
+    -v "$SCRIPT_DIR/.output:/output" \
+    --entrypoint /workspace/dev/pi-emulator/build-image.sh \
+    kioskkit-pi-emulator "$@"
+fi
+
 # --- Configuration -----------------------------------------------------------
 
 # Override defaults before sourcing the shared library
@@ -32,8 +55,17 @@ QEMU_RAM="${PI_EMU_RAM:-6G}"
 # shellcheck disable=SC2034
 QEMU_CPUS="${PI_EMU_CPUS:-$(( $(nproc) / 2 ))}"
 
-WORK_DIR="$SCRIPT_DIR/.work"
-OUTPUT_DIR="$SCRIPT_DIR/.output"
+# When running in the container, /workspace is the repo root (read-only mount).
+# Use /build as the writable work directory.
+if [ -n "${KIOSKKIT_IN_CONTAINER:-}" ]; then
+  REPO_ROOT="/workspace"
+  WORK_DIR="/build"
+  OUTPUT_DIR="/output"
+else
+  WORK_DIR="$SCRIPT_DIR/.work"
+  OUTPUT_DIR="$SCRIPT_DIR/.output"
+fi
+
 GOLDEN_IMAGE="$OUTPUT_DIR/golden.qcow2"
 # shellcheck disable=SC2034
 CACHE_DIR="$WORK_DIR/cache"
@@ -137,6 +169,13 @@ shutdown_and_snapshot() {
 
   log "Creating golden image..."
   flatten_overlay "$DISK_IMAGE" "$GOLDEN_IMAGE"
+
+  # Copy boot files and SSH key to output so run.sh/test.sh can find them
+  # even when the build ran inside Docker with separate volumes.
+  cp "$KERNEL" "$OUTPUT_DIR/vmlinuz"
+  cp "$INITRD" "$OUTPUT_DIR/initrd.img"
+  cp "$BUILD_SSH_KEY" "$OUTPUT_DIR/build-ssh-key"
+  cp "${BUILD_SSH_KEY}.pub" "$OUTPUT_DIR/build-ssh-key.pub"
 
   log "Golden image created at: $GOLDEN_IMAGE"
   log "Size: $(du -h "$GOLDEN_IMAGE" | cut -f1)"

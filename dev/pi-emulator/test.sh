@@ -30,7 +30,12 @@ skip()     { printf '\033[1;33mSKIP\033[0m — %s\n' "$*"; SKIP=$((SKIP + 1)); }
 
 export SSH_ASKPASS=""
 export SSH_ASKPASS_REQUIRE=never
-BUILD_SSH_KEY="$SCRIPT_DIR/.work/build/build-ssh-key"
+# Prefer output dir (works after Docker builds); fall back to work dir.
+if [[ -f "$SCRIPT_DIR/.output/build-ssh-key" ]]; then
+  BUILD_SSH_KEY="$SCRIPT_DIR/.output/build-ssh-key"
+else
+  BUILD_SSH_KEY="$SCRIPT_DIR/.work/build/build-ssh-key"
+fi
 SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5)
 
 remote() {

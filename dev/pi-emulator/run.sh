@@ -25,8 +25,15 @@ KIOSK_PORT="${PI_EMU_KIOSK_PORT:-3001}"
 QEMU_RAM="${PI_EMU_RAM:-2G}"
 QEMU_CPUS="${PI_EMU_CPUS:-4}"
 
-KERNEL="$WORK_DIR/boot/vmlinuz"
-INITRD="$WORK_DIR/boot/initrd.img"
+OUTPUT_DIR="$SCRIPT_DIR/.output"
+# Prefer output dir (works after Docker builds); fall back to work dir (legacy).
+if [[ -f "$OUTPUT_DIR/vmlinuz" ]]; then
+  KERNEL="$OUTPUT_DIR/vmlinuz"
+  INITRD="$OUTPUT_DIR/initrd.img"
+else
+  KERNEL="$WORK_DIR/boot/vmlinuz"
+  INITRD="$WORK_DIR/boot/initrd.img"
+fi
 
 # --- Helpers ------------------------------------------------------------------
 

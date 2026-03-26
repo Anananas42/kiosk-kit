@@ -25,7 +25,8 @@ _PI_IMAGE_COMMON_LOADED=1
 
 : "${SSH_PORT:=2222}"
 : "${QEMU_RAM:=6G}"
-: "${QEMU_CPUS:=$(( $(nproc) / 2 ))}"
+_half_cpus=$(( $(nproc) / 2 ))
+: "${QEMU_CPUS:=$(( _half_cpus > 8 ? 8 : _half_cpus ))}"
 : "${QEMU_DISK_SIZE:=8G}"
 
 : "${PI_SSH_PASS:=raspberry}"
