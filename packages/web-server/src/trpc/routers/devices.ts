@@ -5,7 +5,7 @@ import {
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { devices } from "../../db/schema.js";
 import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
@@ -192,19 +192,27 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
     });
   }
 
-  // Include DB devices not in Tailscale (stale/offline)
-  for (const dbDevice of dbByNodeId.values()) {
-    result.push({
-      id: dbDevice.id,
-      tailscaleNodeId: dbDevice.tailscaleNodeId,
-      userId: dbDevice.userId,
-      name: dbDevice.name,
-      tailscaleIp: dbDevice.tailscaleIp,
-      online: false,
-      lastSeen: null,
-      hostname: dbDevice.name,
-      createdAt: dbDevice.createdAt.toISOString(),
-    });
+  // Remove DB devices no longer in Tailscale (only if API was reachable)
+  if (tailscaleDevices.length > 0) {
+    const staleIds = [...dbByNodeId.values()].map((d) => d.id);
+    if (staleIds.length > 0) {
+      await db.delete(devices).where(inArray(devices.id, staleIds));
+    }
+  } else {
+    // Tailscale API was unavailable — keep DB devices as offline fallback
+    for (const dbDevice of dbByNodeId.values()) {
+      result.push({
+        id: dbDevice.id,
+        tailscaleNodeId: dbDevice.tailscaleNodeId,
+        userId: dbDevice.userId,
+        name: dbDevice.name,
+        tailscaleIp: dbDevice.tailscaleIp,
+        online: false,
+        lastSeen: null,
+        hostname: dbDevice.name,
+        createdAt: dbDevice.createdAt.toISOString(),
+      });
+    }
   }
 
   if (isDev) {

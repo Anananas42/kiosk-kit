@@ -1,5 +1,6 @@
 const BASE_URL = "https://api.tailscale.com";
 const KIOSKKIT_TAG = "tag:kioskkit";
+const SERVER_TAG = "tag:server";
 
 // ── Tailscale API response types ────────────────────────────────────
 
@@ -125,7 +126,9 @@ export class TailscaleClient {
     const data = await this.request<TailscaleDevicesResponse>(
       `/api/v2/tailnet/${this.tailnet}/devices`,
     );
-    return data.devices.filter((d) => d.tags?.includes(KIOSKKIT_TAG)).map(mapDevice);
+    return data.devices
+      .filter((d) => d.tags?.includes(KIOSKKIT_TAG) && !d.tags?.includes(SERVER_TAG))
+      .map(mapDevice);
   }
 
   /** Get a single device by its node ID */
