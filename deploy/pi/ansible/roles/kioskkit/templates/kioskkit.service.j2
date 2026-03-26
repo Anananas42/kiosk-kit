@@ -10,6 +10,12 @@ Group={{ kioskkit_user }}
 WorkingDirectory={{ kioskkit_install_dir }}
 ExecStart=/usr/bin/node packages/kiosk-server/dist/index.js
 EnvironmentFile=-{{ kioskkit_install_dir }}/.env
+{% if kioskkit_device_id %}
+Environment=DEVICE_ID={{ kioskkit_device_id }}
+{% endif %}
+{% if kioskkit_web_server_url %}
+Environment=WEB_SERVER_URL={{ kioskkit_web_server_url }}
+{% endif %}
 Restart=always
 RestartSec=5
 

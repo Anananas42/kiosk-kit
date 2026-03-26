@@ -15,6 +15,9 @@ kioskkit_tailscale_auth_key: ""
 kioskkit_device_id: ""
 kioskkit_customer_tag: ""
 
+# Cloud connectivity — must be overridden per deployment
+kioskkit_web_server_url: ""
+
 # System
 kioskkit_cpu_governor: performance
 kioskkit_tmpfs_size: 64M

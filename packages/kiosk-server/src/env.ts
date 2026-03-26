@@ -7,4 +7,11 @@ config({ path: resolve(root, ".env") });
 
 export const env = {
   port: Number(process.env.PORT) || 3001,
+  deviceId: process.env.DEVICE_ID || "",
+  webServerUrl: process.env.WEB_SERVER_URL || "",
 };
+
+/** Returns true when both DEVICE_ID and WEB_SERVER_URL are configured. */
+export function isCloudConfigured(): boolean {
+  return env.deviceId !== "" && env.webServerUrl !== "";
+}

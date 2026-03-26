@@ -343,6 +343,11 @@ CUSTOMER_TAG=${CUSTOMER_TAG}
 TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
 EOF
 
+  # Persistent device identity (survives first-boot cleanup)
+  cat > "$inject_dir/device.conf" <<EOF
+DEVICE_ID=${DEVICE_ID}
+EOF
+
   # Download Tailscale arm64 .deb for offline installation
   log "Downloading Tailscale arm64 .deb..."
   local ts_deb="$inject_dir/tailscale.deb"
@@ -357,6 +362,10 @@ EOF
 mkdir-p /etc/kioskkit
 upload $inject_dir/tailscale-firstboot.conf /etc/kioskkit/tailscale-firstboot.conf
 chmod 0600 /etc/kioskkit/tailscale-firstboot.conf
+
+# Persistent device identity (not deleted after first boot)
+upload $inject_dir/device.conf /etc/kioskkit/device.conf
+chmod 0644 /etc/kioskkit/device.conf
 
 # First-boot service and script
 upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-tailscale-firstboot.service /etc/systemd/system/kioskkit-tailscale-firstboot.service
