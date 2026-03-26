@@ -631,8 +631,10 @@ stamp_device() {
   fi
   log "  # or use balenaEtcher"
   log ""
+  local img_name
+  img_name=$(basename "$output_file")
   log "Optional: shrink image for faster flashing (~4 GB instead of ~18 GB):"
-  log "  docker run --rm --privileged -v $(dirname "$output_file"):/workdir turee/pishrink-docker pishrink /workdir/$(basename "$output_file")"
+  log "  docker run --rm --privileged -v \$(pwd)/deploy/pi/.output:/workdir turee/pishrink-docker pishrink /workdir/$img_name"
 }
 
 # --- Main --------------------------------------------------------------------
