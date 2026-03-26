@@ -90,24 +90,26 @@ code in `deploy/pi/lib/pi-image-common.sh`:
 7. Reboots (reconnects via SSH key since password auth is now disabled)
 8. Shuts down, snapshots as `provisioned-base.qcow2`
 
-**Layer 2 — App deployment (~5 min, cached):**
+**Layer 2 — App deployment (~1 min, cached):**
 
-9. Creates COW overlay on base image, boots QEMU
-10. Runs `ansible-playbook deploy.yml`:
-    - Remounts `/tmp` to 512M (default 64M tmpfs is too small for node-gyp)
-    - Syncs only kiosk packages (kiosk-client, kiosk-server, kiosk-admin, shared, ui)
-    - Strips root devDependencies from `package.json` (turbo, biome, playwright, etc. not needed on Pi)
-    - Runs filtered `pnpm install` and `pnpm build`
-11. Shuts down, flattens overlay to `app-image.qcow2`
+The app is built on the host at native x86 speed (before Docker), then only
+native arm64 addons are rebuilt inside the QEMU VM:
+
+9. **Host** (before Docker): builds kiosk packages, prunes to production deps
+10. Creates COW overlay on base image, boots QEMU
+11. Rsyncs pre-built app into VM, rebuilds `better-sqlite3` for arm64
+12. Ansible deploys system config (systemd service, sway config, display-sleep)
+13. Shuts down, flattens overlay to `app-image.qcow2`
 
 **Layer 3 — Device stamp (~30 sec, per device):**
 
-12. Copies app image, customizes via guestfish (no QEMU boot):
-    - Restores native Pi boot state (PARTUUID fstab, removes virt kernel)
+14. Generates single-use Tailscale auth key via API (if not provided)
+15. Copies app image, customizes via guestfish (no QEMU boot):
+    - Restores native Pi boot state (PARTUUID fstab, strips firstboot init, removes virt kernel)
     - Injects Tailscale arm64 binary + first-boot auth service with device credentials
     - Generates unique SSH host keys on data partition
     - Removes ephemeral build SSH key
-13. Converts qcow2 to raw .img and shrinks with virt-sparsify or PiShrink
+16. Converts qcow2 to raw .img and shrinks with PiShrink
 
 ## What the image contains
 
@@ -201,7 +203,7 @@ ssh -i $WORK_DIR/build-ssh-key -p 2222 pi@localhost
 
 ### Image doesn't boot on Pi
 
-Verify the Layer 3 device stamp ran successfully — check that the fstab uses PARTUUIDs (not `/dev/vda*`) and that virt kernel files were removed from `/boot/`.
+Verify the Layer 3 device stamp ran successfully — check that the fstab uses PARTUUIDs (not `/dev/vda*`), `cmdline.txt` has no `init=` override, and virt kernel files were removed from `/boot/`.
 
 ## Maintainability
 
@@ -212,6 +214,7 @@ Verify the Layer 3 device stamp ran successfully — check that the fstab uses P
 | Tailscale version | `TAILSCALE_VERSION`, `TAILSCALE_DEB_URL`, `TAILSCALE_DEB_CHECKSUM` in `build-sd-image.sh` |
 | Shared build logic | Edit `lib/pi-image-common.sh` (used by both emulator and SD builder) |
 | First-boot service | Edit `first-boot/tailscale-firstboot.sh` and/or the `.service` file |
+| New native dependency | Add to `npm rebuild` in `deploy_app()` in `build-sd-image.sh` |
 
 ## File structure
 

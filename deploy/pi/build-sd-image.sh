@@ -4,7 +4,7 @@
 # Uses a three-layer cache so that per-device stamping takes ~30s (no QEMU boot):
 #
 #   Layer 1 (base system, ~25 min):  Pi OS + QEMU patches + Ansible provision (--skip-tags tailscale,app)
-#   Layer 2 (app deploy, ~5 min):    Boot base overlay, run deploy.yml, snapshot app image
+#   Layer 2 (app deploy, ~1 min):    Host build + QEMU native addon rebuild + system config
 #   Layer 3 (device stamp, ~30 sec): guestfish-only — Tailscale config, first-boot service, cleanup
 #
 # Prerequisites (all provided by the Dockerfile):
@@ -43,6 +43,58 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker is required when running outside a container" >&2; exit 1; }
+
+  # --- Host-side app build (native speed, before Docker) ---
+  echo "==> Building application on host (native speed)..."
+  APP_STAGE="$SCRIPT_DIR/.work/app-stage"
+  rm -rf "$APP_STAGE"
+  mkdir -p "$APP_STAGE"
+
+  rsync -a --delete \
+    --exclude=node_modules \
+    --exclude=.git \
+    --exclude=data/ \
+    --exclude=deploy/ \
+    --exclude=dev/ \
+    --exclude=plans/ \
+    --exclude=.env \
+    --exclude=packages/web-client/ \
+    --exclude=packages/web-server/ \
+    --exclude=packages/web-admin/ \
+    --exclude=packages/landing/ \
+    "$REPO_ROOT/" "$APP_STAGE/"
+
+  node -e "
+    const pkg = require('$APP_STAGE/package.json');
+    delete pkg.devDependencies;
+    delete pkg.scripts.prepare;
+    require('fs').writeFileSync('$APP_STAGE/package.json', JSON.stringify(pkg, null, 2) + '\n');
+  "
+
+  (cd "$APP_STAGE" && pnpm install --no-frozen-lockfile \
+    --filter @kioskkit/kiosk-server \
+    --filter @kioskkit/kiosk-client \
+    --filter @kioskkit/kiosk-admin \
+    --filter @kioskkit/shared \
+    --filter @kioskkit/ui) || { echo "ERROR: Host pnpm install failed" >&2; exit 1; }
+
+  (cd "$APP_STAGE" && NODE_ENV=production pnpm \
+    --filter @kioskkit/shared \
+    --filter @kioskkit/ui \
+    --filter @kioskkit/kiosk-server \
+    --filter @kioskkit/kiosk-client \
+    --filter @kioskkit/kiosk-admin \
+    build) || { echo "ERROR: Host pnpm build failed" >&2; exit 1; }
+
+  (cd "$APP_STAGE" && CI=true pnpm install --no-frozen-lockfile --prod \
+    --filter @kioskkit/kiosk-server \
+    --filter @kioskkit/kiosk-client \
+    --filter @kioskkit/kiosk-admin \
+    --filter @kioskkit/shared \
+    --filter @kioskkit/ui) || { echo "ERROR: Host pnpm prune failed" >&2; exit 1; }
+
+  echo "==> Host build complete."
+
   echo "==> Building SD image builder Docker image..."
   docker build -t kioskkit-sd-builder "$SCRIPT_DIR"
   echo "==> Re-executing inside container..."
@@ -151,10 +203,6 @@ parse_args() {
     log "Auto-generated device ID: $DEVICE_ID"
   fi
   [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
-  # If no explicit key provided, auto-generate one via Tailscale API
-  if [[ -z "$TAILSCALE_KEY" ]]; then
-    generate_tailscale_key
-  fi
 
   # --device-only implies --app-only (no base rebuild either)
   if [[ $DEVICE_ONLY -eq 1 ]]; then
@@ -275,14 +323,44 @@ provision_base() {
     || err "Ansible base provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
-# deploy_app — run deploy.yml to sync code and build the application (Layer 2).
+# deploy_app — sync pre-built app (from host) into VM, rebuild native arm64 addons.
+#
+# The host build runs before Docker re-exec (native x86 speed). By the time this
+# function runs inside the container, the pre-built app is at $WORK_DIR/app-stage/.
 deploy_app() {
-  log "Deploying kiosk application into the VM..."
+  local stage_dir="$WORK_DIR/app-stage"
+  [[ -d "$stage_dir" ]] || err "No pre-built app found at $stage_dir. Host build may have failed."
 
+  local install_dir="/opt/kioskkit"
+
+  # rsync the pre-built app into the VM
+  log "Syncing pre-built application into VM..."
+  local ssh_key_opt=""
+  if [[ -n "${BUILD_SSH_KEY:-}" && -f "${BUILD_SSH_KEY:-}" ]]; then
+    ssh_key_opt="-i $BUILD_SSH_KEY"
+  fi
+  # shellcheck disable=SC2086
+  rsync -az --delete \
+    -e "ssh ${ssh_key_opt:+$ssh_key_opt }-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $SSH_PORT" \
+    "$stage_dir/" "pi@localhost:${install_dir}/" \
+    || err "rsync into VM failed"
+
+  # Set ownership and rebuild native arm64 addons
+  log "Rebuilding native arm64 addons (better-sqlite3)..."
+  ssh_pi "sudo chown -R kiosk:kiosk $install_dir"
+  ssh_pi "sudo -u kiosk bash -lc 'cd $install_dir && npm rebuild better-sqlite3'" \
+    || err "Native addon rebuild failed inside VM"
+
+  # Deploy ancillary files (systemd service, sway config, display-sleep.py)
+  log "Deploying system configuration..."
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$WORK_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/deploy.yml" \
-    || err "Ansible deploy failed. QEMU VM is still running on port $SSH_PORT for debugging."
+    --start-at-task="Create system config directory" \
+    || err "Ansible post-deploy tasks failed"
+
+  rm -rf "$stage_dir"
+  log "Application deployed."
 }
 
 # customize_device_image — Layer 3 device customization via guestfish.
@@ -514,6 +592,11 @@ shrink_image() {
 stamp_device() {
   local source_image="$1"
   log "Stamping device image for device=$DEVICE_ID..."
+
+  # Generate Tailscale auth key if not explicitly provided
+  if [[ -z "$TAILSCALE_KEY" ]]; then
+    generate_tailscale_key
+  fi
 
   # Create a standalone copy (not overlay — we need raw conversion later)
   local device_image="$WORK_DIR/device-${DEVICE_ID}.qcow2"
