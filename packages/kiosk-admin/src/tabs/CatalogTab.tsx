@@ -1,4 +1,5 @@
 import { formatCurrency, parsePrice } from "@kioskkit/shared";
+import { Badge, Button, Card, CardContent, Input } from "@kioskkit/ui";
 import { type FormEvent, useCallback, useState } from "react";
 import { useData, useFormStatus } from "../hooks.js";
 import { trpc } from "../trpc.js";
@@ -83,71 +84,79 @@ export function CatalogTab() {
       .catch((err: Error) => form.setError(err.message));
   };
 
-  if (loading) return <p className="msg-loading">Loading...</p>;
-  if (error) return <p className="msg-error">Error: {error}</p>;
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
+  if (error) return <p className="text-destructive">Error: {error}</p>;
 
   return (
     <div>
-      {form.error && <p className="msg-error">{form.error}</p>}
-      {form.success && <p className="msg-success">{form.success}</p>}
+      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
+      {form.success && <p className="my-2 text-success">{form.success}</p>}
 
-      {catalog && catalog.length === 0 && <p className="empty-state">No categories yet.</p>}
+      {catalog && catalog.length === 0 && (
+        <p className="italic text-muted-foreground">No categories yet.</p>
+      )}
 
       {catalog?.map((cat) => (
-        <div key={cat.id} className="category-card">
-          <div className="category-header">
-            <strong>{cat.name}</strong>
-            {cat.preorder && <span className="badge">preorder</span>}
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              onClick={() => handleDeleteCategory(Number(cat.id), cat.name)}
-            >
-              Delete
-            </button>
-          </div>
-          {cat.items.length > 0 ? (
-            <ul className="item-list">
-              {cat.items.map((item) => (
-                <li key={item.id} className="item-row">
-                  <span>
-                    {item.name}
-                    {item.quantity ? ` — ${item.quantity}` : ""}
-                    {item.price
-                      ? ` @ ${formatCurrency(parsePrice(item.price), locale, currency)}`
-                      : ""}
-                    {item.dphRate ? (
-                      <span style={{ color: "#888", fontSize: "0.85em", marginLeft: "0.25em" }}>
-                        ({item.dphRate}% DPH)
-                      </span>
-                    ) : null}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleDeleteItem(Number(item.id), item.name)}
+        <Card key={cat.id} className="mb-4 bg-secondary">
+          <CardContent className="p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <strong>{cat.name}</strong>
+              {cat.preorder && <Badge>preorder</Badge>}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDeleteCategory(Number(cat.id), cat.name)}
+              >
+                Delete
+              </Button>
+            </div>
+            {cat.items.length > 0 ? (
+              <ul className="m-0 list-none p-0">
+                {cat.items.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center justify-between border-b border-border/50 py-1 last:border-b-0"
                   >
-                    Delete
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="empty-state">No items in this category.</p>
-          )}
-        </div>
+                    <span>
+                      {item.name}
+                      {item.quantity ? ` — ${item.quantity}` : ""}
+                      {item.price
+                        ? ` @ ${formatCurrency(parsePrice(item.price), locale, currency)}`
+                        : ""}
+                      {item.dphRate ? (
+                        <span className="ml-1 text-[0.85em] text-muted-foreground">
+                          ({item.dphRate}% DPH)
+                        </span>
+                      ) : null}
+                    </span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteItem(Number(item.id), item.name)}
+                    >
+                      Delete
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="italic text-muted-foreground">No items in this category.</p>
+            )}
+          </CardContent>
+        </Card>
       ))}
 
-      <h4 className="section-heading">Add Category</h4>
-      <form onSubmit={handleAddCategory} className="form-row">
-        <input
+      <h4 className="mt-6 mb-4 text-sm font-semibold">Add Category</h4>
+      <form onSubmit={handleAddCategory} className="mb-2 flex flex-wrap items-center gap-2">
+        <Input
           type="text"
           placeholder="Category name"
           value={catName}
           onChange={(e) => setCatName(e.target.value)}
           required
+          className="w-auto"
         />
-        <label>
+        <label className="flex items-center gap-1 text-sm">
           <input
             type="checkbox"
             checked={catPreorder}
@@ -155,16 +164,19 @@ export function CatalogTab() {
           />{" "}
           Preorder
         </label>
-        <button type="submit" className="btn btn-primary">
-          Add Category
-        </button>
+        <Button type="submit">Add Category</Button>
       </form>
 
       {catalog && catalog.length > 0 && (
         <>
-          <h4 className="section-heading">Add Item</h4>
-          <form onSubmit={handleAddItem} className="form-row">
-            <select value={itemCatId} onChange={(e) => setItemCatId(e.target.value)} required>
+          <h4 className="mt-6 mb-4 text-sm font-semibold">Add Item</h4>
+          <form onSubmit={handleAddItem} className="mb-2 flex flex-wrap items-center gap-2">
+            <select
+              value={itemCatId}
+              onChange={(e) => setItemCatId(e.target.value)}
+              required
+              className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+            >
               <option value="">Select category</option>
               {catalog.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -172,37 +184,36 @@ export function CatalogTab() {
                 </option>
               ))}
             </select>
-            <input
+            <Input
               type="text"
               placeholder="Name"
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
               required
+              className="w-auto"
             />
-            <input
+            <Input
               type="text"
               placeholder="Quantity (e.g. 100g)"
               value={itemQty}
               onChange={(e) => setItemQty(e.target.value)}
-              style={{ width: "10rem" }}
+              className="w-40"
             />
-            <input
+            <Input
               type="text"
               placeholder="Price (e.g. 12.50)"
               value={itemPrice}
               onChange={(e) => setItemPrice(e.target.value)}
-              style={{ width: "10rem" }}
+              className="w-40"
             />
-            <input
+            <Input
               type="text"
               placeholder="DPH % (e.g. 21)"
               value={itemDph}
               onChange={(e) => setItemDph(e.target.value)}
-              style={{ width: "10rem" }}
+              className="w-40"
             />
-            <button type="submit" className="btn btn-primary">
-              Add Item
-            </button>
+            <Button type="submit">Add Item</Button>
           </form>
         </>
       )}

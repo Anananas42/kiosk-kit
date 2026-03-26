@@ -1,3 +1,4 @@
+import { Button } from "@kioskkit/ui";
 import { useCallback } from "react";
 import { useData, useFormStatus } from "../../hooks.js";
 import { trpc } from "../../trpc.js";
@@ -20,8 +21,8 @@ export function NetworkTab() {
     onClearError: form.clear,
   });
 
-  if (loading) return <p className="msg-loading">Loading...</p>;
-  if (error) return <p className="msg-error">Error: {error}</p>;
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
+  if (error) return <p className="text-destructive">Error: {error}</p>;
   if (!status) return null;
 
   const savedNotConnected = status.saved.filter((s) => s.ssid !== status.current?.ssid);
@@ -32,17 +33,19 @@ export function NetworkTab() {
 
   return (
     <div>
-      <div className="network-header">
-        <h2 className="section-heading" style={{ margin: 0 }}>
-          Network
-        </h2>
-        <button type="button" className="btn btn-sm" onClick={reload}>
+      <div className="mb-4 flex items-center gap-4">
+        <h2 className="text-sm font-semibold">Network</h2>
+        <Button variant="outline" size="sm" onClick={reload}>
           Scan
-        </button>
+        </Button>
       </div>
 
-      {form.error && <p className="msg-error">{form.error}</p>}
-      {status.ethernet && <p className="network-ethernet-badge">Ethernet connected</p>}
+      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
+      {status.ethernet && (
+        <span className="mb-4 inline-block rounded-md bg-success px-2 py-0.5 text-xs text-white">
+          Ethernet connected
+        </span>
+      )}
 
       {status.current && (
         <ConnectedNetwork
@@ -56,7 +59,7 @@ export function NetworkTab() {
       <AvailableNetworkList networks={availableUnsaved} actions={actions} />
 
       {!status.current && savedNotConnected.length === 0 && availableUnsaved.length === 0 && (
-        <p className="empty-state">No networks found. Click Scan to search.</p>
+        <p className="italic text-muted-foreground">No networks found. Click Scan to search.</p>
       )}
 
       <HiddenNetworkForm onConnected={reload} onError={form.setError} onClearError={form.clear} />

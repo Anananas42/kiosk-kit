@@ -1,5 +1,5 @@
-import { useState } from "react";
-import "./styles.css";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@kioskkit/ui";
+import "./index.css";
 import { BuyersTab } from "./tabs/BuyersTab.js";
 import { CatalogTab } from "./tabs/CatalogTab.js";
 import { ConsumptionTab } from "./tabs/ConsumptionTab.js";
@@ -7,43 +7,48 @@ import { NetworkTab } from "./tabs/network/NetworkTab.js";
 import { PreorderTab } from "./tabs/PreorderTab.js";
 import { SettingsTab } from "./tabs/SettingsTab.js";
 
-type Tab = "catalog" | "buyers" | "consumption" | "settings" | "preorder" | "network";
-
-const TABS: { key: Tab; label: string }[] = [
+const TABS = [
   { key: "catalog", label: "Catalog" },
   { key: "buyers", label: "Buyers" },
   { key: "consumption", label: "Consumption" },
   { key: "settings", label: "Settings" },
   { key: "preorder", label: "Preorder Config" },
   { key: "network", label: "Network" },
-];
+] as const;
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("catalog");
-
   return (
-    <div className="app">
-      <h1>Kiosk Admin</h1>
+    <div className="mx-auto max-w-[960px] px-6 py-4">
+      <h1 className="mb-4 text-lg font-semibold">Kiosk Admin</h1>
 
-      <nav className="tab-nav">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`tab-btn${tab === t.key ? " active" : ""}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      <Tabs defaultValue="catalog">
+        <TabsList>
+          {TABS.map((t) => (
+            <TabsTrigger key={t.key} value={t.key}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {tab === "catalog" && <CatalogTab />}
-      {tab === "buyers" && <BuyersTab />}
-      {tab === "consumption" && <ConsumptionTab />}
-      {tab === "settings" && <SettingsTab />}
-      {tab === "preorder" && <PreorderTab />}
-      {tab === "network" && <NetworkTab />}
+        <TabsContent value="catalog">
+          <CatalogTab />
+        </TabsContent>
+        <TabsContent value="buyers">
+          <BuyersTab />
+        </TabsContent>
+        <TabsContent value="consumption">
+          <ConsumptionTab />
+        </TabsContent>
+        <TabsContent value="settings">
+          <SettingsTab />
+        </TabsContent>
+        <TabsContent value="preorder">
+          <PreorderTab />
+        </TabsContent>
+        <TabsContent value="network">
+          <NetworkTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

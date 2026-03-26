@@ -1,4 +1,5 @@
 import type { WifiStatus } from "@kioskkit/shared";
+import { Badge, Button } from "@kioskkit/ui";
 import { SignalIcon } from "./SignalIcon.js";
 
 interface ConnectedNetworkProps {
@@ -10,23 +11,21 @@ interface ConnectedNetworkProps {
 export function ConnectedNetwork({ current, forgetting, onForget }: ConnectedNetworkProps) {
   return (
     <>
-      <h3 className="section-heading">Connected</h3>
-      <div className="network-row">
-        <div className="network-row-info">
+      <h3 className="mt-6 mb-4 text-sm font-semibold">Connected</h3>
+      <div className="flex items-center justify-between border-b border-border/50 px-2 py-2">
+        <div className="flex items-center gap-2">
           <SignalIcon dBm={current.signal} />
-          <span className="network-ssid">{current.ssid}</span>
-          <span className="badge" style={{ background: "var(--color-success)" }}>
-            Connected
-          </span>
+          <span className="font-medium">{current.ssid}</span>
+          <Badge className="bg-success text-white">Connected</Badge>
         </div>
-        <button
-          type="button"
-          className="btn btn-danger btn-sm"
+        <Button
+          variant="destructive"
+          size="sm"
           disabled={forgetting === current.ssid}
           onClick={() => onForget(current.ssid)}
         >
           {forgetting === current.ssid ? "Forgetting..." : "Forget"}
-        </button>
+        </Button>
       </div>
     </>
   );
