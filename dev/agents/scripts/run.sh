@@ -42,4 +42,15 @@ fi
 export AGENT_TASK="$TASK"
 export AGENT_NO_LOOP="${NO_LOOP}"
 
-exec docker compose -f dev/agents/container/docker-compose.yml $DOCKER_PROFILE run --rm $BUILD_FLAG agent
+COMPOSE="docker compose -f dev/agents/container/docker-compose.yml $DOCKER_PROFILE"
+
+# Ensure sidecar containers and networks are cleaned up on exit.
+# Named volumes (pnpm store, node_modules) are preserved for caching.
+cleanup() {
+  echo ""
+  echo "Cleaning up containers and networks..."
+  $COMPOSE down --remove-orphans 2>/dev/null || true
+}
+trap cleanup EXIT
+
+$COMPOSE run --rm $BUILD_FLAG agent

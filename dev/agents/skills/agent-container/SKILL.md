@@ -43,6 +43,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | Git identity | `kiosk-kit-agent[bot]`, no GPG signing, HTTPS remote |
 | GitHub CLI | `gh`, authenticated via app token from `dev/agents/scripts/github-app-token.sh` |
 | gh-attach | `gh attach` extension for uploading screenshots to PR comments |
+| shellcheck | Pre-installed for `pnpm lint:shell` |
 | Playwright | Chromium pre-installed for screenshot verification |
 | Docker CLI | Available in image; connects to DinD sidecar when `--docker` flag is used |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
@@ -76,6 +77,17 @@ STITCH_API_KEY=...
 7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `dev/agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
 9. After claude finishes a non-interactive task, the **PR watch loop** takes over (unless `--no-loop`)
+10. On exit, `run.sh` tears down sidecar containers (postgres, dind) and networks via `docker compose down`. Named volumes (pnpm store, node_modules) are preserved for caching across runs.
+
+## Cleanup
+
+When the agent exits (normally or via Ctrl-C), `run.sh` automatically runs `docker compose down --remove-orphans` to stop sidecar containers and remove networks. Named volumes are intentionally kept for build caching.
+
+To reclaim all space including cached volumes:
+
+```bash
+docker compose -f dev/agents/container/docker-compose.yml down --volumes --remove-orphans --rmi local
+```
 
 ## PR watch loop
 

@@ -2,7 +2,7 @@ FROM node:24-slim
 
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl jq openssl ca-certificates gnupg rsync \
+    git curl jq openssl ca-certificates gnupg rsync shellcheck \
     python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
@@ -46,10 +46,13 @@ RUN mkdir -p /workspace/node_modules /home/agent/.local/share/pnpm/store /home/a
 
 # Pre-install dependencies at build time (layer cached until lockfile changes)
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json /workspace/
+COPY packages/kiosk-admin/package.json /workspace/packages/kiosk-admin/
 COPY packages/kiosk-client/package.json /workspace/packages/kiosk-client/
 COPY packages/kiosk-server/package.json /workspace/packages/kiosk-server/
 COPY packages/landing/package.json /workspace/packages/landing/
 COPY packages/shared/package.json /workspace/packages/shared/
+COPY packages/ui/package.json /workspace/packages/ui/
+COPY packages/web-admin/package.json /workspace/packages/web-admin/
 COPY packages/web-client/package.json /workspace/packages/web-client/
 COPY packages/web-server/package.json /workspace/packages/web-server/
 WORKDIR /workspace
