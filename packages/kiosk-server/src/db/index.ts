@@ -5,6 +5,17 @@ import { type BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3"
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema.js";
 
+function findMigrationsFolder(): string {
+  // Works from both src/db/ (dev) and dist/ (bundled)
+  for (const candidate of [
+    join(import.meta.dirname, "../../drizzle"),
+    join(import.meta.dirname, "../drizzle"),
+  ]) {
+    if (existsSync(join(candidate, "meta/_journal.json"))) return candidate;
+  }
+  throw new Error("Cannot find drizzle migrations folder");
+}
+
 const MAX_BACKUPS = 3;
 
 function backupDatabase(dbPath: string): void {
@@ -39,7 +50,7 @@ export function createDb(dataDir: string): { db: Db; sqlite: SQLiteDatabase } {
 
   const db = drizzle(sqlite, { schema });
 
-  migrate(db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+  migrate(db, { migrationsFolder: findMigrationsFolder() });
 
   return { db, sqlite };
 }
