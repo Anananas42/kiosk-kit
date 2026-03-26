@@ -577,80 +577,7 @@ convert_to_raw() {
 }
 
 shrink_image() {
-  log "Shrinking image..."
-
-  # Shrink empty partitions (rootB + data) and truncate the image via guestfish.
-  # No sudo or loop devices needed — guestfish runs its own appliance.
-
-  # Shrink filesystems to minimum, then resize partitions to match
-  local shrink_output
-  shrink_output=$(guestfish --rw -a "$FINAL_IMAGE" <<'EOF'
-run
-
-# Shrink rootB (p3) — empty, minimize it
-e2fsck-f /dev/sda3
-resize2fs-M /dev/sda3
-
-# Shrink data (p4) — nearly empty, minimize it
-e2fsck-f /dev/sda4
-resize2fs-M /dev/sda4
-
-# Report the new filesystem sizes (in 1K blocks)
-tune2fs-l /dev/sda3
-tune2fs-l /dev/sda4
-EOF
-  ) || log "WARN: guestfish shrink had non-zero exit (may be OK)"
-
-  # Extract the new block counts to calculate partition sizes
-  local p3_blocks p3_blocksize p4_blocks p4_blocksize
-  p3_blocks=$(echo "$shrink_output" | awk '/^Block count:/{print $3; exit}')
-  p3_blocksize=$(echo "$shrink_output" | awk '/^Block size:/{print $3; exit}')
-  p4_blocks=$(echo "$shrink_output" | awk '/^Block count:/{count=$3} END{print count}')
-  p4_blocksize=$(echo "$shrink_output" | awk '/^Block size:/{size=$3} END{print size}')
-
-  local p3_bytes=$(( p3_blocks * p3_blocksize ))
-  local p4_bytes=$(( p4_blocks * p4_blocksize ))
-
-  # Get partition start offsets and resize them to fit the shrunk filesystems
-  local part_info
-  part_info=$(guestfish --ro -a "$FINAL_IMAGE" <<'EOF'
-run
-part-list /dev/sda
-EOF
-  )
-
-  # Parse p3 start offset from part-list output
-  local p3_start
-  p3_start=$(echo "$part_info" | awk '/\[2\]/{found=1} found && /part_start:/{print $2; exit}')
-
-  # Calculate new partition sizes (add 1 MB margin for filesystem metadata)
-  local margin=$((1024 * 1024))
-  local p3_new_size=$(( p3_bytes + margin ))
-  local p4_new_size=$(( p4_bytes + margin ))
-  local p3_new_end_sector=$(( (p3_start + p3_new_size) / 512 ))
-  local p4_new_start_sector=$(( p3_new_end_sector + 1 ))
-  local p4_new_end_sector=$(( p4_new_start_sector + p4_new_size / 512 ))
-
-  # Use sfdisk to rewrite partitions 3 and 4 (no confirmation prompts)
-  # Dump current table, modify p3 and p4 sizes, apply
-  local sfdisk_dump
-  sfdisk_dump=$(sfdisk -d "$FINAL_IMAGE")
-
-  # Replace p3 and p4 lines with new sizes
-  local p3_start_sector=$(( p3_start / 512 ))
-  local p3_sectors=$(( p3_new_size / 512 ))
-  local p4_sectors=$(( p4_new_size / 512 ))
-  sfdisk_dump=$(echo "$sfdisk_dump" | sed \
-    -e "s|^\(${FINAL_IMAGE}3.*start= *\)[0-9]*\(.*size= *\)[0-9]*|\1${p3_start_sector}\2${p3_sectors}|" \
-    -e "s|^\(${FINAL_IMAGE}4.*start= *\)[0-9]*\(.*size= *\)[0-9]*|\1${p4_new_start_sector}\2${p4_sectors}|")
-
-  echo "$sfdisk_dump" | sfdisk --no-reread --force "$FINAL_IMAGE" >/dev/null 2>&1
-
-  # Truncate the file to just past the last partition
-  local truncate_bytes=$(( (p4_new_end_sector + 1) * 512 ))
-  truncate -s "$truncate_bytes" "$FINAL_IMAGE"
-
-  log "Image shrunk: $(du -h "$FINAL_IMAGE" | cut -f1)"
+  log "Image size: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
 
 # stamp_device — Layer 3: all guestfish operations for per-device customization.
@@ -703,6 +630,9 @@ stamp_device() {
     log "  sudo dd if=$output_file of=/dev/sdX bs=4M status=progress"
   fi
   log "  # or use balenaEtcher"
+  log ""
+  log "Optional: shrink image for faster flashing (~4 GB instead of ~18 GB):"
+  log "  docker run --rm --privileged -v $(dirname "$output_file"):/workdir turee/pishrink-docker pishrink /workdir/$(basename "$output_file")"
 }
 
 # --- Main --------------------------------------------------------------------

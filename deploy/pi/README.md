@@ -109,7 +109,7 @@ native arm64 addons are rebuilt inside the QEMU VM:
     - Injects Tailscale arm64 binary + first-boot auth service with device credentials
     - Generates unique SSH host keys on data partition
     - Removes ephemeral build SSH key
-16. Converts qcow2 to raw .img and shrinks via guestfish (resize2fs + truncate, no sudo needed)
+16. Converts qcow2 to raw .img, zeros free space, creates sparse file
 
 ## What the image contains
 

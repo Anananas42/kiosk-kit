@@ -19,6 +19,12 @@
     mode: "0644"
   notify: Reload sysctl
 
+- name: Load nf_tables kernel module on boot
+  ansible.builtin.copy:
+    content: "nf_tables\n"
+    dest: /etc/modules-load.d/nftables.conf
+    mode: "0644"
+
 - name: Deploy nftables firewall
   ansible.builtin.template:
     src: nftables.conf.j2
