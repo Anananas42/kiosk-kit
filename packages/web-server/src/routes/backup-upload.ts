@@ -13,11 +13,15 @@ function getClientIp(c: { req: { header: (name: string) => string | undefined } 
   return null;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function backupUploadRoute(db: Db) {
   const app = new Hono();
 
   app.post("/:id/backup", async (c) => {
     const deviceId = c.req.param("id");
+
+    if (!UUID_RE.test(deviceId)) return c.json({ error: "Not found" }, 404);
 
     // Look up the device
     const [device] = await db.select().from(devices).where(eq(devices.id, deviceId));
@@ -35,6 +39,8 @@ export function backupUploadRoute(db: Db) {
     const body = await c.req.arrayBuffer();
     const buffer = Buffer.from(body);
     const sizeBytes = buffer.length;
+
+    if (sizeBytes === 0) return c.json({ error: "Empty body" }, 400);
 
     // Upload to S3
     const timestamp = new Date().toISOString();
