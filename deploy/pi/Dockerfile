@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rsync \
     cpio \
     gzip \
+    petname \
   && rm -rf /var/lib/apt/lists/*
 
 # libguestfs needs a kernel to boot its appliance

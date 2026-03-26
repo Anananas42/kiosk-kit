@@ -143,7 +143,11 @@ parse_args() {
     esac
   done
 
-  [[ -n "$DEVICE_ID" ]]     || err "Missing --device-id (or set PI_DEV_DEVICE_ID with --dev)"
+  # Auto-generate a 3-word device ID if not provided
+  if [[ -z "$DEVICE_ID" ]]; then
+    DEVICE_ID=$(petname --words 3 --separator -)
+    log "Auto-generated device ID: $DEVICE_ID"
+  fi
   [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
   # If no explicit key provided, auto-generate one via Tailscale API
   if [[ -z "$TAILSCALE_KEY" ]]; then
