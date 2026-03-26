@@ -76,8 +76,9 @@ STITCH_API_KEY=...
 6. Postgres health check passes, then `db:push` applies the schema
 7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `dev/agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
-9. After claude finishes a non-interactive task, the **PR watch loop** takes over (unless `--no-loop`)
-10. On exit, `run.sh` tears down sidecar containers (postgres, dind) and networks via `docker compose down`. Named volumes (pnpm store, node_modules) are preserved for caching across runs.
+9. After claude finishes a non-interactive task, its session ID is captured so the watch loop can resume it
+10. The **PR watch loop** takes over (unless `--no-loop`), resuming the primary session for fixes
+11. On exit, `run.sh` tears down sidecar containers (postgres, dind) and networks via `docker compose down`. Named volumes (pnpm store, node_modules) are preserved for caching across runs.
 
 ## Cleanup
 
@@ -95,7 +96,7 @@ When a task is provided via `AGENT_TASK`, the container does not exit after clau
 
 1. Polls the PR for the current branch every 30 seconds
 2. Checks CI status and review comments
-3. If CI is failing or reviews need attention → re-invokes claude with full context (logs, comments)
+3. If CI is failing or reviews need attention → resumes the primary agent session via `claude --resume` with the failure/feedback details. This preserves the agent's full conversation history from the implementation phase.
 4. If PR is merged or closed → container exits cleanly
 5. After 5 consecutive failed fix attempts → posts a comment asking for human help and continues polling for `@continue`
 
