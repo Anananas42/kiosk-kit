@@ -347,17 +347,23 @@ EOF
     echo "blkid /dev/sda2"
     echo "mount /dev/sda2 /"
     echo "download /etc/ssh/sshd_config $sshd_cfg"
+    echo "umount /"
+    echo "mount /dev/sda1 /"
+    echo "download /cmdline.txt $stamp_dir/cmdline.txt"
   } > "$read_cmd"
 
   local blkid_lines
   blkid_lines=$(guestfish < "$read_cmd")
 
   local partuuid_p1 partuuid_p2
-  partuuid_p1=$(echo "$blkid_lines" | grep -oP 'PARTUUID=\K[^ "]+' | head -1 || true)
-  partuuid_p2=$(echo "$blkid_lines" | grep -oP 'PARTUUID=\K[^ "]+' | tail -1 || true)
+  partuuid_p1=$(echo "$blkid_lines" | awk '/PART_ENTRY_UUID:/{print $2; exit}')
+  partuuid_p2=$(echo "$blkid_lines" | awk '/PART_ENTRY_UUID:/{uuid=$2} END{print uuid}')
 
   # Patch sshd_config to use host keys on data partition
   sed -i -E 's,^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key,HostKey /data/ssh/ssh_host_\1_key,' "$sshd_cfg"
+
+  # Strip Pi OS first-boot init override from cmdline.txt
+  sed -i 's| init=/usr/lib/raspberrypi-sys-mods/firstboot||' "$stamp_dir/cmdline.txt"
 
   # Build Pi-native fstab with PARTUUIDs
   cat > "$stamp_dir/fstab" <<FSTAB
@@ -466,6 +472,11 @@ FSTAB
       echo "upload $ssh_dir/ssh_host_${keytype}_key.pub /ssh/ssh_host_${keytype}_key.pub"
       echo "chmod 0644 /ssh/ssh_host_${keytype}_key.pub"
     done
+
+    # === boot partition (p1) ===
+    echo "umount /"
+    echo "mount /dev/sda1 /"
+    echo "upload $stamp_dir/cmdline.txt /cmdline.txt"
   } > "$write_cmd"
 
   guestfish < "$write_cmd" || log "WARN: Some guestfish commands failed (may be OK if files didn't exist)"
