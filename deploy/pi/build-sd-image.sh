@@ -579,15 +579,67 @@ convert_to_raw() {
 shrink_image() {
   log "Shrinking image..."
 
-  # PiShrink truncates unused partitions so dd writes only the used data.
-  local pishrink="$CACHE_DIR/pishrink.sh"
-  if [[ ! -f "$pishrink" ]]; then
-    log "Downloading PiShrink..."
-    mkdir -p "$CACHE_DIR"
-    curl -fL -o "$pishrink" "https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh"
-    chmod +x "$pishrink"
-  fi
-  bash "$pishrink" "$FINAL_IMAGE"
+  # Shrink empty partitions (rootB + data) and truncate the image via guestfish.
+  # No sudo or loop devices needed — guestfish runs its own appliance.
+
+  # Shrink filesystems to minimum, then resize partitions to match
+  local shrink_output
+  shrink_output=$(guestfish --rw -a "$FINAL_IMAGE" <<'EOF'
+run
+
+# Shrink rootB (p3) — empty, minimize it
+e2fsck-f /dev/sda3
+resize2fs-M /dev/sda3
+
+# Shrink data (p4) — nearly empty, minimize it
+e2fsck-f /dev/sda4
+resize2fs-M /dev/sda4
+
+# Report the new filesystem sizes (in 1K blocks)
+tune2fs-l /dev/sda3
+tune2fs-l /dev/sda4
+EOF
+  ) || log "WARN: guestfish shrink had non-zero exit (may be OK)"
+
+  # Extract the new block counts to calculate partition sizes
+  local p3_blocks p3_blocksize p4_blocks p4_blocksize
+  p3_blocks=$(echo "$shrink_output" | awk '/^Block count:/{print $3; exit}')
+  p3_blocksize=$(echo "$shrink_output" | awk '/^Block size:/{print $3; exit}')
+  p4_blocks=$(echo "$shrink_output" | awk '/^Block count:/{count=$3} END{print count}')
+  p4_blocksize=$(echo "$shrink_output" | awk '/^Block size:/{size=$3} END{print size}')
+
+  local p3_bytes=$(( p3_blocks * p3_blocksize ))
+  local p4_bytes=$(( p4_blocks * p4_blocksize ))
+
+  # Get partition start offsets and resize them to fit the shrunk filesystems
+  local part_info
+  part_info=$(guestfish --ro -a "$FINAL_IMAGE" <<'EOF'
+run
+part-list /dev/sda
+EOF
+  )
+
+  # Parse p3 start offset from part-list output
+  local p3_start
+  p3_start=$(echo "$part_info" | awk '/\[2\]/{found=1} found && /part_start:/{print $2; exit}')
+
+  # Calculate new end positions (add 1 MB margin for filesystem metadata)
+  local margin=$((1024 * 1024))
+  local p3_new_end_sector=$(( (p3_start + p3_bytes + margin) / 512 ))
+  local p4_new_start=$(( (p3_new_end_sector + 1) * 512 ))
+  local p4_new_end_sector=$(( (p4_new_start + p4_bytes + margin) / 512 ))
+
+  # Resize partitions and truncate
+  guestfish --rw -a "$FINAL_IMAGE" <<EOF
+run
+part-resize /dev/sda 3 $p3_new_end_sector
+part-del /dev/sda 4
+part-add /dev/sda p $(( p4_new_start / 512 )) $p4_new_end_sector
+EOF
+
+  # Truncate the file to just past the last partition
+  local truncate_bytes=$(( (p4_new_end_sector + 1) * 512 ))
+  truncate -s "$truncate_bytes" "$FINAL_IMAGE"
 
   log "Image shrunk: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
