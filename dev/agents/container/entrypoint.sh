@@ -68,6 +68,7 @@ echo "==> Ready."
 # --- Claude invocation with retry ---
 CLAUDE_MAX_RETRIES=5
 CLAUDE_RETRY_DELAY=30
+PRIMARY_SESSION_ID=""
 
 run_claude() {
   local attempt=0
@@ -86,6 +87,42 @@ run_claude() {
     fi
   done
   echo "==> Claude failed after $CLAUDE_MAX_RETRIES attempts. Container will stay running but idle."
+  return 1
+}
+
+# Capture session ID from the most recent session file
+capture_session_id() {
+  local newest
+  newest=$(ls -t "$CLAUDE_SESSIONS_DIR"/*.jsonl 2>/dev/null | head -1 || echo "")
+  if [ -n "$newest" ]; then
+    PRIMARY_SESSION_ID=$(basename "$newest" .jsonl)
+    echo "==> Captured primary session ID: $PRIMARY_SESSION_ID"
+  fi
+}
+
+# Resume the primary agent session (falls back to run_claude if no session)
+resume_claude() {
+  if [ -z "$PRIMARY_SESSION_ID" ]; then
+    echo "==> No primary session to resume. Starting fresh."
+    run_claude "$@"
+    return $?
+  fi
+  local attempt=0
+  while [ "$attempt" -lt "$CLAUDE_MAX_RETRIES" ]; do
+    attempt=$((attempt + 1))
+    echo "==> Resuming primary session $PRIMARY_SESSION_ID (attempt $attempt/$CLAUDE_MAX_RETRIES)..."
+    start_log_tailer
+    if claude --dangerously-skip-permissions --resume "$PRIMARY_SESSION_ID" -p "$@"; then
+      return 0
+    fi
+    local exit_code=$?
+    echo "==> Claude exited with code $exit_code (attempt $attempt/$CLAUDE_MAX_RETRIES)."
+    if [ "$attempt" -lt "$CLAUDE_MAX_RETRIES" ]; then
+      echo "==> Retrying in ${CLAUDE_RETRY_DELAY}s..."
+      sleep "$CLAUDE_RETRY_DELAY"
+    fi
+  done
+  echo "==> Claude resume failed after $CLAUDE_MAX_RETRIES attempts."
   return 1
 }
 
@@ -153,6 +190,8 @@ if [ -n "${AGENT_TASK:-}" ]; then
     echo "==> Initial task failed after retries. Sleeping indefinitely — container stays up for inspection."
     sleep infinity
   fi
+  # Capture the primary session so the watch loop can resume it
+  capture_session_id
   if [ -n "${AGENT_NO_LOOP:-}" ]; then
     echo "==> --no-loop set, skipping PR watch loop."
     exit 0
@@ -186,7 +225,7 @@ if [ "$BRANCH" = "main" ]; then
     echo "==> Max attempts ($MAX_ATTEMPTS) reached without creating a PR. Sleeping indefinitely."
     sleep infinity
   fi
-  if ! run_claude "You completed the implementation but never pushed the branch or created a PR. Follow the cicd-workflow skill: create a branch, commit your changes, push, and open a PR. The Linear issue is in AGENT_TASK."; then
+  if ! resume_claude "You completed the implementation but never pushed the branch or created a PR. Follow the cicd-workflow skill: create a branch, commit your changes, push, and open a PR. The Linear issue is in AGENT_TASK."; then
     echo "==> Re-invocation failed after retries. Sleeping indefinitely."
     sleep infinity
   fi
@@ -216,7 +255,7 @@ done
 
 if [ -z "$PR_INIT_JSON" ]; then
   echo "==> No PR found after $PR_WAIT_MAX attempts. Re-invoking claude to create PR..."
-  run_claude "You pushed branch $BRANCH but no PR exists yet. Follow the cicd-workflow skill: create a PR using the GitHub App token, link it to the Linear issue, and enable auto-merge." || true
+  resume_claude "You pushed branch $BRANCH but no PR exists yet. Follow the cicd-workflow skill: create a PR using the GitHub App token, link it to the Linear issue, and enable auto-merge." || true
   GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
   PR_INIT_JSON=$(GH_TOKEN="${GH_TOKEN}" gh pr view --json number 2>/dev/null || echo "")
 fi
@@ -397,7 +436,8 @@ $REVIEW_ACTION"
       continue
     fi
 
-    if ! run_claude "$NEEDS_ACTION"; then
+    if ! resume_claude "ACTION NEEDED:
+$NEEDS_ACTION"; then
       echo "==> Watch loop claude invocation failed after retries. Sleeping indefinitely."
       sleep infinity
     fi
