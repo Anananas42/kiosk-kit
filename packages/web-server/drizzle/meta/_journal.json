@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774016158304,
-      "tag": "0000_marvelous_franklin_storm",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774310839141,
-      "tag": "0001_nostalgic_network",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774311230421,
-      "tag": "0002_lethal_bedlam",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1774700000000,
-      "tag": "0003_rework_devices_tailscale",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1774526920988,
-      "tag": "0004_boring_owl",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1774527759312,
-      "tag": "0005_lovely_ironclad",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1774528705362,
-      "tag": "0006_charming_menace",
+      "when": 1774537080406,
+      "tag": "0000_flaky_jack_murdock",
       "breakpoints": true
     }
   ]

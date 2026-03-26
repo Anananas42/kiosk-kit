@@ -1,1 +1,0 @@
-ALTER TABLE "devices" ADD COLUMN "last_seen" timestamp with time zone;
