@@ -1,4 +1,4 @@
-import { execFile as execFileCb, spawn } from "node:child_process";
+import { execFile as execFileCb } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import type { OtaStatus } from "@kioskkit/shared";
@@ -13,7 +13,6 @@ const VERSION_FILE = "/etc/kioskkit/version";
 const PROGRESS_FILE = "/data/ota/pending/progress.json";
 const PENDING_DIR = "/data/ota/pending";
 const ROOTFS_IMAGE = "/data/ota/pending/rootfs.img.zst";
-const PID_FILE = "/data/ota/pending/download.pid";
 
 interface StateJson {
   status: OtaStatus["status"];
@@ -25,7 +24,7 @@ interface StateJson {
 interface ProgressJson {
   version: string;
   progress: number;
-  bytesDownloaded: number;
+  bytesReceived: number;
   bytesTotal: number;
 }
 
@@ -86,40 +85,10 @@ export async function getOtaStatus(): Promise<OtaStatus> {
     activeSlot,
     committedSlot: activeSlot,
     currentVersion: version ?? null,
-    download: state?.status === "downloading" && progress ? progress : null,
+    upload: state?.status === "uploading" && progress ? progress : null,
     lastUpdate: state?.lastUpdate ?? null,
     lastResult: state?.lastResult ?? null,
   };
-}
-
-export async function startDownload(url: string, version: string, sha256: string): Promise<void> {
-  const currentState = await readJsonFile<StateJson>(STATE_FILE);
-  if (currentState?.status === "downloading") {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "A download is already in progress",
-    });
-  }
-
-  await mkdir(PENDING_DIR, { recursive: true });
-
-  await writeStateFile({
-    status: "downloading",
-    version,
-    lastUpdate: currentState?.lastUpdate ?? null,
-    lastResult: currentState?.lastResult ?? null,
-  } as StateJson);
-
-  const scriptPath = `${SCRIPTS_DIR}/ota-download.sh`;
-  const child = spawn("sudo", [scriptPath, url, sha256, PENDING_DIR], {
-    detached: true,
-    stdio: "ignore",
-  });
-  child.unref();
-
-  if (child.pid) {
-    await writeFile(PID_FILE, String(child.pid));
-  }
 }
 
 export async function installAndReboot(): Promise<void> {
@@ -147,23 +116,14 @@ export async function installAndReboot(): Promise<void> {
   await runSudoScript("ota-install.sh", [ROOTFS_IMAGE]);
 }
 
-export async function cancelDownload(): Promise<void> {
+export async function cancelUpload(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
-  if (currentState?.status !== "downloading") {
+  if (currentState?.status !== "uploading") {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "No download in progress to cancel",
+      message: "No upload in progress to cancel",
     });
-  }
-
-  const pid = await readTextFile(PID_FILE);
-  if (pid) {
-    try {
-      await execFile("sudo", ["kill", pid]);
-    } catch {
-      // Process may have already exited
-    }
   }
 
   await rm(PENDING_DIR, { recursive: true, force: true });

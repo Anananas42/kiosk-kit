@@ -14,4 +14,8 @@ export const settingsRouter = router({
   "preorderConfig.get": baseProcedure.output(PreorderConfigSchema).query(({ ctx }) => {
     return ctx.store.getPreorderConfig() ?? DEFAULT_PREORDER_CONFIG;
   }),
+
+  "backup.status": baseProcedure.query(({ ctx }) => {
+    return { lastBackupAt: ctx.store.getSetting("lastBackupAt") };
+  }),
 });

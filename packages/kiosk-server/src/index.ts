@@ -9,7 +9,7 @@ const DATA_DIR = join(process.cwd(), "data");
 
 const { db, sqlite } = createDb(DATA_DIR);
 const store = new Store(db);
-const app = createApp(store);
+const app = createApp(store, sqlite);
 
 serve({ fetch: app.fetch, port: env.port }, (info) => {
   console.log(`[server] Listening on http://localhost:${info.port}`);

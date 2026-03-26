@@ -1,12 +1,15 @@
 import { serveStatic } from "@hono/node-server/serve-static";
 import { trpcServer } from "@hono/trpc-server";
+import type { Database as SQLiteDatabase } from "better-sqlite3";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { backupRoute } from "./backup.js";
 import type { Store } from "./db/store.js";
+import { otaUploadRoute } from "./ota-upload.js";
 import { healthRoute } from "./routes/health.js";
 import { appRouter } from "./trpc/router.js";
 
-export function createApp(store: Store) {
+export function createApp(store: Store, sqlite: SQLiteDatabase) {
   const app = new Hono();
 
   app.onError((err, c) => {
@@ -17,6 +20,8 @@ export function createApp(store: Store) {
   app.use("/api/*", cors());
 
   app.route("/api/health", healthRoute());
+  app.route("/api/backup", backupRoute(sqlite, store));
+  app.route("/api/ota/upload", otaUploadRoute());
 
   app.use(
     "/api/trpc/*",

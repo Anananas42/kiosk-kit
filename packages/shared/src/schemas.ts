@@ -333,30 +333,33 @@ export const ItemCountInputSchema = z.object({
 // ── OTA schemas ─────────────────────────────────────────────────────
 
 export const OtaStatusSchema = z.object({
-  status: z.enum(["idle", "downloading", "downloaded", "installing", "confirming", "rollback"]),
+  status: z.enum(["idle", "uploading", "downloaded", "installing", "confirming", "rollback"]),
   activeSlot: z.enum(["A", "B"]),
   committedSlot: z.enum(["A", "B"]),
   currentVersion: z.string().nullable(),
-  download: z
+  upload: z
     .object({
       version: z.string(),
       progress: z.number(),
-      bytesDownloaded: z.number(),
+      bytesReceived: z.number(),
       bytesTotal: z.number(),
     })
     .nullable(),
   lastUpdate: z.string().nullable(),
   lastResult: z
-    .enum(["success", "failed_health_check", "failed_download", "failed_install"])
+    .enum(["success", "failed_health_check", "failed_upload", "failed_install"])
     .nullable(),
 });
 
 export type OtaStatus = z.infer<typeof OtaStatusSchema>;
 
-export const OtaDownloadInputSchema = z.object({
-  url: z.string().url(),
+// ── Release schemas ─────────────────────────────────────────────────
+
+export const ReleaseInfoSchema = z.object({
   version: z.string(),
-  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  sha256: z.string(),
+  releaseNotes: z.string().nullable(),
+  publishedAt: z.string(),
 });
 
-export type OtaDownloadInput = z.infer<typeof OtaDownloadInputSchema>;
+export type ReleaseInfo = z.infer<typeof ReleaseInfoSchema>;

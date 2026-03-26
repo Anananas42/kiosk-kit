@@ -4,7 +4,6 @@ import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
 const mockExecFile = vi.hoisted(() => vi.fn());
-const mockSpawn = vi.hoisted(() => vi.fn());
 const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
@@ -12,7 +11,6 @@ const mockRm = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({
   execFile: mockExecFile,
-  spawn: mockSpawn,
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -33,21 +31,33 @@ function mockFiles(files: Record<string, string>) {
 }
 
 function mockSudoSuccess(stdout = "") {
-  mockExecFile.mockImplementation((_cmd: string, _args: string[], cb: Function) => {
-    cb(null, { stdout, stderr: "" });
-  });
+  mockExecFile.mockImplementation(
+    (
+      _cmd: string,
+      _args: string[],
+      cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
+    ) => {
+      cb(null, { stdout, stderr: "" });
+    },
+  );
 }
 
 function mockSudoFailure(errorOutput: string) {
-  mockExecFile.mockImplementation((_cmd: string, _args: string[], cb: Function) => {
-    const err = new Error("Script failed") as Error & {
-      stdout: string;
-      stderr: string;
-    };
-    err.stdout = errorOutput;
-    err.stderr = "";
-    cb(err);
-  });
+  mockExecFile.mockImplementation(
+    (
+      _cmd: string,
+      _args: string[],
+      cb: (err: unknown, result?: { stdout: string; stderr: string }) => void,
+    ) => {
+      const err = new Error("Script failed") as Error & {
+        stdout: string;
+        stderr: string;
+      };
+      err.stdout = errorOutput;
+      err.stderr = "";
+      cb(err);
+    },
+  );
 }
 
 beforeEach(() => {
@@ -77,7 +87,7 @@ describe("admin.ota.status", () => {
       activeSlot: "A",
       committedSlot: "A",
       currentVersion: "1.0.0",
-      download: null,
+      upload: null,
       lastUpdate: "2026-03-01T00:00:00Z",
       lastResult: "success",
     });
@@ -94,7 +104,7 @@ describe("admin.ota.status", () => {
       activeSlot: "A",
       committedSlot: "A",
       currentVersion: null,
-      download: null,
+      upload: null,
       lastUpdate: null,
       lastResult: null,
     });
@@ -112,15 +122,15 @@ describe("admin.ota.status", () => {
     expect(result.committedSlot).toBe("B");
   });
 
-  it("includes download progress when downloading", async () => {
+  it("includes upload progress when uploading", async () => {
     const progress = {
       version: "2.0.0",
       progress: 45,
-      bytesDownloaded: 450000,
+      bytesReceived: 450000,
       bytesTotal: 1000000,
     };
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "downloading" }),
+      "/data/ota/state.json": JSON.stringify({ status: "uploading" }),
       "/data/ota/boot-slot": "A",
       "/etc/kioskkit/version": "1.0.0",
       "/data/ota/pending/progress.json": JSON.stringify(progress),
@@ -129,66 +139,8 @@ describe("admin.ota.status", () => {
     const caller = createCaller({ store });
     const result = await caller["admin.ota.status"]();
 
-    expect(result.status).toBe("downloading");
-    expect(result.download).toEqual(progress);
-  });
-});
-
-describe("admin.ota.download", () => {
-  const validInput = {
-    url: "https://example.com/image.zst",
-    version: "2.0.0",
-    sha256: "a".repeat(64),
-  };
-
-  it("starts download and updates state", async () => {
-    mockFiles({});
-    mockSpawn.mockReturnValue({
-      pid: 12345,
-      unref: vi.fn(),
-    });
-
-    const caller = createCaller({ store });
-    const result = await caller["admin.ota.download"](validInput);
-
-    expect(result).toEqual({ ok: true });
-    expect(mockSpawn).toHaveBeenCalledWith(
-      "sudo",
-      [
-        "/opt/kioskkit/system/ota-download.sh",
-        validInput.url,
-        validInput.sha256,
-        "/data/ota/pending",
-      ],
-      { detached: true, stdio: "ignore" },
-    );
-    expect(mockWriteFile).toHaveBeenCalledWith(
-      "/data/ota/state.json",
-      expect.stringContaining('"downloading"'),
-    );
-  });
-
-  it("rejects if already downloading", async () => {
-    mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "downloading" }),
-    });
-
-    const caller = createCaller({ store });
-
-    await expect(caller["admin.ota.download"](validInput)).rejects.toThrow(
-      "A download is already in progress",
-    );
-  });
-
-  it("rejects invalid sha256", async () => {
-    const caller = createCaller({ store });
-
-    await expect(
-      caller["admin.ota.download"]({
-        ...validInput,
-        sha256: "invalid",
-      }),
-    ).rejects.toThrow();
+    expect(result.status).toBe("uploading");
+    expect(result.upload).toEqual(progress);
   });
 });
 
@@ -235,35 +187,32 @@ describe("admin.ota.install", () => {
   });
 });
 
-describe("admin.ota.cancelDownload", () => {
-  it("rejects if not downloading", async () => {
+describe("admin.ota.cancelUpload", () => {
+  it("rejects if not uploading", async () => {
     mockFiles({
       "/data/ota/state.json": JSON.stringify({ status: "idle" }),
     });
 
     const caller = createCaller({ store });
 
-    await expect(caller["admin.ota.cancelDownload"]()).rejects.toThrow(
-      "No download in progress to cancel",
+    await expect(caller["admin.ota.cancelUpload"]()).rejects.toThrow(
+      "No upload in progress to cancel",
     );
   });
 
-  it("cancels download, cleans up, and resets state", async () => {
+  it("cleans up and resets state", async () => {
     mockFiles({
       "/data/ota/state.json": JSON.stringify({
-        status: "downloading",
+        status: "uploading",
         lastUpdate: "2026-03-01T00:00:00Z",
         lastResult: "success",
       }),
-      "/data/ota/pending/download.pid": "12345",
     });
-    mockSudoSuccess();
 
     const caller = createCaller({ store });
-    const result = await caller["admin.ota.cancelDownload"]();
+    const result = await caller["admin.ota.cancelUpload"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockExecFile).toHaveBeenCalledWith("sudo", ["kill", "12345"], expect.any(Function));
     expect(mockRm).toHaveBeenCalledWith("/data/ota/pending", {
       recursive: true,
       force: true,
