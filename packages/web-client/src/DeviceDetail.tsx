@@ -1,7 +1,7 @@
 import { Badge, Card, CardContent } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { type Device, fetchDevice } from "./api.js";
+import { type Device, fetchDevice, fetchDeviceStatus } from "./api.js";
 
 function formatRelativeTime(isoString: string): string {
   const now = Date.now();
@@ -22,19 +22,24 @@ export function DeviceDetail() {
   const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [reachable, setReachable] = useState<boolean | null>(null);
   const [iframeLoading, setIframeLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
     fetchDevice(id)
-      .then(setDevice)
+      .then(async (d) => {
+        setDevice(d);
+        const isReachable = await fetchDeviceStatus(id);
+        setReachable(isReachable);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id]);
 
   if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
 
-  const online = device?.online ?? null;
+  const online = reachable;
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
