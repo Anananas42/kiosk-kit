@@ -145,7 +145,7 @@ parse_args() {
 
   # Auto-generate a 3-word device ID if not provided
   if [[ -z "$DEVICE_ID" ]]; then
-    DEVICE_ID=$(petname --words 3 --separator -)
+    DEVICE_ID=$(grep -E '^[a-z]{3,8}$' /usr/share/dict/words | shuf -n3 | paste -sd-)
     log "Auto-generated device ID: $DEVICE_ID"
   fi
   [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
