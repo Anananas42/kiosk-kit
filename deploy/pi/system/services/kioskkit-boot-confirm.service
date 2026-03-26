@@ -1,0 +1,13 @@
+[Unit]
+Description=KioskKit Boot Confirmation (A/B OTA)
+After=kioskkit.service
+Wants=kioskkit.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kioskkit/system/boot-confirm.sh
+RemainAfterExit=false
+TimeoutStartSec=360
+
+[Install]
+WantedBy=multi-user.target

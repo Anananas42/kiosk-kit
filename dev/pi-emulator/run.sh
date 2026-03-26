@@ -78,7 +78,7 @@ QEMU_ARGS=(
   -M virt -cpu cortex-a72 -m "$QEMU_RAM" -smp "$QEMU_CPUS"
   -kernel "$KERNEL"
   -initrd "$INITRD"
-  -append "root=/dev/vda2 rw console=ttyAMA0 earlycon=pl011,0x09000000 panic=-1"
+  -append "rw console=ttyAMA0 earlycon=pl011,0x09000000 panic=-1"
   -drive "if=virtio,file=$OVERLAY,format=qcow2"
   -nic "user,model=virtio,hostfwd=tcp::${SSH_PORT}-:22,hostfwd=tcp::${KIOSK_PORT}-:3001"
 )

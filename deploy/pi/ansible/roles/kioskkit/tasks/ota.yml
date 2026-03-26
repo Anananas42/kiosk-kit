@@ -1,0 +1,55 @@
+---
+- name: Create OTA scripts directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}/system"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy OTA management scripts
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../system/scripts/{{ item }}"
+    dest: "{{ kioskkit_install_dir }}/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - ota-download.sh
+    - ota-install.sh
+    - ota-rollback.sh
+    - boot-confirm.sh
+
+- name: Deploy OTA sudoers rules
+  ansible.builtin.template:
+    src: sudoers-ota.j2
+    dest: /etc/sudoers.d/kioskkit-ota
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Deploy boot-confirm service
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../system/services/kioskkit-boot-confirm.service"
+    dest: /etc/systemd/system/kioskkit-boot-confirm.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable boot-confirm service
+  ansible.builtin.systemd:
+    name: kioskkit-boot-confirm.service
+    enabled: true
+
+- name: Create OTA state directories
+  ansible.builtin.file:
+    path: "/data/ota/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - ""
+    - pending

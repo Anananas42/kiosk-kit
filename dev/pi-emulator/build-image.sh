@@ -171,8 +171,23 @@ setup_wifi_simulation() {
   ssh_pi "sudo systemctl disable wpa_supplicant@wlan0.service 2>/dev/null || true"
 }
 
+initialize_ota_state() {
+  log "Initializing OTA state on data partition..."
+  guestfish --rw -a "$DISK_IMAGE" <<'EOF'
+run
+mount /dev/sda4 /
+mkdir-p /ota
+mkdir-p /ota/pending
+write /ota/boot-slot "A"
+write /ota/state.json "{\"status\":\"idle\",\"slot\":\"A\"}"
+EOF
+}
+
 shutdown_and_snapshot() {
   shutdown_qemu
+
+  # Initialize OTA state on the data partition (guestfish on cold image)
+  initialize_ota_state
 
   log "Creating golden image..."
   flatten_overlay "$DISK_IMAGE" "$GOLDEN_IMAGE"
