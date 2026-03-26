@@ -1,6 +1,6 @@
 {
-  "id": "a6148944-60ed-4e9d-b04e-9647f19c46cf",
-  "prevId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "id": "0b690724-fd69-449c-98cf-796e19c72a5e",
+  "prevId": "a6148944-60ed-4e9d-b04e-9647f19c46cf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -115,6 +115,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "last_seen": {
+          "name": "last_seen",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

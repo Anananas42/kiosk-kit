@@ -63,6 +63,15 @@
     group: "{{ kioskkit_user }}"
     mode: "0755"
 
+- name: Write persistent device identity
+  ansible.builtin.copy:
+    content: "DEVICE_ID={{ kioskkit_device_id }}\n"
+    dest: /etc/kioskkit/device.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: kioskkit_device_id | length > 0
+
 - name: Deploy display-sleep.py
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../system/config/display-sleep.py"
