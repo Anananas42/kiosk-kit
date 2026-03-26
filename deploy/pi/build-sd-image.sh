@@ -46,7 +46,10 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   echo "==> Building SD image builder Docker image..."
   docker build -t kioskkit-sd-builder "$SCRIPT_DIR"
   echo "==> Re-executing inside container..."
-  exec docker run --rm \
+  DOCKER_TTY_FLAG=""
+  if [ -t 0 ]; then DOCKER_TTY_FLAG="-it"; fi
+  # shellcheck disable=SC2086
+  exec docker run --rm $DOCKER_TTY_FLAG \
     -e KIOSKKIT_IN_CONTAINER=1 \
     ${PI_DEV_DEVICE_ID:+-e PI_DEV_DEVICE_ID="$PI_DEV_DEVICE_ID"} \
     ${PI_DEV_CUSTOMER_TAG:+-e PI_DEV_CUSTOMER_TAG="$PI_DEV_CUSTOMER_TAG"} \
@@ -57,6 +60,7 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
     ${SD_BUILD_RAM:+-e SD_BUILD_RAM="$SD_BUILD_RAM"} \
     ${SD_BUILD_CPUS:+-e SD_BUILD_CPUS="$SD_BUILD_CPUS"} \
     -v "$REPO_ROOT:/workspace:ro" \
+    -v "$SCRIPT_DIR/.work:/build" \
     -v "$SCRIPT_DIR/.output:/output" \
     kioskkit-sd-builder "$@"
 fi

@@ -34,8 +34,7 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
     ${PI_EMU_RAM:+-e PI_EMU_RAM="$PI_EMU_RAM"} \
     ${PI_EMU_CPUS:+-e PI_EMU_CPUS="$PI_EMU_CPUS"} \
     -v "$REPO_ROOT:/workspace:ro" \
-    -v pi-emu-cache:/build/cache \
-    -v pi-emu-boot:/build/boot \
+    -v "$SCRIPT_DIR/.work:/build" \
     -v "$SCRIPT_DIR/.output:/output" \
     --entrypoint /workspace/dev/pi-emulator/build-image.sh \
     kioskkit-pi-emulator "$@"
