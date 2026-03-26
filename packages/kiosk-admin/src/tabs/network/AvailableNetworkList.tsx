@@ -1,4 +1,5 @@
 import type { WifiNetwork } from "@kioskkit/shared";
+import { Button, Input } from "@kioskkit/ui";
 import type { FormEvent } from "react";
 import { SignalIcon } from "./SignalIcon.js";
 import type { NetworkActions } from "./types.js";
@@ -13,7 +14,7 @@ export function AvailableNetworkList({ networks, actions }: AvailableNetworkList
 
   return (
     <>
-      <h3 className="section-heading">Available Networks</h3>
+      <h3 className="mt-6 mb-4 text-sm font-semibold">Available Networks</h3>
       {networks.map((net) => (
         <AvailableNetworkRow key={net.ssid} network={net} actions={actions} />
       ))}
@@ -35,35 +36,36 @@ function AvailableNetworkRow({
     <div>
       <button
         type="button"
-        className="network-row network-row-clickable"
+        className="flex w-full cursor-pointer items-center justify-between border-b border-border/50 bg-transparent px-2 py-2 text-left hover:bg-secondary"
         onClick={() => toggleExpand(network.ssid, "available")}
       >
-        <div className="network-row-info">
+        <div className="flex items-center gap-2">
           <SignalIcon dBm={network.signal} />
-          <span className="network-ssid">{network.ssid}</span>
-          {network.security === "wpa" && <span className="network-lock">WPA</span>}
+          <span className="font-medium">{network.ssid}</span>
+          {network.security === "wpa" && <span className="text-xs text-muted-foreground">WPA</span>}
         </div>
       </button>
       {isExpanded && (
         <form
-          className="network-expand"
+          className="border-b border-border/50 bg-secondary p-2"
           onSubmit={(e: FormEvent) =>
             handleConnect(e, network.ssid, network.security === "wpa" ? password : undefined)
           }
         >
-          <div className="form-row">
+          <div className="flex flex-wrap items-center gap-2">
             {network.security === "wpa" && (
-              <input
+              <Input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={connecting}
+                className="w-auto min-w-[200px]"
               />
             )}
-            <button type="submit" className="btn btn-primary btn-sm" disabled={connecting}>
+            <Button type="submit" size="sm" disabled={connecting}>
               {connecting ? "Connecting..." : "Connect"}
-            </button>
+            </Button>
           </div>
         </form>
       )}

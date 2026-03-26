@@ -3,10 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useData, useFormStatus } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
-// Array indices: 0=Sun, 1=Mon, ..., 6=Sat
-// Display order: Mon-Sun
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-// Map display index -> schema index (0=Sun): Mon=1, Tue=2, ..., Sat=6, Sun=0
 const DISPLAY_TO_WEEKDAY = [1, 2, 3, 4, 5, 6, 0];
 
 export function PreorderTab() {
@@ -59,28 +56,34 @@ export function PreorderTab() {
       .finally(() => setSaving(false));
   };
 
-  if (loading) return <p className="msg-loading">Loading...</p>;
-  if (error) return <p className="msg-error">Error: {error}</p>;
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
+  if (error) return <p className="text-destructive">Error: {error}</p>;
   if (!draft) return null;
 
   return (
     <div>
-      {form.error && <p className="msg-error">{form.error}</p>}
-      {form.success && <p className="msg-success">{form.success}</p>}
+      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
+      {form.success && <p className="my-2 text-success">{form.success}</p>}
 
-      <div className="preorder-grid">
+      <div className="grid grid-cols-[auto_repeat(7,1fr)] gap-px overflow-hidden rounded-md border border-border">
         {/* Header row */}
-        <div className="grid-header" />
+        <div className="flex items-center justify-center bg-secondary p-2 text-xs font-semibold text-muted-foreground" />
         {DAY_LABELS.map((day) => (
-          <div key={day} className="grid-header">
+          <div
+            key={day}
+            className="flex items-center justify-center bg-secondary p-2 text-xs font-semibold text-muted-foreground"
+          >
             {day}
           </div>
         ))}
 
         {/* Ordering row */}
-        <div className="grid-label">Ordering</div>
+        <div className="flex items-center bg-secondary p-2 text-sm font-medium">Ordering</div>
         {DISPLAY_TO_WEEKDAY.map((weekday, displayIdx) => (
-          <div key={`ordering-${weekday}`}>
+          <div
+            key={`ordering-${weekday}`}
+            className="flex items-center justify-center bg-background p-2"
+          >
             <input
               type="checkbox"
               checked={draft.orderingDays[weekday]}
@@ -91,9 +94,12 @@ export function PreorderTab() {
         ))}
 
         {/* Delivery row */}
-        <div className="grid-label">Delivery</div>
+        <div className="flex items-center bg-secondary p-2 text-sm font-medium">Delivery</div>
         {DISPLAY_TO_WEEKDAY.map((weekday, displayIdx) => (
-          <div key={`delivery-${weekday}`}>
+          <div
+            key={`delivery-${weekday}`}
+            className="flex items-center justify-center bg-background p-2"
+          >
             <input
               type="checkbox"
               checked={draft.deliveryDays[weekday]}

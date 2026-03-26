@@ -1,3 +1,4 @@
+import { Button, Input } from "@kioskkit/ui";
 import { type FormEvent, useState } from "react";
 import { trpc } from "../../trpc.js";
 
@@ -36,43 +37,41 @@ export function HiddenNetworkForm({ onConnected, onError, onClearError }: Hidden
 
   if (!showForm) {
     return (
-      <div className="network-hidden-section">
-        <button type="button" className="btn btn-sm" onClick={() => setShowForm(true)}>
+      <div className="mt-6">
+        <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
           Connect to hidden network
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="network-hidden-section">
-      <form className="network-expand" onSubmit={handleSubmit}>
-        <h3 className="section-heading">Hidden Network</h3>
-        <div className="form-row">
-          <input
+    <div className="mt-6">
+      <form className="rounded-md bg-secondary p-4" onSubmit={handleSubmit}>
+        <h3 className="mb-4 text-sm font-semibold">Hidden Network</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
             type="text"
             placeholder="Network name (SSID)"
             value={ssid}
             onChange={(e) => setSsid(e.target.value)}
             disabled={connecting}
+            className="w-auto min-w-[200px]"
           />
-          <input
+          <Input
             type="password"
             placeholder="Password (optional)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={connecting}
+            className="w-auto min-w-[200px]"
           />
-          <button
-            type="submit"
-            className="btn btn-primary btn-sm"
-            disabled={connecting || !ssid.trim()}
-          >
+          <Button type="submit" size="sm" disabled={connecting || !ssid.trim()}>
             {connecting ? "Connecting..." : "Connect"}
-          </button>
-          <button type="button" className="btn btn-sm" onClick={reset}>
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={reset}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>
