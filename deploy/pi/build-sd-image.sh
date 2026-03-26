@@ -357,7 +357,7 @@ EOF
   partuuid_p2=$(echo "$blkid_lines" | grep -oP 'PARTUUID=\K[^ "]+' | tail -1 || true)
 
   # Patch sshd_config to use host keys on data partition
-  sed -i -E 's|^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key|HostKey /data/ssh/ssh_host_\1_key|' "$sshd_cfg"
+  sed -i -E 's,^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key,HostKey /data/ssh/ssh_host_\1_key,' "$sshd_cfg"
 
   # Build Pi-native fstab with PARTUUIDs
   cat > "$stamp_dir/fstab" <<FSTAB

@@ -7,6 +7,12 @@
   vars_files:
     - ../roles/kioskkit/defaults/main.yml
   tasks:
+    - name: Expand tmpfs for build (node-gyp needs >64M)
+      ansible.builtin.command:
+        cmd: mount -o remount,size=512M /tmp
+      changed_when: true
+      failed_when: false
+
     - name: Sync application files
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../../../../"
@@ -34,9 +40,20 @@
         group: "{{ kioskkit_user | default('kiosk') }}"
         recurse: true
 
+    - name: Strip root devDependencies and prepare script (not needed on Pi)
+      ansible.builtin.shell:
+        cmd: >
+          cd {{ kioskkit_install_dir | default('/opt/kioskkit') }} &&
+          node -e "
+            const pkg = require('./package.json');
+            delete pkg.devDependencies;
+            delete pkg.scripts.prepare;
+            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
     - name: Install dependencies and build
       ansible.builtin.command:
-        cmd: "bash -lc 'cd {{ kioskkit_install_dir | default('/opt/kioskkit') }} && pnpm install --frozen-lockfile --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui && pnpm --filter @kioskkit/shared --filter @kioskkit/ui --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin build'"
+        cmd: "bash -lc 'cd {{ kioskkit_install_dir | default('/opt/kioskkit') }} && pnpm install --no-frozen-lockfile --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui && pnpm --filter @kioskkit/shared --filter @kioskkit/ui --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin build'"
       become: true
       become_user: "{{ kioskkit_user | default('kiosk') }}"
       changed_when: true
