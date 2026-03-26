@@ -45,3 +45,79 @@ export async function restoreBackup(backupId: string): Promise<void> {
 export function logout(): Promise<Response> {
   return fetch("/api/auth/logout", { method: "POST" });
 }
+
+// ── OTA helpers ────────────────────────────────────────────────────
+
+export interface ReleaseInfo {
+  version: string;
+  sha256: string;
+  releaseNotes: string | null;
+  publishedAt: string;
+}
+
+export interface OtaStatus {
+  status: "idle" | "uploading" | "downloaded" | "installing" | "confirming" | "rollback";
+  activeSlot: "A" | "B";
+  committedSlot: "A" | "B";
+  currentVersion: string | null;
+  upload: {
+    version: string;
+    progress: number;
+    bytesReceived: number;
+    bytesTotal: number;
+  } | null;
+  lastUpdate: string | null;
+  lastResult: "success" | "failed_health_check" | "failed_upload" | "failed_install" | null;
+}
+
+export async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
+  return trpc["releases.latest"].query();
+}
+
+export async function fetchOtaStatus(deviceId: string): Promise<OtaStatus> {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.status`);
+  if (!res.ok) throw new Error("Failed to fetch OTA status");
+  const json = (await res.json()) as { result: { data: OtaStatus } };
+  return json.result.data;
+}
+
+export async function triggerOtaDownload(deviceId: string, version: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/ota/push`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ version }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({ error: "Download failed" }))) as {
+      error?: string;
+    };
+    throw new Error(err.error ?? "Download failed");
+  }
+}
+
+export async function triggerOtaInstall(deviceId: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.install`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) throw new Error("Install failed");
+}
+
+export async function triggerOtaRollback(deviceId: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.rollback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) throw new Error("Rollback failed");
+}
+
+export async function cancelOtaDownload(deviceId: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.cancelUpload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) throw new Error("Cancel failed");
+}
