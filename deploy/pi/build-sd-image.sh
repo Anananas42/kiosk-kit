@@ -71,9 +71,9 @@ fi
 # shellcheck disable=SC2034
 SSH_PORT=2222
 # shellcheck disable=SC2034
-QEMU_DISK_SIZE=24G
+QEMU_DISK_SIZE=18G
 # shellcheck disable=SC2034
-QEMU_RAM="${SD_BUILD_RAM:-4G}"
+QEMU_RAM="${SD_BUILD_RAM:-6G}"
 # shellcheck disable=SC2034
 _half_cpus=$(( $(nproc) / 2 ))
 # shellcheck disable=SC2034
