@@ -485,19 +485,15 @@ convert_to_raw() {
 shrink_image() {
   log "Shrinking image..."
 
-  # Use virt-sparsify if available, otherwise try PiShrink
-  if command -v virt-sparsify >/dev/null 2>&1; then
-    log "Using virt-sparsify..."
-    local sparse_output="$WORK_DIR/kioskkit-${DEVICE_ID}-sparse.img"
-    virt-sparsify "$FINAL_IMAGE" "$sparse_output"
-    mv "$sparse_output" "$FINAL_IMAGE"
-  else
+  # PiShrink truncates unused partitions so dd writes only the used data.
+  local pishrink="$CACHE_DIR/pishrink.sh"
+  if [[ ! -f "$pishrink" ]]; then
     log "Downloading PiShrink..."
-    local pishrink="$WORK_DIR/pishrink.sh"
+    mkdir -p "$CACHE_DIR"
     curl -fL -o "$pishrink" "https://raw.githubusercontent.com/Drewsif/PiShrink/master/pishrink.sh"
     chmod +x "$pishrink"
-    bash "$pishrink" "$FINAL_IMAGE"
   fi
+  bash "$pishrink" "$FINAL_IMAGE"
 
   log "Image shrunk: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
