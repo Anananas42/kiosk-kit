@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { backupRoute } from "./backup.js";
 import type { Store } from "./db/store.js";
+import { otaUploadRoute } from "./ota-upload.js";
 import { healthRoute } from "./routes/health.js";
 import { appRouter } from "./trpc/router.js";
 
@@ -20,6 +21,7 @@ export function createApp(store: Store, sqlite: SQLiteDatabase) {
 
   app.route("/api/health", healthRoute());
   app.route("/api/backup", backupRoute(sqlite, store));
+  app.route("/api/ota/upload", otaUploadRoute());
 
   app.use(
     "/api/trpc/*",

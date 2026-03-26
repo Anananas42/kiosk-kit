@@ -330,6 +330,29 @@ export const ItemCountInputSchema = z.object({
   preorder: z.boolean().optional(),
 });
 
+// ── OTA schemas ─────────────────────────────────────────────────────
+
+export const OtaStatusSchema = z.object({
+  status: z.enum(["idle", "uploading", "downloaded", "installing", "confirming", "rollback"]),
+  activeSlot: z.enum(["A", "B"]),
+  committedSlot: z.enum(["A", "B"]),
+  currentVersion: z.string().nullable(),
+  upload: z
+    .object({
+      version: z.string(),
+      progress: z.number(),
+      bytesReceived: z.number(),
+      bytesTotal: z.number(),
+    })
+    .nullable(),
+  lastUpdate: z.string().nullable(),
+  lastResult: z
+    .enum(["success", "failed_health_check", "failed_upload", "failed_install"])
+    .nullable(),
+});
+
+export type OtaStatus = z.infer<typeof OtaStatusSchema>;
+
 // ── Release schemas ─────────────────────────────────────────────────
 
 export const ReleaseInfoSchema = z.object({
