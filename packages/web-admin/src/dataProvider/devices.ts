@@ -37,8 +37,22 @@ export const devicesDataProvider: DataProvider = {
 
   update: async (_resource, params) => {
     const id = toStringId(params.id);
-    const { name } = params.data as { name: string };
-    const data = await trpc["devices.update"].mutate({ id, name });
+    const { name, userId } = params.data as { name?: string; userId?: string | null };
+    const previousUserId = (params.previousData as { userId?: string | null })?.userId;
+
+    const promises: Promise<unknown>[] = [];
+
+    if (name !== undefined) {
+      promises.push(trpc["devices.update"].mutate({ id, name }));
+    }
+
+    if (userId !== previousUserId) {
+      promises.push(trpc["devices.assign"].mutate({ id, userId: userId ?? null }));
+    }
+
+    await Promise.all(promises);
+
+    const data = await trpc["devices.get"].query({ id });
     return { data };
   },
 
