@@ -28,3 +28,4 @@
   ansible.builtin.systemd:
     name: ssh.service
     state: restarted
+  failed_when: false
