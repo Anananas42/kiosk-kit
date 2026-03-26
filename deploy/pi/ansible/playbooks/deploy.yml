@@ -60,6 +60,20 @@
         group: "{{ kioskkit_user | default('kiosk') }}"
         mode: "0644"
 
+    - name: Ensure data directory exists
+      ansible.builtin.file:
+        path: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/data"
+        state: directory
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        mode: "0755"
+
+    - name: Deploy systemd service
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/kioskkit/templates/kioskkit.service.j2"
+        dest: /etc/systemd/system/kioskkit.service
+        mode: "0644"
+
     - name: Clear Chromium cache
       ansible.builtin.file:
         path: "/home/{{ kioskkit_user | default('kiosk') }}/.cache/chromium"
@@ -69,6 +83,7 @@
       ansible.builtin.systemd:
         name: kioskkit.service
         state: restarted
+        daemon_reload: true
 
     - name: Restart sway (force Chromium reload)
       ansible.builtin.command:

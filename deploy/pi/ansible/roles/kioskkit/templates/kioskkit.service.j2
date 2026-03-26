@@ -9,7 +9,7 @@ User={{ kioskkit_user }}
 Group={{ kioskkit_user }}
 WorkingDirectory={{ kioskkit_install_dir }}
 ExecStart=/usr/bin/node packages/kiosk-server/dist/index.js
-EnvironmentFile={{ kioskkit_install_dir }}/.env
+EnvironmentFile=-{{ kioskkit_install_dir }}/.env
 Restart=always
 RestartSec=5
 
