@@ -529,7 +529,23 @@ stamp_device() {
   log "  Size:   $size"
   log ""
   log "Flash with:"
-  log "  sudo dd if=$output_file of=/dev/sdX bs=4M status=progress"
+  local sd_cards
+  sd_cards=$(lsblk -d -n -o NAME,SIZE,TRAN,MODEL -b 2>/dev/null \
+    | awk '$3 == "usb" && $2+0 >= 2147483648 && $2+0 <= 274877906944 {print $1, $2, $4}' \
+    | while read -r name sz model; do
+        label="blank"
+        if lsblk -n -o FSTYPE "/dev/$name" 2>/dev/null | grep -q '[a-z]'; then
+          label="has data"
+        fi
+        printf "/dev/%s (%.0fG, %s, %s)\n" "$name" "$(echo "$sz / 1073741824" | bc)" "$model" "$label"
+      done)
+  if [[ -n "$sd_cards" ]]; then
+    while IFS= read -r card; do
+      log "  sudo dd if=$output_file of=${card%% *} bs=4M status=progress  # ${card#* }"
+    done <<< "$sd_cards"
+  else
+    log "  sudo dd if=$output_file of=/dev/sdX bs=4M status=progress"
+  fi
   log "  # or use balenaEtcher"
 }
 
