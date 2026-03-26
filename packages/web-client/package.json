@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@kioskkit/shared": "workspace:*",
+    "@kioskkit/ui": "workspace:*",
     "@trpc/client": "^11.15.0",
     "@trpc/server": "^11.15.0",
     "react": "^19.2.4",
@@ -19,12 +20,14 @@
   },
   "devDependencies": {
     "@kioskkit/web-server": "workspace:*",
+    "@tailwindcss/vite": "^4.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^29.0.1",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
     "vite": "^8.0.1"
   }
