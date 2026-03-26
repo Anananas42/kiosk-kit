@@ -1,21 +1,9 @@
 import { Badge, Card, CardContent } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { type Device, fetchDevice, fetchDeviceStatus } from "./api.js";
-
-function formatRelativeTime(isoString: string): string {
-  const now = Date.now();
-  const then = new Date(isoString).getTime();
-  const diffMs = now - then;
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
-  const diffDays = Math.floor(diffHr / 24);
-  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
-}
+import { type Device, fetchBackups, fetchDevice, fetchDeviceStatus } from "./api.js";
+import { BackupSection } from "./BackupSection.js";
+import { formatRelativeTime } from "./format.js";
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +12,9 @@ export function DeviceDetail() {
   const [error, setError] = useState(false);
   const [reachable, setReachable] = useState<boolean | null>(null);
   const [iframeLoading, setIframeLoading] = useState(true);
+  const [backupList, setBackupList] = useState<
+    { id: string; sizeBytes: number; createdAt: string }[]
+  >([]);
 
   useEffect(() => {
     if (!id) return;
@@ -35,6 +26,9 @@ export function DeviceDetail() {
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+    fetchBackups(id)
+      .then(setBackupList)
+      .catch(() => {});
   }, [id]);
 
   if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
@@ -160,6 +154,9 @@ export function DeviceDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Backups section */}
+      {!loading && !error && <BackupSection backups={backupList} />}
     </div>
   );
 }

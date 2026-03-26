@@ -14,6 +14,31 @@ import {
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { type Device, fetchDeviceStatus, fetchDevices } from "./api.js";
+import { getBackupDotColor } from "./BackupSection.js";
+import { formatRelativeTime } from "./format.js";
+
+function BackupIndicator({ lastBackupAt }: { lastBackupAt?: string | null }) {
+  const dotColor = getBackupDotColor(lastBackupAt);
+
+  if (!lastBackupAt) {
+    return (
+      <span className="flex items-center gap-1.5 text-xs" title="No backups yet">
+        <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
+        <span className="text-muted-foreground">No backups</span>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="flex items-center gap-1.5 text-xs"
+      title={`Last backup: ${formatRelativeTime(lastBackupAt)}`}
+    >
+      <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
+      <span className="text-muted-foreground">{formatRelativeTime(lastBackupAt)}</span>
+    </span>
+  );
+}
 
 export function DeviceList() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -59,6 +84,7 @@ export function DeviceList() {
               <TableRow>
                 <TableHead>Status</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Backup</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,6 +102,9 @@ export function DeviceList() {
                     >
                       {d.name}
                     </Link>
+                  </TableCell>
+                  <TableCell>
+                    <BackupIndicator lastBackupAt={d.lastBackupAt} />
                   </TableCell>
                 </TableRow>
               ))}

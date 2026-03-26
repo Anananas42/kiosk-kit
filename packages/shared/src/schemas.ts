@@ -60,6 +60,7 @@ export const DeviceSchema = z.object({
   tailscaleIp: z.string().nullable().optional(),
   online: z.boolean(),
   lastSeen: z.string().nullable(),
+  lastBackupAt: z.string().nullable().optional(),
   hostname: z.string(),
   createdAt: z.coerce.string(),
 });
