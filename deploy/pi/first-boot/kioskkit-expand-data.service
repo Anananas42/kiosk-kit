@@ -3,7 +3,7 @@ Description=Expand data partition to fill SD card
 DefaultDependencies=no
 Before=local-fs.target
 After=systemd-udevd.service
-ConditionPathExists=/data/.expand-needed
+ConditionPathExists=/etc/.expand-data-needed
 
 [Service]
 Type=oneshot

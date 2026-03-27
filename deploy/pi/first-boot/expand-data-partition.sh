@@ -30,4 +30,4 @@ resize2fs "$PART" || {
 echo "Data partition expanded successfully."
 
 # Remove marker so this service doesn't run again
-rm -f /data/.expand-needed
+rm -f /etc/.expand-data-needed

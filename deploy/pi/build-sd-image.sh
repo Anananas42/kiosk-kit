@@ -567,6 +567,10 @@ FSTAB
     # service activation. Our first-boot services use marker files instead.
     echo "truncate /etc/machine-id"
 
+    # Marker for first-boot partition expansion (on rootfs so it's visible before
+    # /data is mounted — the expand service runs Before=local-fs.target)
+    echo "touch /etc/.expand-data-needed"
+
     # === data partition (p4) ===
     echo "umount /"
     echo "mount /dev/sda4 /"
@@ -575,9 +579,6 @@ FSTAB
     # match the Pi's new machine-id, causing journald to fall back to volatile mode.
     echo "rm-rf /journal"
     echo "mkdir-p /journal"
-
-    # Marker for first-boot partition expansion
-    echo "touch /.expand-needed"
 
     # Device config
     echo "mkdir-p /kioskkit-config"
