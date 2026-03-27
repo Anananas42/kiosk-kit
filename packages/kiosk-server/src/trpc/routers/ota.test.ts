@@ -1,3 +1,4 @@
+import { OtaResult, OtaStep } from "@kioskkit/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Store } from "../../db/store.js";
 import { appRouter } from "../router.js";
@@ -71,9 +72,9 @@ describe("admin.ota.status", () => {
   it("returns correct status when all files exist", async () => {
     mockFiles({
       "/data/ota/state.json": JSON.stringify({
-        status: "idle",
+        status: OtaStep.Idle,
         lastUpdate: "2026-03-01T00:00:00Z",
-        lastResult: "success",
+        lastResult: OtaResult.Success,
       }),
       "/data/ota/boot-slot": "A",
       "/etc/kioskkit/version": "1.0.0",
@@ -83,13 +84,13 @@ describe("admin.ota.status", () => {
     const result = await caller["admin.ota.status"]();
 
     expect(result).toEqual({
-      status: "idle",
+      status: OtaStep.Idle,
       activeSlot: "A",
       committedSlot: "A",
       currentVersion: "1.0.0",
       upload: null,
       lastUpdate: "2026-03-01T00:00:00Z",
-      lastResult: "success",
+      lastResult: OtaResult.Success,
     });
   });
 
@@ -100,7 +101,7 @@ describe("admin.ota.status", () => {
     const result = await caller["admin.ota.status"]();
 
     expect(result).toEqual({
-      status: "idle",
+      status: OtaStep.Idle,
       activeSlot: "A",
       committedSlot: "A",
       currentVersion: null,
@@ -130,7 +131,7 @@ describe("admin.ota.status", () => {
       bytesTotal: 1000000,
     };
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "uploading" }),
+      "/data/ota/state.json": JSON.stringify({ status: OtaStep.Uploading }),
       "/data/ota/boot-slot": "A",
       "/etc/kioskkit/version": "1.0.0",
       "/data/ota/pending/progress.json": JSON.stringify(progress),
@@ -139,7 +140,7 @@ describe("admin.ota.status", () => {
     const caller = createCaller({ store });
     const result = await caller["admin.ota.status"]();
 
-    expect(result.status).toBe("uploading");
+    expect(result.status).toBe(OtaStep.Uploading);
     expect(result.upload).toEqual(progress);
   });
 });
@@ -147,7 +148,7 @@ describe("admin.ota.status", () => {
 describe("admin.ota.install", () => {
   it("rejects if no downloaded image", async () => {
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "idle" }),
+      "/data/ota/state.json": JSON.stringify({ status: OtaStep.Idle }),
     });
 
     const caller = createCaller({ store });
@@ -159,7 +160,7 @@ describe("admin.ota.install", () => {
 
   it("rejects if already installing", async () => {
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "installing" }),
+      "/data/ota/state.json": JSON.stringify({ status: OtaStep.Installing }),
     });
 
     const caller = createCaller({ store });
@@ -171,7 +172,7 @@ describe("admin.ota.install", () => {
 
   it("calls install script when image is downloaded", async () => {
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "downloaded" }),
+      "/data/ota/state.json": JSON.stringify({ status: OtaStep.Downloaded }),
     });
     mockSudoSuccess();
 
@@ -190,7 +191,7 @@ describe("admin.ota.install", () => {
 describe("admin.ota.cancelUpload", () => {
   it("rejects if not uploading", async () => {
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "idle" }),
+      "/data/ota/state.json": JSON.stringify({ status: OtaStep.Idle }),
     });
 
     const caller = createCaller({ store });
@@ -203,9 +204,9 @@ describe("admin.ota.cancelUpload", () => {
   it("cleans up and resets state", async () => {
     mockFiles({
       "/data/ota/state.json": JSON.stringify({
-        status: "uploading",
+        status: OtaStep.Uploading,
         lastUpdate: "2026-03-01T00:00:00Z",
-        lastResult: "success",
+        lastResult: OtaResult.Success,
       }),
     });
 
@@ -223,7 +224,7 @@ describe("admin.ota.cancelUpload", () => {
 describe("admin.ota.rollback", () => {
   it("calls rollback script from any state", async () => {
     mockFiles({
-      "/data/ota/state.json": JSON.stringify({ status: "confirming" }),
+      "/data/ota/state.json": JSON.stringify({ status: OtaStep.Confirming }),
     });
     mockSudoSuccess();
 

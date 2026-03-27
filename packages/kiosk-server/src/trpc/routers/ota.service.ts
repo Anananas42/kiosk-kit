@@ -1,7 +1,7 @@
 import { execFile as execFileCb } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import type { OtaStatus } from "@kioskkit/shared";
+import { type OtaStatus, OtaStep } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 
 const execFile = promisify(execFileCb);
@@ -81,11 +81,11 @@ export async function getOtaStatus(): Promise<OtaStatus> {
   const activeSlot = (bootSlot === "A" || bootSlot === "B" ? bootSlot : "A") as "A" | "B";
 
   return {
-    status: state?.status ?? "idle",
+    status: state?.status ?? OtaStep.Idle,
     activeSlot,
     committedSlot: activeSlot,
     currentVersion: version ?? null,
-    upload: state?.status === "uploading" && progress ? progress : null,
+    upload: state?.status === OtaStep.Uploading && progress ? progress : null,
     lastUpdate: state?.lastUpdate ?? null,
     lastResult: state?.lastResult ?? null,
   };
@@ -94,14 +94,14 @@ export async function getOtaStatus(): Promise<OtaStatus> {
 export async function installAndReboot(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
-  if (currentState?.status === "installing") {
+  if (currentState?.status === OtaStep.Installing) {
     throw new TRPCError({
       code: "CONFLICT",
       message: "Installation is already in progress",
     });
   }
 
-  if (currentState?.status !== "downloaded") {
+  if (currentState?.status !== OtaStep.Downloaded) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: "No downloaded image available for installation",
@@ -110,7 +110,7 @@ export async function installAndReboot(): Promise<void> {
 
   await writeStateFile({
     ...currentState,
-    status: "installing",
+    status: OtaStep.Installing,
   });
 
   await runSudoScript("ota-install.sh", [ROOTFS_IMAGE]);
@@ -119,7 +119,7 @@ export async function installAndReboot(): Promise<void> {
 export async function cancelUpload(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
-  if (currentState?.status !== "uploading") {
+  if (currentState?.status !== OtaStep.Uploading) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: "No upload in progress to cancel",
@@ -129,7 +129,7 @@ export async function cancelUpload(): Promise<void> {
   await rm(PENDING_DIR, { recursive: true, force: true });
 
   await writeStateFile({
-    status: "idle",
+    status: OtaStep.Idle,
     lastUpdate: currentState.lastUpdate,
     lastResult: currentState.lastResult,
   } as StateJson);
@@ -139,7 +139,7 @@ export async function rollbackAndReboot(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
   await writeStateFile({
-    status: "rollback",
+    status: OtaStep.Rollback,
     lastUpdate: currentState?.lastUpdate ?? null,
     lastResult: currentState?.lastResult ?? null,
   } as StateJson);

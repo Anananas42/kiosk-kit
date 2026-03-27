@@ -333,8 +333,24 @@ export const ItemCountInputSchema = z.object({
 
 // ── OTA schemas ─────────────────────────────────────────────────────
 
+export enum OtaStep {
+  Idle = "idle",
+  Uploading = "uploading",
+  Downloaded = "downloaded",
+  Installing = "installing",
+  Confirming = "confirming",
+  Rollback = "rollback",
+}
+
+export enum OtaResult {
+  Success = "success",
+  FailedHealthCheck = "failed_health_check",
+  FailedUpload = "failed_upload",
+  FailedInstall = "failed_install",
+}
+
 export const OtaStatusSchema = z.object({
-  status: z.enum(["idle", "uploading", "downloaded", "installing", "confirming", "rollback"]),
+  status: z.nativeEnum(OtaStep),
   activeSlot: z.enum(["A", "B"]),
   committedSlot: z.enum(["A", "B"]),
   currentVersion: z.string().nullable(),
@@ -347,9 +363,7 @@ export const OtaStatusSchema = z.object({
     })
     .nullable(),
   lastUpdate: z.string().nullable(),
-  lastResult: z
-    .enum(["success", "failed_health_check", "failed_upload", "failed_install"])
-    .nullable(),
+  lastResult: z.nativeEnum(OtaResult).nullable(),
 });
 
 export type OtaStatus = z.infer<typeof OtaStatusSchema>;

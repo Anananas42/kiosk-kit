@@ -6,7 +6,7 @@ import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
 import { useBackups } from "../hooks/backups.js";
 import { useDevice, useDeviceStatus } from "../hooks/devices.js";
-import { deriveDeviceStatus } from "../lib/device-status.js";
+import { DeviceStatus, deriveDeviceStatus } from "../lib/device-status.js";
 import { formatRelativeTime } from "../lib/format.js";
 
 export function DeviceDetail() {
@@ -41,7 +41,7 @@ export function DeviceDetail() {
         </div>
         {!isLoading && !error && status !== null && (
           <div className="flex items-center gap-2">
-            {device?.lastSeen && status === "offline" && (
+            {device?.lastSeen && status === DeviceStatus.Offline && (
               <span className="text-muted-foreground text-xs">
                 Last seen {formatRelativeTime(device.lastSeen)}
               </span>
@@ -69,49 +69,51 @@ export function DeviceDetail() {
       )}
 
       {/* Offline / App Not Connected state */}
-      {!isLoading && !error && (status === "offline" || status === "app-not-connected") && (
-        <Card className="flex flex-1 items-center justify-center">
-          <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
-            <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
-              <svg
-                className="text-muted-foreground h-7 w-7"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                role="img"
-                aria-label="Disconnected"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d={
-                    status === "offline"
-                      ? "M3 3l18 18M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"
-                      : "M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-                  }
-                />
-              </svg>
-            </div>
-            <div>
-              <p className="text-foreground font-medium">
-                {status === "offline" ? "Device is offline" : "App not connected"}
-              </p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {status === "offline"
-                  ? "The management interface is available when the device is connected to the network."
-                  : "The device is on the network but the kiosk app is not responding."}
-              </p>
-              {device?.lastSeen && status === "offline" && (
-                <p className="text-muted-foreground mt-2 text-xs">
-                  Last seen {formatRelativeTime(device.lastSeen)}
+      {!isLoading &&
+        !error &&
+        (status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected) && (
+          <Card className="flex flex-1 items-center justify-center">
+            <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
+              <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
+                <svg
+                  className="text-muted-foreground h-7 w-7"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  role="img"
+                  aria-label="Disconnected"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d={
+                      status === DeviceStatus.Offline
+                        ? "M3 3l18 18M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"
+                        : "M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                    }
+                  />
+                </svg>
+              </div>
+              <div>
+                <p className="text-foreground font-medium">
+                  {status === DeviceStatus.Offline ? "Device is offline" : "App not connected"}
                 </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {status === DeviceStatus.Offline
+                    ? "The management interface is available when the device is connected to the network."
+                    : "The device is on the network but the kiosk app is not responding."}
+                </p>
+                {device?.lastSeen && status === DeviceStatus.Offline && (
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    Last seen {formatRelativeTime(device.lastSeen)}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Loading state */}
       {isLoading && (
@@ -124,7 +126,7 @@ export function DeviceDetail() {
       )}
 
       {/* Iframe for online device */}
-      {!isLoading && !error && status === "online" && (
+      {!isLoading && !error && status === DeviceStatus.Online && (
         <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
@@ -144,7 +146,9 @@ export function DeviceDetail() {
       )}
 
       {/* OTA update card — only when device is online */}
-      {!isLoading && !error && status === "online" && id && <OtaUpdateCard deviceId={id} />}
+      {!isLoading && !error && status === DeviceStatus.Online && id && (
+        <OtaUpdateCard deviceId={id} />
+      )}
 
       {/* Backups section */}
       {!isLoading &&

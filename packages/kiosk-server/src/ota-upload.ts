@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { Writable } from "node:stream";
+import { OtaResult, OtaStep } from "@kioskkit/shared";
 import { Hono } from "hono";
 
 const PENDING_DIR = "/data/ota/pending";
@@ -53,7 +54,7 @@ export function otaUploadRoute() {
       // No state file — fresh device
     }
 
-    if (currentState?.status === "uploading") {
+    if (currentState?.status === OtaStep.Uploading) {
       return c.json({ error: "An upload is already in progress" }, 409);
     }
 
@@ -64,7 +65,7 @@ export function otaUploadRoute() {
       lastUpdate: (currentState as Record<string, unknown>)?.lastUpdate ?? null,
       lastResult: (currentState as Record<string, unknown>)?.lastResult ?? null,
     };
-    await writeState({ status: "uploading", version, ...stateBase });
+    await writeState({ status: OtaStep.Uploading, version, ...stateBase });
 
     // Stream body to disk while computing SHA256
     const hash = createHash("sha256");
@@ -72,7 +73,7 @@ export function otaUploadRoute() {
 
     const body = c.req.raw.body;
     if (!body) {
-      await writeState({ status: "idle", ...stateBase });
+      await writeState({ status: OtaStep.Idle, ...stateBase });
       return c.json({ error: "Empty request body" }, 400);
     }
 
@@ -129,17 +130,17 @@ export function otaUploadRoute() {
       if (actualSha256 !== sha256) {
         await rm(PENDING_DIR, { recursive: true, force: true });
         await writeState({
-          status: "idle",
+          status: OtaStep.Idle,
           ...stateBase,
           lastUpdate: new Date().toISOString(),
-          lastResult: "failed_upload",
+          lastResult: OtaResult.FailedUpload,
         });
         return c.json({ error: `Checksum mismatch: expected ${sha256}, got ${actualSha256}` }, 422);
       }
 
       // Success — mark as downloaded (ready for install)
       await writeState({
-        status: "downloaded",
+        status: OtaStep.Downloaded,
         version,
         ...stateBase,
         lastUpdate: new Date().toISOString(),
@@ -149,10 +150,10 @@ export function otaUploadRoute() {
     } catch (err) {
       await rm(PENDING_DIR, { recursive: true, force: true }).catch(() => {});
       await writeState({
-        status: "idle",
+        status: OtaStep.Idle,
         ...stateBase,
         lastUpdate: new Date().toISOString(),
-        lastResult: "failed_upload",
+        lastResult: OtaResult.FailedUpload,
       });
       const message = err instanceof Error ? err.message : "Upload failed";
       return c.json({ error: message }, 500);

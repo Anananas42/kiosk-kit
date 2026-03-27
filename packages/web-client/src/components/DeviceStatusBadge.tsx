@@ -1,17 +1,21 @@
 import { Badge } from "@kioskkit/ui";
-import type { DeviceStatus } from "../lib/device-status.js";
+import { DeviceStatus } from "../lib/device-status.js";
 
 const config: Record<
   DeviceStatus,
   { label: string; dotClass: string; variant: "default" | "secondary" }
 > = {
-  online: { label: "Online", dotClass: "bg-green-500", variant: "default" },
-  "app-not-connected": {
+  [DeviceStatus.Online]: { label: "Online", dotClass: "bg-green-500", variant: "default" },
+  [DeviceStatus.AppNotConnected]: {
     label: "App Not Connected",
     dotClass: "bg-orange-400",
     variant: "secondary",
   },
-  offline: { label: "Offline", dotClass: "bg-muted-foreground", variant: "secondary" },
+  [DeviceStatus.Offline]: {
+    label: "Offline",
+    dotClass: "bg-muted-foreground",
+    variant: "secondary",
+  },
 };
 
 export function DeviceStatusBadge({ status }: { status: DeviceStatus }) {

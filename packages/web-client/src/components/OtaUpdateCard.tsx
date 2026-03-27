@@ -1,4 +1,4 @@
-import type { OtaStatus } from "@kioskkit/shared";
+import { OtaResult, type OtaStatus, OtaStep } from "@kioskkit/shared";
 import {
   Button,
   Card,
@@ -24,64 +24,63 @@ import {
 } from "../hooks/ota.js";
 import { formatFileSize } from "../lib/format.js";
 
-type CardState =
-  | "loading"
-  | "error"
-  | "up-to-date"
-  | "update-available"
-  | "downloading"
-  | "downloaded"
-  | "installing"
-  | "success"
-  | "failed";
+enum CardState {
+  UpToDate = "up-to-date",
+  UpdateAvailable = "update-available",
+  Downloading = "downloading",
+  Downloaded = "downloaded",
+  Installing = "installing",
+  Success = "success",
+  Failed = "failed",
+}
 
-function deriveCardState(
-  otaStatus: OtaStatus | undefined,
-  latestVersion: string | undefined,
-): CardState {
-  if (!otaStatus) return "loading";
-
-  const { status, lastResult, currentVersion } = otaStatus;
-
-  if (status === "uploading") return "downloading";
-  if (status === "downloaded") return "downloaded";
-  if (status === "installing") return "installing";
-  if (status === "rollback") return "failed";
-  if (lastResult === "success") return "success";
-  if (
-    lastResult === "failed_health_check" ||
-    lastResult === "failed_upload" ||
-    lastResult === "failed_install"
-  )
-    return "failed";
-
-  if (latestVersion && currentVersion !== latestVersion) return "update-available";
-  return "up-to-date";
+function deriveCardState(otaStatus: OtaStatus, latestVersion?: string): CardState {
+  switch (otaStatus.status) {
+    case OtaStep.Uploading:
+      return CardState.Downloading;
+    case OtaStep.Downloaded:
+      return CardState.Downloaded;
+    case OtaStep.Installing:
+      return CardState.Installing;
+    case OtaStep.Rollback:
+      return CardState.Failed;
+    case OtaStep.Idle:
+    case OtaStep.Confirming: {
+      if (otaStatus.lastResult === OtaResult.Success) return CardState.Success;
+      if (otaStatus.lastResult !== null) return CardState.Failed;
+      if (latestVersion && otaStatus.currentVersion !== latestVersion)
+        return CardState.UpdateAvailable;
+      return CardState.UpToDate;
+    }
+  }
 }
 
 export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: release } = useLatestRelease();
-
-  const { data: otaStatus, error: otaError } = useOtaStatus(deviceId, {
+  const {
+    data: otaStatus,
+    isLoading,
+    error: otaError,
+  } = useOtaStatus(deviceId, {
     refetchInterval: (query) => {
       const data = (query as { state: { data: OtaStatus | undefined } }).state.data;
       if (!data) return false;
-      if (data.status === "uploading") return 3000;
-      if (data.status === "installing") return 5000;
+      if (data.status === OtaStep.Uploading) return 3000;
+      if (data.status === OtaStep.Installing) return 5000;
       return false;
     },
   });
 
   const cardState = useMemo(
-    () => (otaError ? ("error" as CardState) : deriveCardState(otaStatus, release?.version)),
-    [otaStatus, release?.version, otaError],
+    () => (otaStatus ? deriveCardState(otaStatus, release?.version) : null),
+    [otaStatus, release?.version],
   );
 
   // Poll device health during install to detect when device comes back online
   useDeviceStatus(deviceId, {
-    refetchInterval: cardState === "installing" ? 5000 : false,
+    refetchInterval: cardState === CardState.Installing ? 5000 : false,
   });
 
   const otaDownload = useOtaDownload(deviceId);
@@ -122,7 +121,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
     });
   };
 
-  if (cardState === "loading") {
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-4">
@@ -133,7 +132,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
     );
   }
 
-  if (cardState === "error") {
+  if (otaError || !otaStatus || !cardState) {
     return (
       <Card>
         <CardContent className="py-4">
@@ -143,9 +142,9 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
     );
   }
 
-  const currentVersion = otaStatus?.currentVersion;
+  const currentVersion = otaStatus.currentVersion;
   const latestVersion = release?.version;
-  const uploadProgress = otaStatus?.upload;
+  const uploadProgress = otaStatus.upload;
   const isNotLatest = currentVersion && latestVersion && currentVersion !== latestVersion;
 
   return (
@@ -160,11 +159,11 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
 
         {actionError && <p className="text-destructive text-xs">{actionError}</p>}
 
-        {cardState === "up-to-date" && (
+        {cardState === CardState.UpToDate && (
           <p className="text-muted-foreground text-sm">Running v{currentVersion} (latest)</p>
         )}
 
-        {cardState === "update-available" && (
+        {cardState === CardState.UpdateAvailable && (
           <div className="flex items-center justify-between">
             <p className="text-sm">v{latestVersion} available</p>
             <Button size="sm" onClick={handleDownload} disabled={actionLoading}>
@@ -173,7 +172,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
           </div>
         )}
 
-        {cardState === "downloading" && (
+        {cardState === CardState.Downloading && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <p className="text-sm">Downloading v{uploadProgress?.version ?? latestVersion}…</p>
@@ -196,7 +195,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
           </div>
         )}
 
-        {cardState === "downloaded" && (
+        {cardState === CardState.Downloaded && (
           <div className="flex items-center justify-between">
             <p className="text-sm">Ready to install v{latestVersion}</p>
             <div className="flex gap-2">
@@ -232,23 +231,23 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
           </div>
         )}
 
-        {cardState === "installing" && (
+        {cardState === CardState.Installing && (
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
             <p className="text-sm">Device is rebooting…</p>
           </div>
         )}
 
-        {cardState === "success" && (
+        {cardState === CardState.Success && (
           <p className="text-sm text-green-600">Updated to v{currentVersion}</p>
         )}
 
-        {cardState === "failed" && (
+        {cardState === CardState.Failed && (
           <div className="flex items-center justify-between">
             <p className="text-destructive text-sm">
-              {otaStatus?.lastResult === "failed_health_check"
+              {otaStatus.lastResult === OtaResult.FailedHealthCheck
                 ? `Rolled back to v${currentVersion}`
-                : `Update failed`}
+                : "Update failed"}
             </p>
             {isNotLatest && (
               <Button size="sm" variant="outline" onClick={handleDownload} disabled={actionLoading}>
@@ -258,7 +257,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
           </div>
         )}
 
-        {(cardState === "up-to-date" || cardState === "success") && isNotLatest && (
+        {(cardState === CardState.UpToDate || cardState === CardState.Success) && isNotLatest && (
           <Button size="sm" variant="outline" onClick={handleRollback} disabled={actionLoading}>
             Rollback
           </Button>
