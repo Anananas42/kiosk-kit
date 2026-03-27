@@ -21,7 +21,8 @@ echo "Authenticating Tailscale as kioskkit-${DEVICE_ID} (stage:${STAGE})..."
 
 tailscale up \
   --authkey="$TAILSCALE_AUTH_KEY" \
-  --hostname="kioskkit-${DEVICE_ID}"
+  --hostname="kioskkit-${DEVICE_ID}" \
+  --ssh
 
 echo "Tailscale authenticated successfully."
 
