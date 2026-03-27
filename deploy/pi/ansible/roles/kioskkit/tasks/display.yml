@@ -28,6 +28,11 @@
     mode: "0644"
   notify: Reload systemd
 
+- name: Enable getty on tty1
+  ansible.builtin.systemd:
+    name: getty@tty1.service
+    enabled: true
+
 - name: Install Chromium managed policies directory
   ansible.builtin.file:
     path: /etc/chromium/policies/managed
