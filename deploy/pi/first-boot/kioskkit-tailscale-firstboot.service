@@ -2,6 +2,7 @@
 Description=KioskKit Tailscale First Boot Authentication
 After=network-online.target tailscaled.service
 Wants=network-online.target
+Requires=tailscaled.service
 ConditionPathExists=/etc/kioskkit/tailscale-firstboot.conf
 
 [Service]

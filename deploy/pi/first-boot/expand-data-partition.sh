@@ -29,7 +29,13 @@ fi
 partx --update --nr "$PART_NUM" "$DISK"
 sleep 1
 
-# Resize filesystem to match (works online on mounted ext4)
+# Filesystem check required for offline resize (partition is not yet mounted)
+e2fsck -fy "$PART" || {
+  echo "e2fsck failed"
+  exit 1
+}
+
+# Resize filesystem to fill expanded partition
 resize2fs "$PART" || {
   echo "resize2fs failed"
   exit 1
