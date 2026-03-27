@@ -619,7 +619,7 @@ FSTAB
 convert_to_raw() {
   log "Converting qcow2 to raw image..."
   local raw_output="$STAMP_DIR/image.img"
-  qemu-img convert -f qcow2 -O raw "$STAMP_DIR/device.qcow2" "$raw_output"
+  qemu-img convert -f qcow2 -O raw -S 4k "$STAMP_DIR/device.qcow2" "$raw_output"
   FINAL_IMAGE="$raw_output"
   log "Raw image: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
