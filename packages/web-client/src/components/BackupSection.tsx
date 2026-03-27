@@ -14,28 +14,8 @@ import {
   DialogTrigger,
 } from "@kioskkit/ui";
 import { useState } from "react";
-import { fetchBackupDownloadUrl, restoreBackup } from "./api.js";
-import { formatFileSize, formatRelativeTime } from "./format.js";
-
-/**
- * Backup freshness thresholds (in hours) mapped to Tailwind dot colors.
- * Green = less than 24 h, yellow = 24–72 h, red = older than 72 h.
- */
-export const BACKUP_STATUS_COLORS = {
-  fresh: "bg-green-500", // < 24 hours
-  stale: "bg-yellow-500", // 24–72 hours
-  outdated: "bg-red-500", // > 72 hours
-  none: "bg-gray-400", // no backup
-} as const;
-
-/** Returns the dot color class for a given backup timestamp. */
-export function getBackupDotColor(lastBackupAt?: string | null): string {
-  if (!lastBackupAt) return BACKUP_STATUS_COLORS.none;
-  const hoursAgo = (Date.now() - new Date(lastBackupAt).getTime()) / (1000 * 60 * 60);
-  if (hoursAgo < 24) return BACKUP_STATUS_COLORS.fresh;
-  if (hoursAgo < 72) return BACKUP_STATUS_COLORS.stale;
-  return BACKUP_STATUS_COLORS.outdated;
-}
+import { useBackupDownload, useRestoreBackup } from "../hooks/backups.js";
+import { formatFileSize, formatRelativeTime } from "../lib/format.js";
 
 interface Backup {
   id: string;
@@ -51,36 +31,8 @@ interface BackupSectionProps {
 
 export function BackupSection({ backups, deviceName, deviceOnline }: BackupSectionProps) {
   const [showAll, setShowAll] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [restoringId, setRestoringId] = useState<string | null>(null);
-  const [restoreResult, setRestoreResult] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-
-  async function handleDownload(backupId: string) {
-    setDownloadingId(backupId);
-    try {
-      const url = await fetchBackupDownloadUrl(backupId);
-      window.open(url, "_blank");
-    } finally {
-      setDownloadingId(null);
-    }
-  }
-
-  async function handleRestore(backupId: string) {
-    setRestoringId(backupId);
-    setRestoreResult(null);
-    try {
-      await restoreBackup(backupId);
-      setRestoreResult({ type: "success", message: "Backup restored successfully." });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Restore failed";
-      setRestoreResult({ type: "error", message });
-    } finally {
-      setRestoringId(null);
-    }
-  }
+  const download = useBackupDownload();
+  const restore = useRestoreBackup(backups[0]?.id ?? "");
 
   return (
     <Card>
@@ -93,15 +45,14 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
         )}
       </CardHeader>
       <CardContent>
-        {restoreResult && (
-          <div
-            className={`mb-3 rounded-md px-3 py-2 text-sm ${
-              restoreResult.type === "success"
-                ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                : "bg-destructive/10 text-destructive"
-            }`}
-          >
-            {restoreResult.message}
+        {restore.error && (
+          <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {restore.error instanceof Error ? restore.error.message : "Restore failed"}
+          </div>
+        )}
+        {restore.isSuccess && (
+          <div className="mb-3 rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+            Backup restored successfully.
           </div>
         )}
         {backups.length === 0 ? (
@@ -123,9 +74,11 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={deviceOnline === false || restoringId !== null}
+                          disabled={deviceOnline === false || restore.isPending}
                         >
-                          {restoringId === b.id ? "Restoring\u2026" : "Restore"}
+                          {restore.isPending && restore.variables === b.id
+                            ? "Restoring\u2026"
+                            : "Restore"}
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -142,7 +95,7 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                             <Button variant="outline">Cancel</Button>
                           </DialogClose>
                           <DialogClose asChild>
-                            <Button variant="destructive" onClick={() => handleRestore(b.id)}>
+                            <Button variant="destructive" onClick={() => restore.mutate(b.id)}>
                               Restore
                             </Button>
                           </DialogClose>
@@ -152,10 +105,12 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={downloadingId === b.id}
-                      onClick={() => handleDownload(b.id)}
+                      disabled={download.isPending && download.variables === b.id}
+                      onClick={() => download.mutate(b.id)}
                     >
-                      {downloadingId === b.id ? "Downloading\u2026" : "Download"}
+                      {download.isPending && download.variables === b.id
+                        ? "Downloading\u2026"
+                        : "Download"}
                     </Button>
                   </div>
                 </div>

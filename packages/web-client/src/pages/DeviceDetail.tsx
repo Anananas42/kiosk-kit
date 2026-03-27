@@ -1,42 +1,24 @@
 import { Card, CardContent } from "@kioskkit/ui";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { type Device, fetchBackups, fetchDevice, fetchDeviceStatus } from "./api.js";
-import { BackupSection } from "./BackupSection.js";
-import { DeviceStatusBadge, deriveDeviceStatus } from "./components/DeviceStatusBadge.js";
-import { OtaUpdateCard } from "./components/OtaUpdateCard.js";
-import { formatRelativeTime } from "./format.js";
+import { BackupSection } from "../components/BackupSection.js";
+import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
+import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
+import { useBackups } from "../hooks/backups.js";
+import { useDevice, useDeviceStatus } from "../hooks/devices.js";
+import { deriveDeviceStatus } from "../lib/device-status.js";
+import { formatRelativeTime } from "../lib/format.js";
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
-  const [device, setDevice] = useState<Device | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [reachable, setReachable] = useState<boolean | null>(null);
+  const { data: device, isLoading, error } = useDevice(id);
+  const { data: appResponding } = useDeviceStatus(id);
+  const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
-  const [backupList, setBackupList] = useState<
-    { id: string; sizeBytes: number; createdAt: string }[]
-  >([]);
-  const [backupError, setBackupError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!id) return;
-    fetchDevice(id)
-      .then(async (d) => {
-        setDevice(d);
-        const isReachable = await fetchDeviceStatus(id);
-        setReachable(isReachable);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-    fetchBackups(id)
-      .then(setBackupList)
-      .catch((err) => setBackupError(err instanceof Error ? err.message : String(err)));
-  }, [id]);
 
   if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
 
-  const status = deriveDeviceStatus(device?.online ?? false, reachable);
+  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
@@ -49,7 +31,7 @@ export function DeviceDetail() {
             </Link>
             <span className="mx-2">/</span>
           </nav>
-          {loading ? (
+          {isLoading ? (
             <div className="bg-muted h-5 w-32 animate-pulse rounded" />
           ) : error ? (
             <span className="text-destructive">Device not found</span>
@@ -57,7 +39,7 @@ export function DeviceDetail() {
             <span className="text-foreground font-medium">{device?.name}</span>
           )}
         </div>
-        {!loading && !error && status !== null && (
+        {!isLoading && !error && status !== null && (
           <div className="flex items-center gap-2">
             {device?.lastSeen && status === "offline" && (
               <span className="text-muted-foreground text-xs">
@@ -70,7 +52,7 @@ export function DeviceDetail() {
       </div>
 
       {/* Error state */}
-      {!loading && error && (
+      {!isLoading && error && (
         <Card className="flex flex-1 items-center justify-center">
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
@@ -87,7 +69,7 @@ export function DeviceDetail() {
       )}
 
       {/* Offline / App Not Connected state */}
-      {!loading && !error && (status === "offline" || status === "app-not-connected") && (
+      {!isLoading && !error && (status === "offline" || status === "app-not-connected") && (
         <Card className="flex flex-1 items-center justify-center">
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
@@ -132,7 +114,7 @@ export function DeviceDetail() {
       )}
 
       {/* Loading state */}
-      {loading && (
+      {isLoading && (
         <Card className="flex flex-1 items-center justify-center">
           <CardContent className="flex items-center gap-2 py-16">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -142,7 +124,7 @@ export function DeviceDetail() {
       )}
 
       {/* Iframe for online device */}
-      {!loading && !error && status === "online" && (
+      {!isLoading && !error && status === "online" && (
         <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
@@ -162,22 +144,22 @@ export function DeviceDetail() {
       )}
 
       {/* OTA update card — only when device is online */}
-      {!loading && !error && status === "online" && id && <OtaUpdateCard deviceId={id} />}
+      {!isLoading && !error && status === "online" && id && <OtaUpdateCard deviceId={id} />}
 
       {/* Backups section */}
-      {!loading &&
+      {!isLoading &&
         !error &&
         (backupError ? (
           <Card>
             <CardContent>
-              <p className="text-destructive">Failed to load backups: {backupError}</p>
+              <p className="text-destructive">Failed to load backups: {backupError.message}</p>
             </CardContent>
           </Card>
         ) : (
           <BackupSection
-            backups={backupList}
+            backups={backups ?? []}
             deviceName={device?.name}
-            deviceOnline={reachable ?? undefined}
+            deviceOnline={appResponding ?? undefined}
           />
         ))}
     </div>

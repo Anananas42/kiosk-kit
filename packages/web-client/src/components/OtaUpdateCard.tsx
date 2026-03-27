@@ -1,3 +1,4 @@
+import type { OtaStatus } from "@kioskkit/shared";
 import {
   Button,
   Card,
@@ -11,18 +12,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@kioskkit/ui";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useDeviceStatus } from "../hooks/devices.js";
 import {
-  cancelOtaDownload,
-  fetchDeviceStatus,
-  fetchLatestRelease,
-  fetchOtaStatus,
-  type OtaStatus,
-  type ReleaseInfo,
-  triggerOtaDownload,
-  triggerOtaInstall,
-  triggerOtaRollback,
-} from "../api.js";
+  useLatestRelease,
+  useOtaCancelDownload,
+  useOtaDownload,
+  useOtaInstall,
+  useOtaRollback,
+  useOtaStatus,
+} from "../hooks/ota.js";
+import { formatFileSize } from "../lib/format.js";
 
 type CardState =
   | "loading"
@@ -35,198 +35,91 @@ type CardState =
   | "success"
   | "failed";
 
-interface Props {
-  deviceId: string;
+function deriveCardState(
+  otaStatus: OtaStatus | undefined,
+  latestVersion: string | undefined,
+): CardState {
+  if (!otaStatus) return "loading";
+
+  const { status, lastResult, currentVersion } = otaStatus;
+
+  if (status === "uploading") return "downloading";
+  if (status === "downloaded") return "downloaded";
+  if (status === "installing") return "installing";
+  if (status === "rollback") return "failed";
+  if (lastResult === "success") return "success";
+  if (
+    lastResult === "failed_health_check" ||
+    lastResult === "failed_upload" ||
+    lastResult === "failed_install"
+  )
+    return "failed";
+
+  if (latestVersion && currentVersion !== latestVersion) return "update-available";
+  return "up-to-date";
 }
 
-export function OtaUpdateCard({ deviceId }: Props) {
-  const [release, setRelease] = useState<ReleaseInfo | null>(null);
-  const [otaStatus, setOtaStatus] = useState<OtaStatus | null>(null);
-  const [cardState, setCardState] = useState<CardState>("loading");
-  const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-  }, []);
+  const { data: release } = useLatestRelease();
 
-  const pollOtaStatus = useCallback(
-    (intervalMs: number) => {
-      stopPolling();
-      pollRef.current = setInterval(async () => {
-        try {
-          const status = await fetchOtaStatus(deviceId);
-          setOtaStatus(status);
-        } catch {
-          // Keep polling — device may be rebooting
-        }
-      }, intervalMs);
+  const { data: otaStatus, error: otaError } = useOtaStatus(deviceId, {
+    refetchInterval: (query) => {
+      const data = (query as { state: { data: OtaStatus | undefined } }).state.data;
+      if (!data) return false;
+      if (data.status === "uploading") return 3000;
+      if (data.status === "installing") return 5000;
+      return false;
     },
-    [deviceId, stopPolling],
+  });
+
+  const cardState = useMemo(
+    () => (otaError ? ("error" as CardState) : deriveCardState(otaStatus, release?.version)),
+    [otaStatus, release?.version, otaError],
   );
 
-  const pollHealth = useCallback(
-    (intervalMs: number) => {
-      stopPolling();
-      pollRef.current = setInterval(async () => {
-        try {
-          const online = await fetchDeviceStatus(deviceId);
-          if (online) {
-            stopPolling();
-            // Device is back — fetch new status
-            const status = await fetchOtaStatus(deviceId);
-            setOtaStatus(status);
-          }
-        } catch {
-          // Keep polling
-        }
-      }, intervalMs);
-    },
-    [deviceId, stopPolling],
-  );
+  // Poll device health during install to detect when device comes back online
+  useDeviceStatus(deviceId, {
+    refetchInterval: cardState === "installing" ? 5000 : false,
+  });
 
-  // Derive card state from OTA status + release info
-  useEffect(() => {
-    if (!otaStatus) return;
+  const otaDownload = useOtaDownload(deviceId);
+  const otaInstall = useOtaInstall(deviceId);
+  const otaRollback = useOtaRollback(deviceId);
+  const otaCancel = useOtaCancelDownload(deviceId);
 
-    const status = otaStatus.status;
-    const lastResult = otaStatus.lastResult;
+  const actionLoading =
+    otaDownload.isPending || otaInstall.isPending || otaRollback.isPending || otaCancel.isPending;
 
-    if (status === "uploading") {
-      setCardState("downloading");
-      pollOtaStatus(3000);
-      return;
-    }
-
-    if (status === "downloaded") {
-      setCardState("downloaded");
-      stopPolling();
-      return;
-    }
-
-    if (status === "installing") {
-      setCardState("installing");
-      pollHealth(5000);
-      return;
-    }
-
-    if (status === "rollback") {
-      setCardState("failed");
-      stopPolling();
-      return;
-    }
-
-    // idle or confirming
-    if (lastResult === "success") {
-      setCardState("success");
-      stopPolling();
-      return;
-    }
-
-    if (
-      lastResult === "failed_health_check" ||
-      lastResult === "failed_upload" ||
-      lastResult === "failed_install"
-    ) {
-      setCardState("failed");
-      stopPolling();
-      return;
-    }
-
-    // idle with no special result — check for update
-    if (release && otaStatus.currentVersion !== release.version) {
-      setCardState("update-available");
-    } else {
-      setCardState("up-to-date");
-    }
-    stopPolling();
-  }, [otaStatus, release, pollOtaStatus, pollHealth, stopPolling]);
-
-  // Initial fetch
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const [rel, status] = await Promise.all([fetchLatestRelease(), fetchOtaStatus(deviceId)]);
-        if (cancelled) return;
-        setRelease(rel);
-        setOtaStatus(status);
-      } catch {
-        if (!cancelled) {
-          setCardState("error");
-          setError("Failed to load OTA status");
-        }
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [deviceId]);
-
-  // Cleanup polling on unmount
-  useEffect(() => stopPolling, [stopPolling]);
-
-  const handleDownload = async () => {
-    if (!release) return;
-    setActionLoading(true);
-    setError(null);
-    try {
-      await triggerOtaDownload(deviceId, release.version);
-      // Start polling for upload progress
-      pollOtaStatus(3000);
-      setCardState("downloading");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Download failed");
-    } finally {
-      setActionLoading(false);
+  const handleDownload = () => {
+    setActionError(null);
+    if (release) {
+      otaDownload.mutate(release.version, {
+        onError: (e) => setActionError(e instanceof Error ? e.message : "Download failed"),
+      });
     }
   };
 
-  const handleCancel = async () => {
-    setActionLoading(true);
-    setError(null);
-    try {
-      await cancelOtaDownload(deviceId);
-      const status = await fetchOtaStatus(deviceId);
-      setOtaStatus(status);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Cancel failed");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleCancel = () => {
+    setActionError(null);
+    otaCancel.mutate(undefined, {
+      onError: (e) => setActionError(e instanceof Error ? e.message : "Cancel failed"),
+    });
   };
 
-  const handleInstall = async () => {
-    setActionLoading(true);
-    setError(null);
-    try {
-      await triggerOtaInstall(deviceId);
-      setCardState("installing");
-      pollHealth(5000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Install failed");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleInstall = () => {
+    setActionError(null);
+    otaInstall.mutate(undefined, {
+      onError: (e) => setActionError(e instanceof Error ? e.message : "Install failed"),
+    });
   };
 
-  const handleRollback = async () => {
-    setActionLoading(true);
-    setError(null);
-    try {
-      await triggerOtaRollback(deviceId);
-      setCardState("installing");
-      pollHealth(5000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Rollback failed");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleRollback = () => {
+    setActionError(null);
+    otaRollback.mutate(undefined, {
+      onError: (e) => setActionError(e instanceof Error ? e.message : "Rollback failed"),
+    });
   };
 
   if (cardState === "loading") {
@@ -244,7 +137,7 @@ export function OtaUpdateCard({ deviceId }: Props) {
     return (
       <Card>
         <CardContent className="py-4">
-          <p className="text-destructive text-sm">{error ?? "Failed to load OTA status"}</p>
+          <p className="text-destructive text-sm">Failed to load OTA status</p>
         </CardContent>
       </Card>
     );
@@ -265,7 +158,7 @@ export function OtaUpdateCard({ deviceId }: Props) {
           )}
         </div>
 
-        {error && <p className="text-destructive text-xs">{error}</p>}
+        {actionError && <p className="text-destructive text-xs">{actionError}</p>}
 
         {cardState === "up-to-date" && (
           <p className="text-muted-foreground text-sm">Running v{currentVersion} (latest)</p>
@@ -275,7 +168,7 @@ export function OtaUpdateCard({ deviceId }: Props) {
           <div className="flex items-center justify-between">
             <p className="text-sm">v{latestVersion} available</p>
             <Button size="sm" onClick={handleDownload} disabled={actionLoading}>
-              {actionLoading ? "Starting…" : "Download"}
+              {otaDownload.isPending ? "Starting…" : "Download"}
             </Button>
           </div>
         )}
@@ -297,7 +190,7 @@ export function OtaUpdateCard({ deviceId }: Props) {
             <p className="text-muted-foreground text-xs">
               {uploadProgress?.progress ?? 0}%
               {uploadProgress
-                ? ` — ${formatBytes(uploadProgress.bytesReceived)} / ${formatBytes(uploadProgress.bytesTotal)}`
+                ? ` — ${formatFileSize(uploadProgress.bytesReceived)} / ${formatFileSize(uploadProgress.bytesTotal)}`
                 : ""}
             </p>
           </div>
@@ -365,7 +258,6 @@ export function OtaUpdateCard({ deviceId }: Props) {
           </div>
         )}
 
-        {/* Rollback button — shown when device is not on latest and in a stable state */}
         {(cardState === "up-to-date" || cardState === "success") && isNotLatest && (
           <Button size="sm" variant="outline" onClick={handleRollback} disabled={actionLoading}>
             Rollback
@@ -374,10 +266,4 @@ export function OtaUpdateCard({ deviceId }: Props) {
       </CardContent>
     </Card>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

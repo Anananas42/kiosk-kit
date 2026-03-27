@@ -1,6 +1,5 @@
 import { Badge } from "@kioskkit/ui";
-
-export type DeviceStatus = "online" | "app-not-connected" | "offline";
+import type { DeviceStatus } from "../lib/device-status.js";
 
 const config: Record<
   DeviceStatus,
@@ -14,16 +13,6 @@ const config: Record<
   },
   offline: { label: "Offline", dotClass: "bg-muted-foreground", variant: "secondary" },
 };
-
-export function deriveDeviceStatus(
-  tailscaleOnline: boolean,
-  appResponding: boolean | null | undefined,
-): DeviceStatus | null {
-  if (appResponding == null) return null;
-  if (!tailscaleOnline) return "offline";
-  if (!appResponding) return "app-not-connected";
-  return "online";
-}
 
 export function DeviceStatusBadge({ status }: { status: DeviceStatus }) {
   const { label, dotClass, variant } = config[status];

@@ -1,9 +1,9 @@
 import { Button } from "@kioskkit/ui";
 import { BrowserRouter, Route, Routes } from "react-router";
-import { logout } from "./api.js";
-import { DeviceDetail } from "./DeviceDetail.js";
-import { DeviceList } from "./DeviceList.js";
-import { useAuth } from "./useAuth.js";
+import { logout } from "./api/auth.js";
+import { useAuth } from "./hooks/auth.js";
+import { DeviceDetail } from "./pages/DeviceDetail.js";
+import { DeviceList } from "./pages/DeviceList.js";
 
 export function App() {
   const { user, setUser, loading, error } = useAuth();

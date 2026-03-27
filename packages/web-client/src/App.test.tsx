@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
@@ -7,10 +8,17 @@ function trpcBatchResponse(data: unknown) {
   return new Response(JSON.stringify([{ result: { type: "data", data } }]));
 }
 
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe("App", () => {
   it("renders sign-in when not authenticated", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(trpcBatchResponse({ user: null }));
-    render(<App />);
+    renderWithProviders(<App />);
     await waitFor(() => {
       expect(screen.getByText("Sign in with Google")).toBeInTheDocument();
     });
@@ -25,7 +33,7 @@ describe("App", () => {
         }),
       )
       .mockResolvedValueOnce(trpcBatchResponse([]));
-    render(<App />);
+    renderWithProviders(<App />);
     await waitFor(() => {
       expect(screen.getByText("No devices registered.")).toBeInTheDocument();
     });
