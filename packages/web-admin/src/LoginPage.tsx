@@ -25,9 +25,6 @@ export function LoginPage() {
           <Typography variant="h4" component="h1" fontWeight="bold">
             KioskKit Admin
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Sign in to manage your devices
-          </Typography>
           <Button variant="outlined" size="large" href="/api/auth/google" fullWidth>
             Sign in with Google
           </Button>
