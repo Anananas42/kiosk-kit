@@ -17,6 +17,5 @@
       tailscale up
       --authkey={{ kioskkit_tailscale_auth_key }}
       --hostname=kioskkit-{{ kioskkit_device_id }}
-      --advertise-tags=tag:{{ kioskkit_customer_tag }}
   when: kioskkit_tailscale_auth_key | length > 0
   changed_when: true

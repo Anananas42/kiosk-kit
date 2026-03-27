@@ -12,18 +12,18 @@
 #   ansible-playbook, sshpass, curl, jq, xz, dpkg-deb
 #
 # Usage:
-#   ./build-sd-image.sh --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
-#   ./build-sd-image.sh --device-id 042 --customer-tag acme   # auto-generates key via Tailscale API
-#   ./build-sd-image.sh --dev                   # reads PI_DEV_* env vars
+#   ./build-sd-image.sh --stage production --device-id 042 --tailscale-key tskey-auth-XXXX
+#   ./build-sd-image.sh --stage production --device-id 042   # auto-generates key via Tailscale API
+#   ./build-sd-image.sh --dev                   # stage=dev, auto-generates device ID + key
 #   ./build-sd-image.sh --dev --force            # rebuild all layers
 #   ./build-sd-image.sh --dev --app-only         # skip base layer (must exist)
 #   ./build-sd-image.sh --dev --device-only      # stamp device on existing app image (~30s)
 #
 # Options:
 #   --device-id ID         Device identifier (e.g. 042)
-#   --customer-tag TAG     Customer tag for Tailscale ACLs (e.g. acme)
+#   --stage STAGE          Target stage (dev|production) — determines Tailscale tags
 #   --tailscale-key KEY    Explicit Tailscale auth key; if omitted, auto-generated via API
-#   --dev                  Use PI_DEV_* env vars for device-id, customer-tag, tailscale-key
+#   --dev                  Shorthand for --stage dev with auto-generated device ID + key
 #   --force                Rebuild all cached layers from scratch
 #   --app-only             Skip base layer rebuild (must already exist)
 #   --device-only          Only stamp device on existing app image (~30s)
@@ -37,6 +37,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Tailscale tags per stage. Every device gets tag:kioskkit plus a stage-specific tag.
+declare -A STAGE_TAGS=(
+  [dev]="tag:kioskkit tag:dev-pi"
+  [production]="tag:kioskkit tag:production-pi"
+)
 
 # --- Docker re-exec ---------------------------------------------------------
 # If not inside a container, rebuild and re-exec inside Docker.
@@ -141,7 +147,6 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   exec docker run --rm $DOCKER_TTY_FLAG \
     -e KIOSKKIT_IN_CONTAINER=1 \
     ${PI_DEV_DEVICE_ID:+-e PI_DEV_DEVICE_ID="$PI_DEV_DEVICE_ID"} \
-    ${PI_DEV_CUSTOMER_TAG:+-e PI_DEV_CUSTOMER_TAG="$PI_DEV_CUSTOMER_TAG"} \
     ${PI_DEV_TAILSCALE_KEY:+-e PI_DEV_TAILSCALE_KEY="$PI_DEV_TAILSCALE_KEY"} \
     ${TAILSCALE_OAUTH_CLIENT_ID:+-e TAILSCALE_OAUTH_CLIENT_ID="$TAILSCALE_OAUTH_CLIENT_ID"} \
     ${TAILSCALE_OAUTH_CLIENT_SECRET:+-e TAILSCALE_OAUTH_CLIENT_SECRET="$TAILSCALE_OAUTH_CLIENT_SECRET"} \
@@ -210,7 +215,7 @@ trap cleanup_qemu EXIT
 
 parse_args() {
   DEVICE_ID=""
-  CUSTOMER_TAG=""
+  STAGE=""
   TAILSCALE_KEY=""
   FORCE=0
   APP_ONLY=0
@@ -218,12 +223,12 @@ parse_args() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --device-id)    [[ $# -ge 2 ]] || err "--device-id requires a value"; DEVICE_ID="$2"; shift 2 ;;
-      --customer-tag) [[ $# -ge 2 ]] || err "--customer-tag requires a value"; CUSTOMER_TAG="$2"; shift 2 ;;
+      --device-id)     [[ $# -ge 2 ]] || err "--device-id requires a value"; DEVICE_ID="$2"; shift 2 ;;
+      --stage)         [[ $# -ge 2 ]] || err "--stage requires a value"; STAGE="$2"; shift 2 ;;
       --tailscale-key) [[ $# -ge 2 ]] || err "--tailscale-key requires a value"; TAILSCALE_KEY="$2"; shift 2 ;;
       --dev)
         DEVICE_ID="${PI_DEV_DEVICE_ID:-}"
-        CUSTOMER_TAG="${PI_DEV_CUSTOMER_TAG:-}"
+        STAGE="dev"
         TAILSCALE_KEY="${PI_DEV_TAILSCALE_KEY:-}"
         shift
         ;;
@@ -239,14 +244,15 @@ parse_args() {
     DEVICE_ID=$(grep -E '^[a-z]{3,8}$' /usr/share/dict/words | shuf -n3 | paste -sd-)
     log "Auto-generated device ID: $DEVICE_ID"
   fi
-  [[ -n "$CUSTOMER_TAG" ]]  || err "Missing --customer-tag (or set PI_DEV_CUSTOMER_TAG with --dev)"
+  [[ -n "$STAGE" ]] || err "Missing --stage (dev|production) or use --dev"
+  [[ -n "${STAGE_TAGS[$STAGE]+x}" ]] || err "Unknown stage '$STAGE'. Valid stages: ${!STAGE_TAGS[*]}"
 
   # --device-only implies --app-only (no base rebuild either)
   if [[ $DEVICE_ONLY -eq 1 ]]; then
     APP_ONLY=1
   fi
 
-  log "Building image for device=$DEVICE_ID customer=$CUSTOMER_TAG"
+  log "Building image for device=$DEVICE_ID stage=$STAGE"
 }
 
 # --- Tailscale API key generation --------------------------------------------
@@ -284,12 +290,9 @@ generate_tailscale_key() {
     || err "Failed to parse OAuth token response"
   [[ -n "$access_token" ]] || err "OAuth token exchange returned empty token. Response: $token_response"
 
-  # Build tags array: always include tag:kioskkit, add customer tag if set
+  # Build tags array from stage constant
   local tags_json
-  tags_json=$(jq -n '["tag:kioskkit"]')
-  if [[ -n "$CUSTOMER_TAG" ]]; then
-    tags_json=$(printf '%s' "$tags_json" | jq --arg t "tag:$CUSTOMER_TAG" '. + [$t]')
-  fi
+  tags_json=$(printf '%s\n' ${STAGE_TAGS[$STAGE]} | jq -R . | jq -s .)
 
   local description
   description="kioskkit-${DEVICE_ID}"
@@ -298,7 +301,7 @@ generate_tailscale_key() {
   payload=$(jq -n \
     --argjson tags "$tags_json" \
     --arg desc "$description" \
-    '{capabilities: {devices: {create: {reusable: false, ephemeral: false, tags: $tags}}}, description: $desc}')
+    '{capabilities: {devices: {create: {reusable: false, ephemeral: false, preauthorized: true, tags: $tags}}}, description: $desc}')
 
   log "Requesting auth key with tags: $tags_json"
   local response
@@ -344,7 +347,7 @@ all:
           ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           kioskkit_tailscale_auth_key: "skip"
           kioskkit_device_id: "${DEVICE_ID}"
-          kioskkit_customer_tag: "${CUSTOMER_TAG}"
+          kioskkit_stage: "${STAGE}"
 EOF
 }
 
@@ -420,13 +423,13 @@ customize_device_image() {
   # Write device config files
   cat > "$stamp_dir/tailscale-firstboot.conf" <<EOF
 DEVICE_ID=${DEVICE_ID}
-CUSTOMER_TAG=${CUSTOMER_TAG}
+STAGE=${STAGE}
 TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
 EOF
 
   cat > "$stamp_dir/device.conf" <<EOF
 DEVICE_ID=${DEVICE_ID}
-CUSTOMER_TAG=${CUSTOMER_TAG}
+STAGE=${STAGE}
 EOF
 
   # Download Tailscale arm64 .deb (cached across device stamps)
@@ -558,18 +561,23 @@ FSTAB
     # Remove build SSH key
     echo "rm-f /home/pi/.ssh/authorized_keys"
 
-    # Write "uninitialized" to machine-id so systemd treats first real boot as
-    # ConditionFirstBoot=yes. An empty file triggers new ID generation but does NOT
-    # set the first-boot flag in systemd 252 — it must contain "uninitialized\n".
-    echo "write /etc/machine-id \"uninitialized\n\""
+    # Clear QEMU's machine-id so the Pi generates its own on first boot.
+    # Use empty file (not "uninitialized") to avoid ConditionFirstBoot=yes, which
+    # triggers systemd preset logic that fails on the still-ro rootfs and breaks
+    # service activation. Our first-boot services use marker files instead.
+    echo "truncate /etc/machine-id"
 
     # === data partition (p4) ===
     echo "umount /"
     echo "mount /dev/sda4 /"
 
-    # Clear QEMU build journals so systemd treats Pi boot as ConditionFirstBoot=yes
-    echo "glob rm-f /journal/*/*.journal"
-    echo "glob rm-f /journal/*/*.journal~"
+    # Remove stale QEMU journal directories — the machine-id subdirectory won't
+    # match the Pi's new machine-id, causing journald to fall back to volatile mode.
+    echo "rm-rf /journal"
+    echo "mkdir-p /journal"
+
+    # Marker for first-boot partition expansion
+    echo "touch /.expand-needed"
 
     # Device config
     echo "mkdir-p /kioskkit-config"

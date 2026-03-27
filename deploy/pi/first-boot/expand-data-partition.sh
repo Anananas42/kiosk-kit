@@ -16,7 +16,12 @@ growpart "$DISK" "$PART_NUM" || {
   echo "growpart: partition already at max size or failed"
 }
 
-# Resize filesystem to match
+# Tell the kernel to re-read the partition table after growpart resized it.
+# Without this, resize2fs sees the old partition size and fails with EBUSY.
+partprobe "$DISK"
+sleep 1
+
+# Resize filesystem to match (works online on mounted ext4)
 resize2fs "$PART" || {
   echo "resize2fs failed"
   exit 1
@@ -24,5 +29,5 @@ resize2fs "$PART" || {
 
 echo "Data partition expanded successfully."
 
-# Disable this service — only needs to run once
-systemctl disable kioskkit-expand-data.service
+# Remove marker so this service doesn't run again
+rm -f /data/.expand-needed
