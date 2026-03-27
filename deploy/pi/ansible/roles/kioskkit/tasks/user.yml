@@ -7,7 +7,7 @@
 - name: Create kiosk user
   ansible.builtin.user:
     name: "{{ kioskkit_user }}"
-    system: true
+    system: false
     create_home: true
     shell: /bin/bash
     groups: video,input,render,_seatd
