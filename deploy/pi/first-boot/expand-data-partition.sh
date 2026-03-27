@@ -19,8 +19,7 @@ growpart "$DISK" "$PART_NUM" || {
   echo "growpart: partition already at max size or failed"
 }
 
-# Notify the kernel about the resized partition. Use partx instead of partprobe
-# to avoid re-enumerating all devices, which disrupts logind seat assignments.
+# Notify the kernel about the resized partition
 partx --update --nr "$PART_NUM" "$DISK"
 sleep 1
 

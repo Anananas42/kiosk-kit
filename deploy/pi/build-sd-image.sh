@@ -561,12 +561,6 @@ FSTAB
     # Remove build SSH key
     echo "rm-f /home/pi/.ssh/authorized_keys"
 
-    # Clear QEMU's machine-id so the Pi generates its own on first boot.
-    # Use empty file (not "uninitialized") to avoid ConditionFirstBoot=yes, which
-    # triggers systemd preset logic that fails on the still-ro rootfs and breaks
-    # service activation. Our first-boot services use marker files instead.
-    echo "truncate /etc/machine-id"
-
     # Marker for first-boot partition expansion (on rootfs so it's visible before
     # /data is mounted — the expand service runs Before=local-fs.target)
     echo "touch /etc/.expand-data-needed"
@@ -575,8 +569,7 @@ FSTAB
     echo "umount /"
     echo "mount /dev/sda4 /"
 
-    # Remove stale QEMU journal directories — the machine-id subdirectory won't
-    # match the Pi's new machine-id, causing journald to fall back to volatile mode.
+    # Clear QEMU build journals
     echo "rm-rf /journal"
     echo "mkdir-p /journal"
 
