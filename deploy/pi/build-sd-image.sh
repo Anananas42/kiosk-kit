@@ -677,20 +677,20 @@ stamp_device() {
       done)
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo dd if=$output_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
+      log "  sudo umount ${card%% *}? 2>/dev/null; sudo dd if=$output_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
     done <<< "$sd_cards"
   else
-    log "  sudo dd if=$output_file of=/dev/sdX bs=4M conv=fsync status=progress"
+    log "  sudo umount /dev/sdX? 2>/dev/null; sudo dd if=$output_file of=/dev/sdX bs=4M conv=fsync status=progress"
   fi
   log ""
   log "Fast flash (apt install bmap-tools, skips empty blocks):"
   log "  bmaptool create $output_file -o ${output_file%.img}.bmap"
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo bmaptool copy $output_file ${card%% *}  # ${card#* }"
+      log "  sudo umount ${card%% *}? 2>/dev/null; sudo bmaptool copy $output_file ${card%% *}  # ${card#* }"
     done <<< "$sd_cards"
   else
-    log "  sudo bmaptool copy $output_file /dev/sdX"
+    log "  sudo umount /dev/sdX? 2>/dev/null; sudo bmaptool copy $output_file /dev/sdX"
   fi
 }
 
