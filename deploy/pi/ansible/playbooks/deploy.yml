@@ -89,6 +89,11 @@
         group: "{{ kioskkit_user | default('kiosk') }}"
         mode: "0644"
 
+    - name: Remove chromium dev-shm workaround (redirects shm to /tmp which is only 64M)
+      ansible.builtin.file:
+        path: /etc/chromium.d/dev-shm
+        state: absent
+
     - name: Ensure data directory exists
       ansible.builtin.file:
         path: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/data"

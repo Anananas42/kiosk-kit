@@ -537,7 +537,7 @@ wait_for_reboot() {
 
 shutdown_qemu() {
   log "Shutting down VM..."
-  ssh_pi "sudo shutdown -h now" 2>/dev/null || true
+  ssh_pi "sync && sudo shutdown -h now" 2>/dev/null || true
 
   # Wait for QEMU to exit after guest shutdown
   local pid

@@ -49,9 +49,11 @@
     - lightdm
   failed_when: false
 
-- name: Purge rpi-connect
+- name: Purge rpi-connect and rpi-chromium-mods
   ansible.builtin.apt:
-    name: rpi-connect
+    name:
+      - rpi-connect
+      - rpi-chromium-mods
     state: absent
     purge: true
   failed_when: false

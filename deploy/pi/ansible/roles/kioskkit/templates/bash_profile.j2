@@ -35,5 +35,9 @@ if [ "$(tty)" = "/dev/tty1" ]; then
     sleep 1
     export XDG_RUNTIME_DIR=/tmp/kiosk-xdg
     mkdir -p "$XDG_RUNTIME_DIR"
-    exec sway --unsupported-gpu
+    # Pixman renderer: wlroots 0.15 (sway 1.7) eglQueryDeviceStringEXT is
+    # incompatible with Pi OS's backported Mesa 24.2.  Software rendering
+    # avoids the EGL crash and is adequate for a kiosk UI.
+    export WLR_RENDERER=pixman
+    exec sway --unsupported-gpu 2>>"$XDG_RUNTIME_DIR/sway.log"
 fi
