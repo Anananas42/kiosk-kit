@@ -617,8 +617,8 @@ FSTAB
 
 convert_to_raw() {
   log "Converting qcow2 to raw image..."
-  local raw_output="$WORK_DIR/kioskkit-${DEVICE_ID}.img"
-  qemu-img convert -f qcow2 -O raw "$WORK_DIR/device-${DEVICE_ID}.qcow2" "$raw_output"
+  local raw_output="$STAMP_DIR/image.img"
+  qemu-img convert -f qcow2 -O raw "$STAMP_DIR/device.qcow2" "$raw_output"
   FINAL_IMAGE="$raw_output"
   log "Raw image: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
@@ -631,6 +631,12 @@ shrink_image() {
 # No QEMU boot required — operates on a cold disk image.
 stamp_device() {
   local source_image="$1"
+  local timestamp
+  timestamp=$(date -u +%Y%m%d-%H%M%S)
+  local stamp_label="${timestamp}-kioskkit-${DEVICE_ID}"
+  STAMP_DIR="$WORK_DIR/stamps/${stamp_label}"
+  mkdir -p "$STAMP_DIR"
+
   log "Stamping device image for device=$DEVICE_ID..."
 
   # Generate Tailscale auth key if not explicitly provided
@@ -639,7 +645,7 @@ stamp_device() {
   fi
 
   # Create a standalone copy (not overlay — we need raw conversion later)
-  local device_image="$WORK_DIR/device-${DEVICE_ID}.qcow2"
+  local device_image="$STAMP_DIR/device.qcow2"
   cp "$source_image" "$device_image"
 
   # All guestfish operations on the cold image
@@ -647,9 +653,14 @@ stamp_device() {
   convert_to_raw
   shrink_image
 
-  # Move to output
-  local output_file="$OUTPUT_DIR/kioskkit-${DEVICE_ID}.img"
+  local output_file="$OUTPUT_DIR/${stamp_label}.img"
   mv "$FINAL_IMAGE" "$output_file"
+
+  local bmap_file="$OUTPUT_DIR/${stamp_label}.bmap"
+  if command -v bmaptool >/dev/null 2>&1; then
+    bmaptool create "$output_file" -o "$bmap_file"
+    log "Block map: $bmap_file"
+  fi
 
   local size
   size=$(du -h "$output_file" | cut -f1)
@@ -671,17 +682,19 @@ stamp_device() {
       done)
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo dd if=$output_file of=${card%% *} bs=4M status=progress  # ${card#* }"
+      if [[ -f "$bmap_file" ]]; then
+        log "  sudo bmaptool copy $output_file ${card%% *}  # ${card#* } (fast, skips empty blocks)"
+      else
+        log "  sudo dd if=$output_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
+      fi
     done <<< "$sd_cards"
   else
-    log "  sudo dd if=$output_file of=/dev/sdX bs=4M status=progress"
+    if [[ -f "$bmap_file" ]]; then
+      log "  sudo bmaptool copy $output_file /dev/sdX  # fast, skips empty blocks"
+    else
+      log "  sudo dd if=$output_file of=/dev/sdX bs=4M conv=fsync status=progress"
+    fi
   fi
-  log "  # or use balenaEtcher"
-  log ""
-  local img_name
-  img_name=$(basename "$output_file")
-  log "Optional: shrink image for faster flashing (~4 GB instead of ~18 GB):"
-  log "  docker run --rm --privileged -v \$(pwd)/deploy/pi/.output:/workdir turee/pishrink-docker pishrink /workdir/$img_name"
 }
 
 # --- Main --------------------------------------------------------------------
