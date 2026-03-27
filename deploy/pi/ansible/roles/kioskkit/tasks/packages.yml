@@ -16,6 +16,8 @@
     name:
       - labwc
       - seatd
+      - greetd
+      - wlr-randr
       - swayidle
       - chromium
       - fonts-noto-color-emoji
@@ -59,7 +61,7 @@
     purge: true
   failed_when: false
 
-- name: Set default target to multi-user
+- name: Set default target to graphical
   ansible.builtin.command:
-    cmd: systemctl set-default multi-user.target
+    cmd: systemctl set-default graphical.target
   changed_when: false

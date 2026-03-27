@@ -5,14 +5,6 @@
     system: true
     create_home: true
     shell: /bin/bash
-    groups: video,input,render,tty,_seatd
+    groups: video,input,render,_seatd
     password: "!"
     password_lock: true
-
-- name: Deploy .bash_profile for kiosk user
-  ansible.builtin.template:
-    src: bash_profile.j2
-    dest: "/home/{{ kioskkit_user }}/.bash_profile"
-    owner: "{{ kioskkit_user }}"
-    group: "{{ kioskkit_user }}"
-    mode: "0644"

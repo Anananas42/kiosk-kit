@@ -37,22 +37,15 @@
     enabled: true
     state: started
 
-- name: Create getty override directory
-  ansible.builtin.file:
-    path: /etc/systemd/system/getty@tty1.service.d
-    state: directory
-    mode: "0755"
-
-- name: Configure getty autologin on tty1
-  ansible.builtin.copy:
-    src: getty-autologin.conf
-    dest: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+- name: Deploy greetd config
+  ansible.builtin.template:
+    src: greetd-config.toml.j2
+    dest: /etc/greetd/config.toml
     mode: "0644"
-  notify: Reload systemd
 
-- name: Enable getty on tty1
+- name: Enable greetd (session manager for labwc)
   ansible.builtin.systemd:
-    name: getty@tty1.service
+    name: greetd.service
     enabled: true
 
 - name: Install Chromium managed policies directory
