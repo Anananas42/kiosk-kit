@@ -11,6 +11,9 @@ PART="${DISK}p${PART_NUM}"
 
 echo "Expanding data partition ${PART} to fill disk..."
 
+# growpart needs /tmp for lock files; it may not exist yet at early boot
+mkdir -p /tmp
+
 # Grow partition to use all remaining space
 growpart "$DISK" "$PART_NUM" || {
   echo "growpart: partition already at max size or failed"
