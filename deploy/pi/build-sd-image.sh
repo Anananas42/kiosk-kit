@@ -720,6 +720,16 @@ verify_device() {
     fi
   }
 
+  check_not() {
+    local desc="$1"; shift
+    if "$@" >/dev/null 2>&1; then
+      log "  FAIL: $desc"
+      fails=$((fails + 1))
+    else
+      log "  OK: $desc"
+    fi
+  }
+
   # Parse guestfish "exists" output (returns "true" or "false" per line)
   local line_num=0
   local tailscale_bin=false tailscaled_bin=false build_key=false device_conf_exists=false ssh_ed25519=false ssh_rsa=false
@@ -742,7 +752,7 @@ verify_device() {
   check "SSH host key (ed25519)"        test "$ssh_ed25519" = "true"
   check "SSH host key (rsa)"            test "$ssh_rsa" = "true"
   check "fstab uses PARTUUIDs"          grep -q "PARTUUID=" "$verify_dir/fstab"
-  check "fstab has no /dev/sda"         ! grep -q "/dev/sda" "$verify_dir/fstab"
+  check_not "fstab mounts use no /dev/sda"  grep -E '^/dev/sda' "$verify_dir/fstab"
   check "device.conf has DEVICE_ID"     grep -q "DEVICE_ID=${DEVICE_ID}" "$verify_dir/device.conf"
 
   rm -rf "$verify_dir"
