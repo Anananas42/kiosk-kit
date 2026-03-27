@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # build-sd-image.sh — Build a flashable SD card image for KioskKit Pi devices.
 #
-# Uses a three-layer cache so that per-device stamping takes ~30s (no QEMU boot):
+# Uses a four-layer cache so that per-device stamping takes ~30s (no QEMU boot):
 #
-#   Layer 1 (base system, ~25 min):  Pi OS + QEMU patches + Ansible provision (--skip-tags tailscale,app)
-#   Layer 2 (app deploy, ~1 min):    Host build + arm64 cross-compile + rsync into VM + system config
-#   Layer 3 (device stamp, ~30 sec): guestfish-only — Tailscale config, first-boot service, cleanup
+#   Layer 1 (image prep, ~10 min):   Pi OS download + qcow2 conversion + QEMU patches + initrd
+#   Layer 2 (provision, ~15 min):    Boot QEMU + Ansible provision (--skip-tags tailscale,app)
+#   Layer 3 (app deploy, ~1 min):    Host build + arm64 cross-compile + rsync into VM + system config
+#   Layer 4 (device stamp, ~30 sec): guestfish-only — Tailscale config, first-boot service, cleanup
+#
+# Layers 1+2 are rebuilt together by default (--force). Use --reprovision to
+# re-run only Layer 2 on an existing prepared disk (skips the ~10 min image prep).
 #
 # Prerequisites (all provided by the Dockerfile):
 #   qemu-system-aarch64, qemu-img, guestfish (libguestfs-tools),
@@ -15,8 +19,9 @@
 #   ./build-sd-image.sh --stage production --device-id 042 --tailscale-key tskey-auth-XXXX
 #   ./build-sd-image.sh --stage production --device-id 042   # auto-generates key via Tailscale API
 #   ./build-sd-image.sh --dev                   # stage=dev, auto-generates device ID + key
-#   ./build-sd-image.sh --dev --force            # rebuild all layers
-#   ./build-sd-image.sh --dev --app-only         # skip base layer (must exist)
+#   ./build-sd-image.sh --dev --force            # rebuild all layers from scratch
+#   ./build-sd-image.sh --dev --reprovision      # re-run Ansible on existing prepared disk (~15 min)
+#   ./build-sd-image.sh --dev --app-only         # skip base+provision layers (must exist)
 #   ./build-sd-image.sh --dev --device-only      # stamp device on existing app image (~30s)
 #
 # Options:
@@ -24,8 +29,9 @@
 #   --stage STAGE          Target stage (dev|production) — determines Tailscale tags
 #   --tailscale-key KEY    Explicit Tailscale auth key; if omitted, auto-generated via API
 #   --dev                  Shorthand for --stage dev with auto-generated device ID + key
-#   --force                Rebuild all cached layers from scratch
-#   --app-only             Skip base layer rebuild (must already exist)
+#   --force                Rebuild all layers from scratch (image prep + provision)
+#   --reprovision          Re-run Ansible provision on existing prepared disk (skip image prep)
+#   --app-only             Skip base+provision layers (must already exist)
 #   --device-only          Only stamp device on existing app image (~30s)
 #
 # Environment variables (for API key auto-generation when --tailscale-key is omitted):
@@ -218,6 +224,7 @@ parse_args() {
   STAGE=""
   TAILSCALE_KEY=""
   FORCE=0
+  REPROVISION=0
   APP_ONLY=0
   DEVICE_ONLY=0
 
@@ -233,6 +240,7 @@ parse_args() {
         shift
         ;;
       --force)       FORCE=1; shift ;;
+      --reprovision)      REPROVISION=1; shift ;;
       --app-only)    APP_ONLY=1; shift ;;
       --device-only) DEVICE_ONLY=1; shift ;;
       *) err "Unknown argument: $1" ;;
@@ -329,7 +337,7 @@ generate_tailscale_key() {
 # --- SD image specific functions ---------------------------------------------
 
 # write_inventory — create the Ansible inventory file used by both layers.
-# Called once from main() so the inventory exists even when Layer 1 is cached.
+# Called once from main() so the inventory exists even when Layers 1+2 are cached.
 write_inventory() {
   local inventory_file="$WORK_DIR/inventory.yml"
   cat > "$inventory_file" <<EOF
@@ -351,7 +359,7 @@ all:
 EOF
 }
 
-# provision_base — run provision.yml skipping tailscale and app tags (Layer 1).
+# provision_base — run provision.yml skipping tailscale and app tags (Layer 2).
 provision_base() {
   log "Running Ansible base provisioning (--skip-tags tailscale,app)..."
 
@@ -363,7 +371,7 @@ provision_base() {
     || err "Ansible base provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
-# verify_base — assert Layer 1 produced the expected system state.
+# verify_base — assert Layers 1+2 produced the expected system state.
 # Runs over SSH while the VM is still up, before shutdown_qemu.
 verify_base() {
   log "Verifying base system layer..."
@@ -440,7 +448,7 @@ deploy_app() {
   log "Application deployed."
 }
 
-# verify_app — assert Layer 2 produced the expected app state.
+# verify_app — assert Layer 3 produced the expected app state.
 verify_app() {
   log "Verifying app deployment layer..."
   local fails=0
@@ -471,7 +479,7 @@ verify_app() {
   log "App layer verified ($fails failures)."
 }
 
-# customize_device_image — Layer 3 device customization via guestfish.
+# customize_device_image — Layer 4 device customization via guestfish.
 # Restores Pi boot state, injects Tailscale + first-boot services,
 # stamps device config, generates SSH host keys, removes build SSH key.
 customize_device_image() {
@@ -684,7 +692,7 @@ FSTAB
   log "Device image customized."
 }
 
-# verify_device — assert Layer 3 device stamp is correct.
+# verify_device — assert Layer 4 device stamp is correct.
 # Runs via guestfish on the cold image (no QEMU).
 verify_device() {
   local target_image="$1"
@@ -781,7 +789,7 @@ shrink_image() {
   log "Image size: $(du -h "$FINAL_IMAGE" | cut -f1)"
 }
 
-# stamp_device — Layer 3: all guestfish operations for per-device customization.
+# stamp_device — Layer 4: all guestfish operations for per-device customization.
 # No QEMU boot required — operates on a cold disk image.
 stamp_device() {
   local source_image="$1"
@@ -863,7 +871,7 @@ main() {
   BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
   write_inventory
 
-  # --- Layer 3 only: stamp device on existing app image ---
+  # --- Layer 4 only: stamp device on existing app image ---
   if [[ $DEVICE_ONLY -eq 1 ]]; then
     [[ -f "$APP_IMAGE" ]] || err "No app image found at $APP_IMAGE. Run without --device-only first."
     stamp_device "$APP_IMAGE"
@@ -871,8 +879,8 @@ main() {
   fi
 
   local base_hash app_hash
-  # Base hash covers the provisioning role (minus app.yml/deploy.yml which are Layer 2).
-  # Layer 1 runs provision.yml --skip-tags tailscale,app, so only role tasks
+  # Base hash covers the provisioning role (minus app.yml/deploy.yml which are Layer 3).
+  # Layers 1+2 run provision.yml --skip-tags tailscale,app, so only role tasks
   # for packages, security, display, filesystem, etc. matter.
   base_hash=$(find "$REPO_ROOT/deploy/pi/ansible" -type f \
     -not -name 'deploy.yml' \
@@ -888,12 +896,28 @@ main() {
     "$REPO_ROOT/pnpm-lock.yaml" \
     "$REPO_ROOT/turbo.json")
 
-  # --- Layer 1: Base system ---------------------------------------------------
+  # --- Layers 1+2: Image prep + Ansible provision -----------------------------
   local base_changed=0
   if [[ $APP_ONLY -eq 1 ]]; then
     [[ -f "$BASE_IMAGE" ]] || err "No base image found at $BASE_IMAGE. Run without --app-only first."
     [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --app-only first."
     log "Skipping base layer (--app-only)."
+  elif [[ $REPROVISION -eq 1 ]]; then
+    # Re-run Layer 2 (Ansible provision) on an existing prepared disk from Layer 1.
+    # Ansible is idempotent - already-completed tasks are skipped automatically.
+    [[ -f "$DISK_IMAGE" ]] || err "No prepared disk at $DISK_IMAGE. Run a full build first."
+    [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --reprovision first."
+    base_changed=1
+    log "Re-provisioning existing disk (Ansible only, skipping image prep)..."
+    boot_qemu
+    provision_base
+    verify_base
+    ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
+    wait_for_reboot
+    shutdown_qemu
+    cp "$DISK_IMAGE" "$BASE_IMAGE"
+    echo "$base_hash" > "$WORK_DIR/base-hash"
+    log "Base system layer cached."
   elif [[ -f "$BASE_IMAGE" ]] && [[ "$(cat "$WORK_DIR/base-hash" 2>/dev/null)" == "$base_hash" ]] && [[ $FORCE -eq 0 ]]; then
     log "Base system cached (Ansible unchanged). Skipping to app deployment."
   else
@@ -905,7 +929,7 @@ main() {
     boot_qemu
     provision_base
     verify_base
-    # Mask wpa_supplicant — no wlan0 in QEMU (unmasked in Layer 3 for real hardware)
+    # Mask wpa_supplicant — no wlan0 in QEMU (unmasked in Layer 4 for real hardware)
     ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
     wait_for_reboot
     shutdown_qemu
@@ -914,7 +938,7 @@ main() {
     log "Base system layer cached."
   fi
 
-  # --- Layer 2: App deployment ------------------------------------------------
+  # --- Layer 3: App deployment ------------------------------------------------
   if [[ -f "$APP_IMAGE" ]] && [[ "$(cat "$WORK_DIR/app-hash" 2>/dev/null)" == "$app_hash" ]] && [[ $base_changed -eq 0 ]] && [[ $FORCE -eq 0 ]]; then
     log "App layer cached. Skipping to device stamping."
   else
@@ -929,7 +953,7 @@ main() {
     log "App layer cached."
   fi
 
-  # --- Layer 3: Device customization (guestfish only, no QEMU) ----------------
+  # --- Layer 4: Device customization (guestfish only, no QEMU) ----------------
   stamp_device "$APP_IMAGE"
 }
 

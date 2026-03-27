@@ -1,4 +1,9 @@
 ---
+- name: Ensure _seatd group exists
+  ansible.builtin.group:
+    name: _seatd
+    system: true
+
 - name: Create kiosk user
   ansible.builtin.user:
     name: "{{ kioskkit_user }}"
