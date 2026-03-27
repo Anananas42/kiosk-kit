@@ -19,7 +19,9 @@
       - greetd
       - wlr-randr
       - swayidle
-      - chromium
+      # Pin to Debian stable — Chromium 146 (Pi repo) has a shared memory
+      # descriptor bug that crashes on Wayland compositors.
+      - chromium=143.0.7499.169-1~deb12u1
       - fonts-noto-color-emoji
       - nftables
       - nodejs
