@@ -15,6 +15,7 @@
   ansible.builtin.apt:
     name:
       - labwc
+      - seatd
       - swayidle
       - chromium
       - fonts-noto-color-emoji

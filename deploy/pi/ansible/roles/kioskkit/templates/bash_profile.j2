@@ -35,5 +35,9 @@ if [ "$(tty)" = "/dev/tty1" ]; then
     sleep 1
     export XDG_RUNTIME_DIR=/tmp/kiosk-xdg
     mkdir -p "$XDG_RUNTIME_DIR"
+    # Pixman renderer: wlroots 0.18 GLES2 renderer segfaults with Pi OS's
+    # backported Mesa 24.2.8 on Pi 4 (V3D). Software rendering is the
+    # only stable path until Mesa/wlroots compat is resolved.
+    export WLR_RENDERER=pixman
     exec labwc 2>>"$XDG_RUNTIME_DIR/labwc.log"
 fi

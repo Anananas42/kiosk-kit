@@ -394,6 +394,9 @@ verify_base() {
   check "kioskkit.service exists"       "test -f /etc/systemd/system/kioskkit.service"
   check "kioskkit.service enabled"      "systemctl is-enabled kioskkit.service"
   check "chromium policies deployed"    "test -f /etc/chromium/policies/managed/kioskkit.json"
+  check "seatd installed"              "dpkg -s seatd"
+  check "seatd enabled"               "systemctl is-enabled seatd.service"
+  check "kiosk in _seatd group"       "id kiosk | grep -q _seatd"
 
   if [[ $fails -gt 0 ]]; then
     err "Base layer verification failed ($fails checks). VM still running on port $SSH_PORT for debugging."

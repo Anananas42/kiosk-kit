@@ -5,7 +5,7 @@
     system: true
     create_home: true
     shell: /bin/bash
-    groups: video,input,render
+    groups: video,input,render,tty,_seatd
     password: "!"
     password_lock: true
 

@@ -31,6 +31,12 @@
     group: "{{ kioskkit_user }}"
     mode: "0644"
 
+- name: Enable seatd (seat management for labwc)
+  ansible.builtin.systemd:
+    name: seatd.service
+    enabled: true
+    state: started
+
 - name: Create getty override directory
   ansible.builtin.file:
     path: /etc/systemd/system/getty@tty1.service.d
