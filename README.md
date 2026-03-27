@@ -177,16 +177,16 @@ The Pi's nftables firewall drops all outbound traffic except Tailscale (UDP 4164
 ```
 systemd
 ├── kioskkit.service → node kiosk-server (port 3001)
-├── getty@tty1 → autologin kiosk → .bash_profile → poll 3001 → exec sway
+├── getty@tty1 → autologin kiosk → .bash_profile → poll 3001 → exec labwc
 │     └── chromium --kiosk http://localhost:3001
 └── bcm2835_wdt (15s hardware watchdog)
 ```
 
-Chromium/sway crash → getty respawns. Node crash → systemd restarts. System hang → watchdog reboots.
+Chromium/labwc crash → getty respawns. Node crash → systemd restarts. System hang → watchdog reboots.
 
 ### Security layers
 
-sway (no VT switch) · `exec` in .bash_profile (no shell escape) · viewport meta + CSS touch-action (no pinch zoom) · chromium --kiosk (no address bar) · chromium policies (no devtools/downloads/external URLs) · nftables (Tailscale-only outbound) · udev USB block · SysRq disable · locked kiosk user (no sudo) · systemd sandboxing (writes to `data/` only) · SSH key-only + no root login
+labwc (no VT switch) · `exec` in .bash_profile (no shell escape) · viewport meta + CSS touch-action (no pinch zoom) · chromium --kiosk (no address bar) · chromium policies (no devtools/downloads/external URLs) · nftables (Tailscale-only outbound) · udev USB block · SysRq disable · locked kiosk user (no sudo) · systemd sandboxing (writes to `data/` only) · SSH key-only + no root login
 
 ### Useful commands
 

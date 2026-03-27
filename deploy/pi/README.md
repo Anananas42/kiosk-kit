@@ -97,7 +97,7 @@ cross-compilation of native arm64 addons:
 9. **Host** (before Docker): builds kiosk packages, prunes to production deps, cross-compiles `better-sqlite3` for arm64 in a Bookworm container (matches Pi OS glibc)
 10. Creates COW overlay on base image, boots QEMU
 11. Rsyncs pre-built app into VM
-12. Ansible deploys system config (systemd service, sway config, display-sleep)
+12. Ansible deploys system config (systemd service, labwc config)
 13. Shuts down, flattens overlay to `app-image.qcow2`
 
 **Layer 3 — Device stamp (~30 sec, per device):**
@@ -116,12 +116,12 @@ The full Ansible provisioning playbook runs inside the VM:
 
 | Component | Details |
 |-----------|---------|
-| **OS packages** | Node.js 24, sway, Chromium, nftables, wpa_supplicant |
+| **OS packages** | Node.js 24, labwc, Chromium, nftables, wpa_supplicant |
 | **Kiosk user** | Locked system user, autologin on tty1, no SSH password access |
 | **Application** | kiosk-server, kiosk-client, kiosk-admin, shared, ui (other packages excluded) |
 | **Systemd services** | kioskkit.service, nftables, wpa_supplicant |
 | **Security** | nftables firewall (drop-all except Tailscale/DHCP), SSH password auth disabled, USB storage blocked, sysctl hardening |
-| **Display** | Sway compositor, Chromium kiosk mode, hidden cursor |
+| **Display** | labwc compositor, Chromium kiosk mode, hidden cursor |
 | **Watchdog** | bcm2835_wdt configured (activates on real Pi hardware) |
 | **Filesystem** | tmpfs on /tmp, noatime, performance CPU governor |
 | **WiFi** | Management scripts (scan/connect/forget/status) with sudoers |

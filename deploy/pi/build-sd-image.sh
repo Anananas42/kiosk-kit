@@ -363,6 +363,44 @@ provision_base() {
     || err "Ansible base provisioning failed. QEMU VM is still running on port $SSH_PORT for debugging."
 }
 
+# verify_base — assert Layer 1 produced the expected system state.
+# Runs over SSH while the VM is still up, before shutdown_qemu.
+verify_base() {
+  log "Verifying base system layer..."
+  local fails=0
+
+  check() {
+    local desc="$1"; shift
+    if ssh_pi "$@" >/dev/null 2>&1; then
+      log "  OK: $desc"
+    else
+      log "  FAIL: $desc"
+      fails=$((fails + 1))
+    fi
+  }
+
+  check "labwc installed"               "dpkg -s labwc"
+  check "sway not installed"            "! dpkg -s sway 2>/dev/null"
+  check "swayidle installed"            "dpkg -s swayidle"
+  check "chromium installed"            "which chromium"
+  check "labwc rc.xml deployed"         "test -f /home/kiosk/.config/labwc/rc.xml"
+  check "labwc autostart deployed"      "test -f /home/kiosk/.config/labwc/autostart"
+  check "labwc environment deployed"    "test -f /home/kiosk/.config/labwc/environment"
+  check "bash_profile launches labwc"   "grep -q 'exec labwc' /home/kiosk/.bash_profile"
+  check "no WLR_RENDERER in profile"    "! grep -q WLR_RENDERER /home/kiosk/.bash_profile"
+  check "no /etc/chromium.d/dev-shm"    "test ! -f /etc/chromium.d/dev-shm"
+  check "empty cursor theme exists"     "test -f /usr/share/icons/emptycursor/cursors/default"
+  check "getty autologin configured"    "test -f /etc/systemd/system/getty@tty1.service.d/autologin.conf"
+  check "kioskkit.service exists"       "test -f /etc/systemd/system/kioskkit.service"
+  check "kioskkit.service enabled"      "systemctl is-enabled kioskkit.service"
+  check "chromium policies deployed"    "test -f /etc/chromium/policies/managed/kioskkit.json"
+
+  if [[ $fails -gt 0 ]]; then
+    err "Base layer verification failed ($fails checks). VM still running on port $SSH_PORT for debugging."
+  fi
+  log "Base layer verified ($fails failures)."
+}
+
 # deploy_app — sync pre-built app (from host) into VM, deploy system config.
 deploy_app() {
   local stage_dir="$WORK_DIR/app-stage"
@@ -384,16 +422,47 @@ deploy_app() {
     || err "rsync into VM failed"
   ssh_pi "sudo rsync -a --exclude=data --exclude=system /var/tmp/app-stage/ $install_dir/ && sudo rm -rf /var/tmp/app-stage && sudo chown -R kiosk:kiosk $install_dir"
 
-  # Deploy ancillary files (systemd service, sway config, display-sleep.py)
+  # Deploy ancillary files (systemd service, labwc config)
   log "Deploying system configuration..."
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$WORK_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/deploy.yml" \
-    --start-at-task="Create system config directory" \
+    --start-at-task="Create labwc config directory" \
     || err "Ansible post-deploy tasks failed"
 
   rm -rf "$stage_dir"
   log "Application deployed."
+}
+
+# verify_app — assert Layer 2 produced the expected app state.
+verify_app() {
+  log "Verifying app deployment layer..."
+  local fails=0
+
+  check() {
+    local desc="$1"; shift
+    if ssh_pi "$@" >/dev/null 2>&1; then
+      log "  OK: $desc"
+    else
+      log "  FAIL: $desc"
+      fails=$((fails + 1))
+    fi
+  }
+
+  check "kiosk-server built"            "test -f /opt/kioskkit/packages/kiosk-server/dist/index.js"
+  check "kiosk-client built"            "test -d /opt/kioskkit/packages/kiosk-client/dist"
+  check "shared package built"          "test -d /opt/kioskkit/packages/shared/dist"
+  check "node can parse kiosk-server"    "sudo -u kiosk node --check /opt/kioskkit/packages/kiosk-server/dist/index.js"
+  check "no display-sleep.py"           "test ! -f /opt/kioskkit/system/config/display-sleep.py"
+  check "no sway config dir"            "test ! -d /home/kiosk/.config/sway"
+  check "labwc autostart has port"      "grep -q 'localhost:3001' /home/kiosk/.config/labwc/autostart"
+  check "labwc autostart has scale"     "grep -q 'force-device-scale-factor' /home/kiosk/.config/labwc/autostart"
+  check "app owned by kiosk user"       "test \"\$(stat -c %U /opt/kioskkit/packages/kiosk-server/dist/index.js)\" = kiosk"
+
+  if [[ $fails -gt 0 ]]; then
+    err "App layer verification failed ($fails checks). VM still running on port $SSH_PORT for debugging."
+  fi
+  log "App layer verified ($fails failures)."
 }
 
 # customize_device_image — Layer 3 device customization via guestfish.
@@ -609,6 +678,81 @@ FSTAB
   log "Device image customized."
 }
 
+# verify_device — assert Layer 3 device stamp is correct.
+# Runs via guestfish on the cold image (no QEMU).
+verify_device() {
+  local target_image="$1"
+  log "Verifying device stamp..."
+  local fails=0 verify_dir="$WORK_DIR/verify-stamp"
+  rm -rf "$verify_dir"
+  mkdir -p "$verify_dir"
+
+  # Extract files to check via a single guestfish session
+  local verify_cmd="$verify_dir/verify.cmd"
+  {
+    echo "add $target_image"
+    echo "run"
+    # rootfs (p2)
+    echo "mount /dev/sda2 /"
+    echo "exists /usr/bin/tailscale"
+    echo "exists /usr/sbin/tailscaled"
+    echo "exists /home/pi/.ssh/authorized_keys"
+    echo "download /etc/fstab $verify_dir/fstab"
+    echo "umount /"
+    # data partition (p4)
+    echo "mount /dev/sda4 /"
+    echo "exists /kioskkit-config/device.conf"
+    echo "download /kioskkit-config/device.conf $verify_dir/device.conf"
+    echo "exists /ssh/ssh_host_ed25519_key"
+    echo "exists /ssh/ssh_host_rsa_key"
+  } > "$verify_cmd"
+
+  local gf_output
+  gf_output=$(guestfish < "$verify_cmd" 2>&1) || true
+
+  check() {
+    local desc="$1"; shift
+    if "$@" >/dev/null 2>&1; then
+      log "  OK: $desc"
+    else
+      log "  FAIL: $desc"
+      fails=$((fails + 1))
+    fi
+  }
+
+  # Parse guestfish "exists" output (returns "true" or "false" per line)
+  local line_num=0
+  local tailscale_bin=false tailscaled_bin=false build_key=false device_conf_exists=false ssh_ed25519=false ssh_rsa=false
+  while IFS= read -r line; do
+    line_num=$((line_num + 1))
+    case $line_num in
+      1) tailscale_bin="$line" ;;
+      2) tailscaled_bin="$line" ;;
+      3) build_key="$line" ;;
+      4) device_conf_exists="$line" ;;
+      5) ssh_ed25519="$line" ;;
+      6) ssh_rsa="$line" ;;
+    esac
+  done <<< "$gf_output"
+
+  check "tailscale binary present"      test "$tailscale_bin" = "true"
+  check "tailscaled binary present"     test "$tailscaled_bin" = "true"
+  check "build SSH key removed"         test "$build_key" = "false"
+  check "device.conf on data partition" test "$device_conf_exists" = "true"
+  check "SSH host key (ed25519)"        test "$ssh_ed25519" = "true"
+  check "SSH host key (rsa)"            test "$ssh_rsa" = "true"
+  check "fstab uses PARTUUIDs"          grep -q "PARTUUID=" "$verify_dir/fstab"
+  check "fstab has no /dev/sda"         ! grep -q "/dev/sda" "$verify_dir/fstab"
+  check "device.conf has DEVICE_ID"     grep -q "DEVICE_ID=${DEVICE_ID}" "$verify_dir/device.conf"
+
+  rm -rf "$verify_dir"
+
+  if [[ $fails -gt 0 ]]; then
+    err "Device stamp verification failed ($fails checks)."
+  fi
+  log "Device stamp verified ($fails failures)."
+}
+
 convert_to_raw() {
   log "Converting qcow2 to raw image..."
   local raw_output="$STAMP_DIR/image.img"
@@ -644,6 +788,7 @@ stamp_device() {
 
   # All guestfish operations on the cold image
   customize_device_image "$device_image"
+  verify_device "$device_image"
   convert_to_raw
   shrink_image
 
@@ -743,6 +888,7 @@ main() {
     patch_image_for_virt
     boot_qemu
     provision_base
+    verify_base
     # Mask wpa_supplicant — no wlan0 in QEMU (unmasked in Layer 3 for real hardware)
     ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
     wait_for_reboot
@@ -760,6 +906,7 @@ main() {
     create_cow_overlay "$BASE_IMAGE" "$DISK_IMAGE"
     boot_qemu
     deploy_app
+    verify_app
     shutdown_qemu
     flatten_overlay "$DISK_IMAGE" "$APP_IMAGE"
     echo "$app_hash" > "$WORK_DIR/app-hash"

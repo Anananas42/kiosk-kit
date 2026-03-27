@@ -14,7 +14,7 @@
 - name: Install system packages
   ansible.builtin.apt:
     name:
-      - sway
+      - labwc
       - swayidle
       - chromium
       - fonts-noto-color-emoji

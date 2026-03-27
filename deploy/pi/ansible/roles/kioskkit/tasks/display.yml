@@ -1,16 +1,32 @@
 ---
-- name: Create sway config directory
+- name: Create labwc config directory
   ansible.builtin.file:
-    path: "/home/{{ kioskkit_user }}/.config/sway"
+    path: "/home/{{ kioskkit_user }}/.config/labwc"
     state: directory
     owner: "{{ kioskkit_user }}"
     group: "{{ kioskkit_user }}"
     mode: "0755"
 
-- name: Deploy sway config
+- name: Deploy labwc rc.xml
   ansible.builtin.template:
-    src: sway-config.j2
-    dest: "/home/{{ kioskkit_user }}/.config/sway/config"
+    src: labwc-rc.xml.j2
+    dest: "/home/{{ kioskkit_user }}/.config/labwc/rc.xml"
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0644"
+
+- name: Deploy labwc autostart
+  ansible.builtin.template:
+    src: labwc-autostart.j2
+    dest: "/home/{{ kioskkit_user }}/.config/labwc/autostart"
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Deploy labwc environment
+  ansible.builtin.template:
+    src: labwc-environment.j2
+    dest: "/home/{{ kioskkit_user }}/.config/labwc/environment"
     owner: "{{ kioskkit_user }}"
     group: "{{ kioskkit_user }}"
     mode: "0644"

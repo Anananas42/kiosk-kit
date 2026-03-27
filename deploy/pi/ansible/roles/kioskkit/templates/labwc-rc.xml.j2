@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<!-- Managed by Ansible — do not edit manually. -->
+<labwc_config>
+
+  <core>
+    <decoration>server</decoration>
+    <gap>0</gap>
+  </core>
+
+  <placement>
+    <policy>maximize</policy>
+  </placement>
+
+  <focus>
+    <followMouse>no</followMouse>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+
+  <windowRules>
+    <windowRule identifier="*" serverDecoration="no" skipTaskbar="yes" fixedPosition="yes" />
+  </windowRules>
+
+  <theme>
+    <cornerRadius>0</cornerRadius>
+    <titlebar>
+      <showTitle>no</showTitle>
+    </titlebar>
+    <dropShadows>no</dropShadows>
+  </theme>
+
+  <!-- Strip all default keybinds — kiosk has no keyboard interaction -->
+  <keyboard />
+
+  <!-- Strip all default mousebinds — no context menus or window management -->
+  <mouse />
+
+</labwc_config>

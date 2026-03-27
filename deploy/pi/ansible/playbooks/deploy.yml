@@ -65,26 +65,34 @@
       become_user: "{{ kioskkit_user | default('kiosk') }}"
       changed_when: true
 
-    - name: Create system config directory
+    - name: Create labwc config directory
       ansible.builtin.file:
-        path: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/config"
+        path: "/home/{{ kioskkit_user | default('kiosk') }}/.config/labwc"
         state: directory
         owner: "{{ kioskkit_user | default('kiosk') }}"
         group: "{{ kioskkit_user | default('kiosk') }}"
         mode: "0755"
 
-    - name: Deploy display-sleep.py
-      ansible.builtin.copy:
-        src: "{{ playbook_dir }}/../../system/config/display-sleep.py"
-        dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/config/display-sleep.py"
+    - name: Deploy labwc rc.xml
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/kioskkit/templates/labwc-rc.xml.j2"
+        dest: "/home/{{ kioskkit_user | default('kiosk') }}/.config/labwc/rc.xml"
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        mode: "0644"
+
+    - name: Deploy labwc autostart
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/kioskkit/templates/labwc-autostart.j2"
+        dest: "/home/{{ kioskkit_user | default('kiosk') }}/.config/labwc/autostart"
         owner: "{{ kioskkit_user | default('kiosk') }}"
         group: "{{ kioskkit_user | default('kiosk') }}"
         mode: "0755"
 
-    - name: Deploy sway config
+    - name: Deploy labwc environment
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../roles/kioskkit/templates/sway-config.j2"
-        dest: "/home/{{ kioskkit_user | default('kiosk') }}/.config/sway/config"
+        src: "{{ playbook_dir }}/../roles/kioskkit/templates/labwc-environment.j2"
+        dest: "/home/{{ kioskkit_user | default('kiosk') }}/.config/labwc/environment"
         owner: "{{ kioskkit_user | default('kiosk') }}"
         group: "{{ kioskkit_user | default('kiosk') }}"
         mode: "0644"
@@ -119,13 +127,13 @@
         state: restarted
         daemon_reload: true
 
-    - name: Restart sway (force Chromium reload)
+    - name: Restart labwc (force Chromium reload)
       ansible.builtin.command:
-        cmd: "pkill -u {{ kioskkit_user | default('kiosk') }} sway"
+        cmd: "pkill -u {{ kioskkit_user | default('kiosk') }} labwc"
       failed_when: false
       changed_when: true
 
     - name: Clean stale wayland sockets
       ansible.builtin.shell:
-        cmd: "rm -f /tmp/kiosk-xdg/wayland-* /tmp/kiosk-xdg/sway-ipc.*.sock"
+        cmd: "rm -f /tmp/kiosk-xdg/wayland-*"
       changed_when: false

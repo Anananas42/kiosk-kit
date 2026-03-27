@@ -1,16 +1,9 @@
+#!/bin/sh
 # Managed by Ansible — do not edit manually.
-# Sway compositor config for kiosk mode.
+# labwc autostart — launched by labwc after the compositor is ready.
 # App-level timing constants live in packages/shared/src/config.ts.
-# Display-off timeout ({{ kioskkit_idle_timeout_secs }}s) and wake grab hold ({{ kioskkit_wake_grab_hold_secs }}s)
-# are system-level and kept here / in display-sleep.py respectively.
 
-seat * hide_cursor 1
-default_border none
-default_floating_border none
-
-exec swayidle -w timeout {{ kioskkit_idle_timeout_secs }} '{{ kioskkit_install_dir }}/system/config/display-sleep.py'
-
-exec chromium \
+chromium \
     --kiosk \
     --noerrdialogs \
     --disable-renderer-backgrounding \
@@ -25,4 +18,4 @@ exec chromium \
     --password-store=basic \
     --ozone-platform=wayland \
     --force-device-scale-factor={{ kioskkit_display_scale_factor }} \
-    http://localhost:{{ kioskkit_app_port }}
+    http://localhost:{{ kioskkit_app_port }} &
