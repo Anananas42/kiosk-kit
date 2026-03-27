@@ -19,9 +19,9 @@ growpart "$DISK" "$PART_NUM" || {
   echo "growpart: partition already at max size or failed"
 }
 
-# Tell the kernel to re-read the partition table after growpart resized it.
-# Without this, resize2fs sees the old partition size and fails with EBUSY.
-partprobe "$DISK"
+# Notify the kernel about the resized partition. Use partx instead of partprobe
+# to avoid re-enumerating all devices, which disrupts logind seat assignments.
+partx --update --nr "$PART_NUM" "$DISK"
 sleep 1
 
 # Resize filesystem to match (works online on mounted ext4)
