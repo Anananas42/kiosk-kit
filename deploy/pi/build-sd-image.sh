@@ -531,6 +531,9 @@ FSTAB
     # Patched sshd_config
     echo "upload $sshd_cfg /etc/ssh/sshd_config"
 
+    # Unmask wpa_supplicant (masked during QEMU build to avoid 90s wlan0 wait)
+    echo "rm-f /etc/systemd/system/wpa_supplicant@wlan0.service"
+
     # Remove build SSH key
     echo "rm-f /home/pi/.ssh/authorized_keys"
 
@@ -698,6 +701,8 @@ main() {
     patch_image_for_virt
     boot_qemu
     provision_base
+    # Mask services that wait for hardware absent in QEMU (saves ~90s per boot)
+    ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
     wait_for_reboot
     shutdown_qemu
     cp "$DISK_IMAGE" "$BASE_IMAGE"
