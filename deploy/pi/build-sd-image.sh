@@ -472,8 +472,8 @@ EOF
   # Patch sshd_config to use host keys on data partition
   sed -i -E 's,^#?HostKey /etc/ssh/ssh_host_(rsa|ecdsa|ed25519)_key,HostKey /data/ssh/ssh_host_\1_key,' "$sshd_cfg"
 
-  # Strip Pi OS first-boot init override from cmdline.txt
-  sed -i 's| init=/usr/lib/raspberrypi-sys-mods/firstboot||' "$stamp_dir/cmdline.txt"
+  # Strip Pi OS first-boot init override and quiet flag from cmdline.txt
+  sed -i 's| init=/usr/lib/raspberrypi-sys-mods/firstboot||; s| quiet||' "$stamp_dir/cmdline.txt"
 
   # Build Pi-native fstab with PARTUUIDs
   cat > "$stamp_dir/fstab" <<FSTAB
@@ -558,13 +558,18 @@ FSTAB
     # Remove build SSH key
     echo "rm-f /home/pi/.ssh/authorized_keys"
 
-    # Truncate machine-id so systemd treats first real boot as ConditionFirstBoot=yes
-    # (QEMU populates it during build; without this, kioskkit-expand-data never runs)
-    echo "truncate /etc/machine-id"
+    # Write "uninitialized" to machine-id so systemd treats first real boot as
+    # ConditionFirstBoot=yes. An empty file triggers new ID generation but does NOT
+    # set the first-boot flag in systemd 252 — it must contain "uninitialized\n".
+    echo "write /etc/machine-id \"uninitialized\n\""
 
     # === data partition (p4) ===
     echo "umount /"
     echo "mount /dev/sda4 /"
+
+    # Clear QEMU build journals so systemd treats Pi boot as ConditionFirstBoot=yes
+    echo "glob rm-f /journal/*/*.journal"
+    echo "glob rm-f /journal/*/*.journal~"
 
     # Device config
     echo "mkdir-p /kioskkit-config"
