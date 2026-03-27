@@ -527,8 +527,8 @@ FSTAB
     echo "chmod 0755 /opt/kioskkit/system/expand-data-partition.sh"
     echo "mkdir-p /etc/systemd/system/multi-user.target.wants"
     echo "ln-sf /etc/systemd/system/kioskkit-tailscale-firstboot.service /etc/systemd/system/multi-user.target.wants/kioskkit-tailscale-firstboot.service"
-    echo "mkdir-p /etc/systemd/system/local-fs.target.wants"
-    echo "ln-sf /etc/systemd/system/kioskkit-expand-data.service /etc/systemd/system/local-fs.target.wants/kioskkit-expand-data.service"
+    echo "mkdir-p /etc/systemd/system/data.mount.wants"
+    echo "ln-sf /etc/systemd/system/kioskkit-expand-data.service /etc/systemd/system/data.mount.wants/kioskkit-expand-data.service"
 
     # Tailscale binaries
     if [ -f "$ts_root/usr/bin/tailscale" ]; then
@@ -565,9 +565,9 @@ FSTAB
     echo "umount /"
     echo "mount /dev/sda4 /"
 
-    # Clear QEMU build journals
-    echo "rm-rf /journal"
-    echo "mkdir-p /journal"
+    # Clear QEMU build journal files (keep directory structure and permissions)
+    echo "glob rm-f /journal/*/*.journal"
+    echo "glob rm-f /journal/*/*.journal~"
 
     # Device config
     echo "mkdir-p /kioskkit-config"
@@ -648,9 +648,13 @@ stamp_device() {
 
   local size
   size=$(du -h "$output_file" | cut -f1)
+
+  # Translate container paths to host-relative paths for suggested commands
+  local host_file="deploy/pi/.output/${stamp_label}.img"
+
   log ""
   log "Image built successfully!"
-  log "  Output: $output_file"
+  log "  Output: $host_file"
   log "  Size:   $size"
   log ""
   log "Flash with (install bmap-tools for fast flashing — skips empty blocks):"
@@ -666,20 +670,20 @@ stamp_device() {
       done)
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo umount ${card%% *}? 2>/dev/null; sudo dd if=$output_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
+      log "  sudo umount ${card%% *}? 2>/dev/null; sudo dd if=$host_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
     done <<< "$sd_cards"
   else
-    log "  sudo umount /dev/sdX? 2>/dev/null; sudo dd if=$output_file of=/dev/sdX bs=4M conv=fsync status=progress"
+    log "  sudo umount /dev/sdX? 2>/dev/null; sudo dd if=$host_file of=/dev/sdX bs=4M conv=fsync status=progress"
   fi
   log ""
   log "Fast flash (apt install bmap-tools, skips empty blocks):"
-  log "  bmaptool create $output_file -o ${output_file%.img}.bmap"
+  log "  bmaptool create $host_file -o ${host_file%.img}.bmap"
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo umount ${card%% *}? 2>/dev/null; sudo bmaptool copy $output_file ${card%% *}  # ${card#* }"
+      log "  sudo umount ${card%% *}? 2>/dev/null; sudo bmaptool copy $host_file ${card%% *}  # ${card#* }"
     done <<< "$sd_cards"
   else
-    log "  sudo umount /dev/sdX? 2>/dev/null; sudo bmaptool copy $output_file /dev/sdX"
+    log "  sudo umount /dev/sdX? 2>/dev/null; sudo bmaptool copy $host_file /dev/sdX"
   fi
 }
 

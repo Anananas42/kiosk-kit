@@ -15,9 +15,15 @@ echo "Expanding data partition ${PART} to fill disk..."
 mkdir -p /tmp
 
 # Grow partition to use all remaining space
-growpart "$DISK" "$PART_NUM" || {
-  echo "growpart: partition already at max size or failed"
-}
+# Exit code 0 = grew, 1 = already at max size (NOCHANGE)
+rc=0
+growpart "$DISK" "$PART_NUM" || rc=$?
+if [ "$rc" -eq 1 ]; then
+  echo "growpart: partition already at max size"
+elif [ "$rc" -ne 0 ]; then
+  echo "growpart failed with exit code $rc" >&2
+  exit 1
+fi
 
 # Notify the kernel about the resized partition
 partx --update --nr "$PART_NUM" "$DISK"

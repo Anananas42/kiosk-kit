@@ -1,14 +1,15 @@
 [Unit]
 Description=Expand data partition to fill SD card
 DefaultDependencies=no
-Before=local-fs.target
+Before=data.mount local-fs.target
 After=systemd-udevd.service
 ConditionPathExists=/etc/.expand-data-needed
 
 [Service]
 Type=oneshot
+Environment=TMPDIR=/run
 ExecStart=/opt/kioskkit/system/expand-data-partition.sh
 RemainAfterExit=false
 
 [Install]
-WantedBy=local-fs.target
+WantedBy=data.mount

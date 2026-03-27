@@ -10,7 +10,8 @@
       "Read(//media/adam/bootfs/**)",
       "Read(//media/adam/kioskkit-data/**)",
       "Read(//usr/lib/systemd/system/**)",
-      "Read(//media/adam/rootfs1/etc/modules-load.d/**)"
+      "Read(//media/adam/rootfs1/etc/modules-load.d/**)",
+      "Bash(./deploy/pi/build-sd-image.sh --dev --device-only)"
     ]
   }
 }
