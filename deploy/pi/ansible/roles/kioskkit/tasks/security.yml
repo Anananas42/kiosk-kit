@@ -53,3 +53,18 @@
 
   # SSH host keys are relocated to /data/ssh/ during device stamping (guestfish),
   # not here — sshd would fail to restart during the QEMU build since /data/ isn't mounted.
+
+- name: Ensure ssh.service drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/ssh.service.d
+    state: directory
+    mode: "0755"
+
+- name: Make ssh.service wait for data partition
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      After=data.mount
+      Requires=data.mount
+    dest: /etc/systemd/system/ssh.service.d/wait-for-data.conf
+    mode: "0644"
