@@ -4,7 +4,7 @@ all:
     kiosks:
       hosts:
         # Add production kiosks here. Each host needs host_vars with:
-        #   tailscale_auth_key, device_id, customer_tag
+        #   tailscale_auth_key, device_id, stage
         # Example:
         # kiosk-001:
         #   ansible_host: 100.64.x.x  # Tailscale IP

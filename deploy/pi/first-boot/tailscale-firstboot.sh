@@ -24,6 +24,8 @@ tailscale up \
   --hostname="kioskkit-${DEVICE_ID}" \
   --ssh
 
+tailscale set --auto-update
+
 echo "Tailscale authenticated successfully."
 
 # Clean up — remove credentials and disable this one-shot service

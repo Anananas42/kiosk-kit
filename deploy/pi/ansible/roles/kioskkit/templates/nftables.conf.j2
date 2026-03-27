@@ -1,6 +1,6 @@
 #!/usr/sbin/nft -f
 # Managed by Ansible — do not edit manually.
-# Pi-passive model: no outbound except Tailscale + DHCP + wlan0 DNS/DHCP.
+# Pi-passive model: no outbound except DNS, DHCP, and Tailscale (auth + tunnel).
 
 flush ruleset
 

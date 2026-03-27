@@ -34,7 +34,7 @@ Each host needs these variables (set in `inventory/host_vars/<hostname>.yml` or 
 |---|---|
 | `tailscale_auth_key` | Tailscale pre-auth key for the device |
 | `device_id` | Unique device identifier (e.g., `001`) |
-| `customer_tag` | Tailscale ACL tag (e.g., `customer-42`) |
+| `stage` | Deployment stage (`dev` or `production`) |
 
 ## Testing with a local VM
 

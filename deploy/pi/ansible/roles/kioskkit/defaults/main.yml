@@ -13,7 +13,7 @@ kioskkit_wake_grab_hold_secs: 4.0
 # Tailscale — must be overridden per host
 kioskkit_tailscale_auth_key: ""
 kioskkit_device_id: ""
-kioskkit_customer_tag: ""
+kioskkit_stage: ""
 
 # System
 kioskkit_cpu_governor: performance

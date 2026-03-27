@@ -119,7 +119,7 @@ all:
           ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           kioskkit_tailscale_auth_key: "skip"
           kioskkit_device_id: "rootfs"
-          kioskkit_customer_tag: "ota"
+          kioskkit_stage: "ota"
 EOF
 }
 

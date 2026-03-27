@@ -202,9 +202,9 @@ PIOS_URL="https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_li
 PIOS_CHECKSUM="6ac3a10a1f144c7e9d1f8e568d75ca809288280a593eb6ca053e49b539f465a4"
 
 # Tailscale arm64 .deb URL and checksum
-TAILSCALE_VERSION="1.80.3"
+TAILSCALE_VERSION="1.96.2"
 TAILSCALE_DEB_URL="https://pkgs.tailscale.com/stable/debian/pool/tailscale_${TAILSCALE_VERSION}_arm64.deb"
-TAILSCALE_DEB_CHECKSUM="aed221f435b3ed6e5a6ed0694a3e91b04136264b96ae27cca39433a95fbd03e2"
+TAILSCALE_DEB_CHECKSUM="fcc7b896743e218b8c074c014edc83660517b5b1c5facfd9e240062213232c05"
 
 # shellcheck source=lib/pi-image-common.sh
 source "$REPO_ROOT/deploy/pi/lib/pi-image-common.sh"

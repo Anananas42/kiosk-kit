@@ -26,15 +26,15 @@ sudo chmod 644 /boot/vmlinuz-*  # libguestfs needs to read the host kernel
 
 ```bash
 ./deploy/pi/build-sd-image.sh \
+  --stage production \
   --device-id 042 \
-  --customer-tag acme \
   --tailscale-key tskey-auth-XXXX
 ```
 
 ### Production build (auto-generate key via API)
 
-If `--tailscale-key` is omitted, the script generates a single-use auth key via the
-Tailscale API. Set the required credentials in `.env` or as environment variables:
+If `--tailscale-key` is omitted, the script generates a single-use preauthorized auth
+key via the Tailscale API. Set the required credentials in `.env` or as environment variables:
 
 ```bash
 # .env (or export these)
@@ -43,23 +43,22 @@ TAILSCALE_OAUTH_CLIENT_SECRET=tskey-client-XXXX
 TAILSCALE_TAILNET=your-tailnet.ts.net
 
 ./deploy/pi/build-sd-image.sh \
-  --device-id 042 \
-  --customer-tag acme
+  --stage production \
+  --device-id 042
 ```
 
-The generated key is single-use, non-reusable, non-ephemeral, and tagged with
-`tag:kioskkit` (plus `tag:<customer-tag>` when set).
+The generated key is single-use, non-reusable, non-ephemeral, preauthorized, and tagged
+based on the stage (`dev` → `tag:kioskkit tag:dev-pi`, `production` → `tag:kioskkit tag:production-pi`).
 
 Auto-detects if running outside a container and re-execs inside Docker. No sudo needed.
 
 ### Dev build
 
 ```bash
-export PI_DEV_DEVICE_ID=dev-001
-export PI_DEV_CUSTOMER_TAG=dev
-export PI_DEV_TAILSCALE_KEY=tskey-auth-XXXX   # optional — falls back to API generation
 ./deploy/pi/build-sd-image.sh --dev
 ```
+
+`--dev` is shorthand for `--stage dev` with auto-generated device ID and Tailscale key.
 
 ### Output
 
@@ -161,7 +160,7 @@ docker build -t kioskkit-sd-builder deploy/pi/
 docker run --rm \
   -v "$PWD:/workspace:ro" \
   -v "$PWD/deploy/pi/.output:/output" \
-  kioskkit-sd-builder --device-id 042 --customer-tag acme --tailscale-key tskey-auth-XXXX
+  kioskkit-sd-builder --stage production --device-id 042 --tailscale-key tskey-auth-XXXX
 ```
 
 Environment variables for tuning:
