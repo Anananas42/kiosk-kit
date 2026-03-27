@@ -200,6 +200,7 @@ DISK_IMAGE="$WORK_DIR/disk.qcow2"
 ANSIBLE_DIR="$REPO_ROOT/deploy/pi/ansible"
 
 BASE_IMAGE="$WORK_DIR/provisioned-base.qcow2"
+PREPARED_IMAGE="$WORK_DIR/prepared-disk.qcow2"
 APP_IMAGE="$WORK_DIR/app-image.qcow2"
 
 # shellcheck disable=SC2034
@@ -903,12 +904,13 @@ main() {
     [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --app-only first."
     log "Skipping base layer (--app-only)."
   elif [[ $REPROVISION -eq 1 ]]; then
-    # Re-run Layer 2 (Ansible provision) on an existing prepared disk from Layer 1.
-    # Ansible is idempotent - already-completed tasks are skipped automatically.
-    [[ -f "$DISK_IMAGE" ]] || err "No prepared disk at $DISK_IMAGE. Run a full build first."
-    [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run without --reprovision first."
+    # Re-run Layer 2 (Ansible provision) on the Layer 1 prepared disk.
+    # Restores from the pre-mask snapshot so Ansible sees a clean state.
+    [[ -f "$PREPARED_IMAGE" ]] || err "No prepared disk at $PREPARED_IMAGE. Run a full build (--force) first."
+    [[ -f "$KERNEL" ]] || err "No virt kernel found at $KERNEL. Run a full build (--force) first."
     base_changed=1
-    log "Re-provisioning existing disk (Ansible only, skipping image prep)..."
+    log "Re-provisioning from prepared disk (Ansible only, skipping image prep)..."
+    cp "$PREPARED_IMAGE" "$DISK_IMAGE"
     boot_qemu
     provision_base
     verify_base
@@ -926,6 +928,8 @@ main() {
     download_pios
     prepare_disk
     patch_image_for_virt
+    # Save Layer 1 snapshot (prepared disk before Ansible) for --reprovision
+    cp "$DISK_IMAGE" "$PREPARED_IMAGE"
     boot_qemu
     provision_base
     verify_base
