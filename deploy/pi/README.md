@@ -10,11 +10,7 @@ authenticates, kiosk app starts.
 
 ## Prerequisites
 
-- Docker (everything else is inside the container)
-- aarch64 cross-compiler for native addon compilation:
-  ```bash
-  sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-  ```
+- Docker (everything else is inside containers)
 
 For running without Docker (e.g. in CI):
 
@@ -99,7 +95,7 @@ code in `deploy/pi/lib/pi-image-common.sh`:
 The app is built on the host at native x86 speed (before Docker), including
 cross-compilation of native arm64 addons:
 
-9. **Host** (before Docker): builds kiosk packages, prunes to production deps, cross-compiles `better-sqlite3` for arm64
+9. **Host** (before Docker): builds kiosk packages, prunes to production deps, cross-compiles `better-sqlite3` for arm64 in a Bookworm container (matches Pi OS glibc)
 10. Creates COW overlay on base image, boots QEMU
 11. Rsyncs pre-built app into VM
 12. Ansible deploys system config (systemd service, sway config, display-sleep)
