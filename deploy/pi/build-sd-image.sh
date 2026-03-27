@@ -684,12 +684,13 @@ stamp_device() {
   fi
   log ""
   log "Fast flash (apt install bmap-tools, skips empty blocks):"
+  log "  bmaptool create $output_file -o ${output_file%.img}.bmap"
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo bmaptool copy --nobmap $output_file ${card%% *}  # ${card#* }"
+      log "  sudo bmaptool copy $output_file ${card%% *}  # ${card#* }"
     done <<< "$sd_cards"
   else
-    log "  sudo bmaptool copy --nobmap $output_file /dev/sdX"
+    log "  sudo bmaptool copy $output_file /dev/sdX"
   fi
 }
 
