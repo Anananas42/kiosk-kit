@@ -1,9 +1,38 @@
 # Managed by Ansible — do not edit manually.
 if [ "$(tty)" = "/dev/tty1" ]; then
+    clear
+    printf '\n  KioskKit\n\n'
+
+    # Wait for first-boot partition expansion (skipped on subsequent boots)
+    if systemctl is-active --quiet kioskkit-expand-data.service 2>/dev/null; then
+        printf '  Expanding data partition (first boot)...'
+        while systemctl is-active --quiet kioskkit-expand-data.service 2>/dev/null; do
+            sleep 2
+        done
+        printf ' done.\n'
+    fi
+
+    # Wait for data partition and bind mounts
+    if ! mountpoint -q /data 2>/dev/null; then
+        printf '  Mounting data partition...'
+        while ! mountpoint -q /data 2>/dev/null; do sleep 1; done
+        printf ' done.\n'
+    fi
+
+    # Wait for app server
+    printf '  Starting app server...'
+    n=0
     until curl -sf http://localhost:{{ kioskkit_app_port }} >/dev/null 2>&1; do
+        n=$((n + 1))
+        if [ $((n % 15)) -eq 0 ]; then
+            printf '\n  Still waiting (%ds)...' "$((n * 2))"
+        fi
         sleep 2
     done
+    printf ' ready.\n'
 
+    printf '  Launching display...\n'
+    sleep 1
     export XDG_RUNTIME_DIR=/tmp/kiosk-xdg
     mkdir -p "$XDG_RUNTIME_DIR"
     exec sway --unsupported-gpu
