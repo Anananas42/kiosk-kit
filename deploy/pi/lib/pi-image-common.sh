@@ -213,7 +213,7 @@ patch_image_for_virt() {
   # fstab for virtio-blk (/dev/vda* instead of PARTUUIDs).
   cat > "$patch_dir/fstab" <<'FSTAB'
 /dev/vda2             /                ext4  defaults,noatime  0  1
-LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  2
+LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  0
 /data/kioskkit        /opt/kioskkit/data   none  bind          0  0
 /data/tailscale       /var/lib/tailscale   none  bind          0  0
 /data/wpa             /etc/wpa_supplicant  none  bind          0  0

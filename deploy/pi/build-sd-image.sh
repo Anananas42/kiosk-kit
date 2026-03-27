@@ -479,7 +479,7 @@ EOF
 proc                  /proc            proc  defaults          0  0
 PARTUUID=${partuuid_p1}  /boot/firmware  vfat  defaults          0  2
 PARTUUID=${partuuid_p2}  /               ext4  defaults,noatime  0  1
-LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  2
+LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  0
 /data/kioskkit        /opt/kioskkit/data   none  bind          0  0
 /data/tailscale       /var/lib/tailscale   none  bind          0  0
 /data/wpa             /etc/wpa_supplicant  none  bind          0  0
