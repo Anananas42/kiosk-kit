@@ -364,10 +364,6 @@ provision_base() {
 }
 
 # deploy_app — sync pre-built app (from host) into VM, deploy system config.
-#
-# The host build runs before Docker re-exec (native x86 speed), including
-# cross-compilation of native arm64 addons. By the time this function runs
-# inside the container, the pre-built app is at $WORK_DIR/app-stage/.
 deploy_app() {
   local stage_dir="$WORK_DIR/app-stage"
   [[ -d "$stage_dir" ]] || err "No pre-built app found at $stage_dir. Host build may have failed."
@@ -555,7 +551,7 @@ FSTAB
     # Patched sshd_config
     echo "upload $sshd_cfg /etc/ssh/sshd_config"
 
-    # Unmask wpa_supplicant (masked during QEMU build to avoid 90s wlan0 wait)
+    # Unmask wpa_supplicant for real hardware
     echo "rm-f /etc/systemd/system/wpa_supplicant@wlan0.service"
 
     # Remove build SSH key
@@ -695,9 +691,6 @@ main() {
   require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook dpkg-deb curl jq
   mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
 
-  # Set BUILD_SSH_KEY path early so write_inventory can reference it.
-  # The key itself is generated in create_pi_user() during Layer 1; on cached
-  # runs the file already exists on disk.
   BUILD_SSH_KEY="$WORK_DIR/build-ssh-key"
   write_inventory
 
@@ -742,7 +735,7 @@ main() {
     patch_image_for_virt
     boot_qemu
     provision_base
-    # Mask services that wait for hardware absent in QEMU (saves ~90s per boot)
+    # Mask wpa_supplicant — no wlan0 in QEMU (unmasked in Layer 3 for real hardware)
     ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
     wait_for_reboot
     shutdown_qemu

@@ -224,9 +224,6 @@ main() {
   require_cmd qemu-system-aarch64 qemu-img guestfish ssh sshpass ansible-playbook
   mkdir -p "$CACHE_DIR" "$BOOT_DIR" "$BUILD_DIR" "$RUN_DIR" "$OUTPUT_DIR"
 
-  # Set BUILD_SSH_KEY path early so write_inventory can reference it.
-  # The key itself is generated in create_pi_user() during Layer 1; on cached
-  # runs the file already exists on disk.
   BUILD_SSH_KEY="$BUILD_DIR/build-ssh-key"
   write_inventory
 

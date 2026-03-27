@@ -211,9 +211,6 @@ patch_image_for_virt() {
   mkdir -p "$patch_dir"
 
   # fstab for virtio-blk (/dev/vda* instead of PARTUUIDs).
-  # Boot partition omitted — kernel is loaded directly by QEMU, and pi user/SSH
-  # are set up in the image directly (no need for boot partition userconf/ssh flag).
-  # Root device is a placeholder — the initrd selects the active A/B slot at boot.
   cat > "$patch_dir/fstab" <<'FSTAB'
 /dev/vda2             /                ext4  defaults,noatime  0  1
 LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  2
@@ -243,8 +240,7 @@ FSTAB
     echo "mkdir-p /etc/wpa_supplicant"
     echo "mkdir-p /etc/kioskkit"
     echo "mkdir-p /var/log/journal"
-    # Copy kernel modules to /usr/lib/modules/ (not /lib/ which is a symlink on Pi OS).
-    # copy-in of /lib/ would replace the symlink with a directory, breaking the OS.
+    # Must use /usr/lib/modules/ — /lib/ is a symlink on Pi OS.
     echo "mkdir-p /usr/lib/modules"
     for moddir in "$KERNEL_ROOT"/lib/modules/*/; do
       echo "copy-in $moddir /usr/lib/modules"
@@ -257,8 +253,7 @@ FSTAB
 
   guestfish < "$gf_cmds"
 
-  # Create pi user via file-level edits (separate guestfish session for clarity).
-  # Can't use useradd/chpasswd — ARM binaries, guestfish appliance is x86.
+  # Create pi user via file-level edits (guestfish can't run ARM useradd/chpasswd).
   create_pi_user
 
   # Save kernel to WORK_DIR for direct boot (used by run.sh too)
@@ -282,12 +277,9 @@ create_pi_user() {
   local user_dir="$BUILD_DIR/user-setup"
   mkdir -p "$user_dir"
 
-  # Password hash for "raspberry": openssl passwd -6 -salt rpi raspberry
   local pass_hash='$6$rpi$bNU6H3//23Q69yt.29cRueoCEWuRY.XhpIClqSja6.FjhrGQgzD4RQp7YFBcMosjt9zRf60WsqRMRVvj7Z2gN1'
 
-  # Generate an ephemeral SSH keypair for build-time access.
-  # Password auth is disabled by the security tasks after reboot,
-  # so post-reboot SSH (wait_for_reboot, wifi setup, etc.) needs key auth.
+  # Ephemeral SSH keypair for build-time access (password auth is disabled after provisioning).
   : "${BUILD_SSH_KEY:=$BUILD_DIR/build-ssh-key}"
   rm -f "$BUILD_SSH_KEY" "${BUILD_SSH_KEY}.pub"
   ssh-keygen -t ed25519 -f "$BUILD_SSH_KEY" -N "" -q
@@ -390,20 +382,13 @@ build_initrd() {
     ln -s busybox "$initrd_dir/bin/$cmd"
   done
 
-  # Create init script with A/B slot selection.
-  # Reads boot slot from data partition (/dev/vda4):
-  #   - ota/tryboot (one-shot, consumed on read) takes priority
-  #   - ota/boot-slot (persistent, "A" or "B") is the fallback
-  # Maps slot A -> /dev/vda2, slot B -> /dev/vda3
   cat > "$initrd_dir/init" <<'INIT_SCRIPT'
 #!/bin/sh
 /bin/mount -t proc proc /proc
 /bin/mount -t sysfs sysfs /sys
 /bin/mount -t devtmpfs devtmpfs /dev
 
-# Load virtio modules in dependency order.
-# Some may fail (already built-in or missing deps) — that's OK as long as
-# virtio_blk loads so we can mount root.
+# Load virtio modules in dependency order (failures are expected for built-ins).
 for name in virtio virtio_ring vp_modern vp_legacy virtio_pci_modern_dev virtio_pci_legacy_dev virtio_pci virtio_mmio virtio_blk failover net_failover virtio_net crc16 crc32c_generic mbcache jbd2 ext4; do
   for mod in /lib/modules/${name}.ko*; do
     [ -f "$mod" ] && /bin/insmod "$mod" 2>/dev/null
