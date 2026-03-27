@@ -1,8 +1,9 @@
-import { Badge, Card, CardContent } from "@kioskkit/ui";
+import { Card, CardContent } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { type Device, fetchBackups, fetchDevice, fetchDeviceStatus } from "./api.js";
 import { BackupSection } from "./BackupSection.js";
+import { DeviceStatusBadge, deriveDeviceStatus } from "./components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "./components/OtaUpdateCard.js";
 import { formatRelativeTime } from "./format.js";
 
@@ -35,7 +36,7 @@ export function DeviceDetail() {
 
   if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
 
-  const online = reachable;
+  const status = deriveDeviceStatus(device?.online ?? false, reachable);
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
@@ -56,19 +57,14 @@ export function DeviceDetail() {
             <span className="text-foreground font-medium">{device?.name}</span>
           )}
         </div>
-        {!loading && !error && online !== null && (
+        {!loading && !error && status !== null && (
           <div className="flex items-center gap-2">
-            {device?.lastSeen && !online && (
+            {device?.lastSeen && status === "offline" && (
               <span className="text-muted-foreground text-xs">
                 Last seen {formatRelativeTime(device.lastSeen)}
               </span>
             )}
-            <Badge variant={online ? "default" : "secondary"} className="flex items-center gap-1.5">
-              <span
-                className={`inline-block h-2 w-2 rounded-full ${online ? "bg-green-500" : "bg-muted-foreground"}`}
-              />
-              {online ? "Online" : "Offline"}
-            </Badge>
+            <DeviceStatusBadge status={status} />
           </div>
         )}
       </div>
@@ -90,8 +86,8 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* Offline state */}
-      {!loading && !error && online === false && (
+      {/* Offline / App Not Connected state */}
+      {!loading && !error && (status === "offline" || status === "app-not-connected") && (
         <Card className="flex flex-1 items-center justify-center">
           <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
             <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
@@ -108,16 +104,24 @@ export function DeviceDetail() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M3 3l18 18M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"
+                  d={
+                    status === "offline"
+                      ? "M3 3l18 18M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"
+                      : "M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                  }
                 />
               </svg>
             </div>
             <div>
-              <p className="text-foreground font-medium">Device is offline</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                The management interface is available when the device is connected to the network.
+              <p className="text-foreground font-medium">
+                {status === "offline" ? "Device is offline" : "App not connected"}
               </p>
-              {device?.lastSeen && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                {status === "offline"
+                  ? "The management interface is available when the device is connected to the network."
+                  : "The device is on the network but the kiosk app is not responding."}
+              </p>
+              {device?.lastSeen && status === "offline" && (
                 <p className="text-muted-foreground mt-2 text-xs">
                   Last seen {formatRelativeTime(device.lastSeen)}
                 </p>
@@ -138,7 +142,7 @@ export function DeviceDetail() {
       )}
 
       {/* Iframe for online device */}
-      {!loading && !error && online && (
+      {!loading && !error && status === "online" && (
         <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
@@ -158,7 +162,7 @@ export function DeviceDetail() {
       )}
 
       {/* OTA update card — only when device is online */}
-      {!loading && !error && online && id && <OtaUpdateCard deviceId={id} />}
+      {!loading && !error && status === "online" && id && <OtaUpdateCard deviceId={id} />}
 
       {/* Backups section */}
       {!loading &&

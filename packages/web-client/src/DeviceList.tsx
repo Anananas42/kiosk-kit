@@ -1,5 +1,4 @@
 import {
-  Badge,
   Card,
   CardContent,
   CardHeader,
@@ -15,6 +14,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { type Device, fetchDeviceStatus, fetchDevices } from "./api.js";
 import { getBackupDotColor } from "./BackupSection.js";
+import { DeviceStatusBadge, deriveDeviceStatus } from "./components/DeviceStatusBadge.js";
 import { formatRelativeTime } from "./format.js";
 
 function BackupIndicator({ lastBackupAt }: { lastBackupAt?: string | null }) {
@@ -88,26 +88,31 @@ export function DeviceList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {devices.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Badge variant={statuses[d.id] ? "default" : "secondary"}>
-                      {statuses[d.id] ? "Online" : "Offline"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      to={`/devices/${d.id}`}
-                      className="font-medium text-foreground hover:underline"
-                    >
-                      {d.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <BackupIndicator lastBackupAt={d.lastBackupAt} />
-                  </TableCell>
-                </TableRow>
-              ))}
+              {devices.map((d) => {
+                const status = deriveDeviceStatus(d.online, statuses[d.id]);
+                return (
+                  <TableRow key={d.id}>
+                    <TableCell>
+                      {status ? (
+                        <DeviceStatusBadge status={status} />
+                      ) : (
+                        <span className="text-muted-foreground text-xs">…</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to={`/devices/${d.id}`}
+                        className="font-medium text-foreground hover:underline"
+                      >
+                        {d.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <BackupIndicator lastBackupAt={d.lastBackupAt} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
