@@ -530,6 +530,10 @@ FSTAB
     echo "mkdir-p /etc/systemd/system/data.mount.wants"
     echo "ln-sf /etc/systemd/system/kioskkit-expand-data.service /etc/systemd/system/data.mount.wants/kioskkit-expand-data.service"
 
+    # Boot diagnostics (writes to rootfs so it survives even when data.mount fails)
+    echo "upload $REPO_ROOT/deploy/pi/first-boot/kioskkit-boot-log.service /etc/systemd/system/kioskkit-boot-log.service"
+    echo "ln-sf /etc/systemd/system/kioskkit-boot-log.service /etc/systemd/system/multi-user.target.wants/kioskkit-boot-log.service"
+
     # Tailscale binaries
     if [ -f "$ts_root/usr/bin/tailscale" ]; then
       echo "upload $ts_root/usr/bin/tailscale /usr/bin/tailscale"

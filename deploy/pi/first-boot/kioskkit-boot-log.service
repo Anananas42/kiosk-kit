@@ -1,0 +1,30 @@
+[Unit]
+Description=Capture boot state to rootfs for debugging
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+  LOG=/var/log/boot-state.log; \
+  echo "=== Boot state at $(date) ===" > $LOG; \
+  echo "--- Failed units ---" >> $LOG; \
+  systemctl --failed --no-pager >> $LOG 2>&1; \
+  echo "--- Mount state ---" >> $LOG; \
+  mount >> $LOG 2>&1; \
+  echo "--- data.mount ---" >> $LOG; \
+  systemctl status data.mount --no-pager >> $LOG 2>&1; \
+  echo "--- kioskkit.service ---" >> $LOG; \
+  systemctl status kioskkit.service --no-pager >> $LOG 2>&1; \
+  echo "--- tailscaled.service ---" >> $LOG; \
+  systemctl status tailscaled.service --no-pager >> $LOG 2>&1; \
+  echo "--- kioskkit-expand-data.service ---" >> $LOG; \
+  systemctl status kioskkit-expand-data.service --no-pager >> $LOG 2>&1; \
+  echo "--- kioskkit-tailscale-firstboot.service ---" >> $LOG; \
+  systemctl status kioskkit-tailscale-firstboot.service --no-pager >> $LOG 2>&1; \
+  echo "--- lsblk ---" >> $LOG; \
+  lsblk >> $LOG 2>&1; \
+  echo "=== End ===" >> $LOG'
+RemainAfterExit=false
+
+[Install]
+WantedBy=multi-user.target
