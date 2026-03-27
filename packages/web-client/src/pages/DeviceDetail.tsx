@@ -6,17 +6,19 @@ import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
 import { useBackups } from "../hooks/backups.js";
 import { useDevice, useDeviceStatus } from "../hooks/devices.js";
+import { useTranslate } from "../hooks/useTranslate.js";
 import { DeviceStatus, deriveDeviceStatus } from "../lib/device-status.js";
 import { formatRelativeTime } from "../lib/format.js";
 
 export function DeviceDetail() {
+  const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { data: device, isLoading, error } = useDevice(id);
   const { data: appResponding } = useDeviceStatus(id);
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
 
-  if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
+  if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
 
   const status = deriveDeviceStatus(device?.online ?? false, appResponding);
 
@@ -27,14 +29,14 @@ export function DeviceDetail() {
         <div className="flex items-center gap-2 text-sm">
           <nav className="text-muted-foreground">
             <Link to="/" className="hover:text-foreground underline-offset-4 hover:underline">
-              Dashboard
+              {t("deviceDetail.breadcrumb.dashboard")}
             </Link>
             <span className="mx-2">/</span>
           </nav>
           {isLoading ? (
             <div className="bg-muted h-5 w-32 animate-pulse rounded" />
           ) : error ? (
-            <span className="text-destructive">Device not found</span>
+            <span className="text-destructive">{t("deviceDetail.notFound")}</span>
           ) : (
             <span className="text-foreground font-medium">{device?.name}</span>
           )}
@@ -43,7 +45,7 @@ export function DeviceDetail() {
           <div className="flex items-center gap-2">
             {device?.lastSeen && status === DeviceStatus.Offline && (
               <span className="text-muted-foreground text-xs">
-                Last seen {formatRelativeTime(device.lastSeen)}
+                {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </span>
             )}
             <DeviceStatusBadge status={status} />
@@ -58,11 +60,9 @@ export function DeviceDetail() {
             <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
               <span className="text-muted-foreground text-xl">?</span>
             </div>
-            <p className="text-muted-foreground">
-              This device could not be found. It may have been removed.
-            </p>
+            <p className="text-muted-foreground">{t("deviceDetail.notFoundDescription")}</p>
             <Link to="/" className="text-sm text-primary hover:underline">
-              Back to Dashboard
+              {t("deviceDetail.backToDashboard")}
             </Link>
           </CardContent>
         </Card>
@@ -98,16 +98,18 @@ export function DeviceDetail() {
               </div>
               <div>
                 <p className="text-foreground font-medium">
-                  {status === DeviceStatus.Offline ? "Device is offline" : "App not connected"}
+                  {status === DeviceStatus.Offline
+                    ? t("deviceDetail.offline.title")
+                    : t("deviceDetail.appNotConnected.title")}
                 </p>
                 <p className="text-muted-foreground mt-1 text-sm">
                   {status === DeviceStatus.Offline
-                    ? "The management interface is available when the device is connected to the network."
-                    : "The device is on the network but the kiosk app is not responding."}
+                    ? t("deviceDetail.offline.description")
+                    : t("deviceDetail.appNotConnected.description")}
                 </p>
                 {device?.lastSeen && status === DeviceStatus.Offline && (
                   <p className="text-muted-foreground mt-2 text-xs">
-                    Last seen {formatRelativeTime(device.lastSeen)}
+                    {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
                   </p>
                 )}
               </div>
@@ -120,7 +122,7 @@ export function DeviceDetail() {
         <Card className="flex flex-1 items-center justify-center">
           <CardContent className="flex items-center gap-2 py-16">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            <span className="text-muted-foreground text-sm">Loading device…</span>
+            <span className="text-muted-foreground text-sm">{t("deviceDetail.loadingDevice")}</span>
           </CardContent>
         </Card>
       )}
@@ -132,7 +134,9 @@ export function DeviceDetail() {
             {iframeLoading && (
               <div className="flex items-center gap-2 p-4">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                <span className="text-muted-foreground text-sm">Loading device management…</span>
+                <span className="text-muted-foreground text-sm">
+                  {t("deviceDetail.loadingManagement")}
+                </span>
               </div>
             )}
             <iframe
@@ -156,7 +160,9 @@ export function DeviceDetail() {
         (backupError ? (
           <Card>
             <CardContent>
-              <p className="text-destructive">Failed to load backups: {backupError.message}</p>
+              <p className="text-destructive">
+                {t("deviceDetail.backupError", { error: backupError.message })}
+              </p>
             </CardContent>
           </Card>
         ) : (

@@ -15,6 +15,7 @@ import { Link } from "react-router";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { FreshnessIndicator } from "../components/FreshnessIndicator.js";
 import { useDeviceStatus, useDevices } from "../hooks/devices.js";
+import { useTranslate } from "../hooks/useTranslate.js";
 import { deriveDeviceStatus } from "../lib/device-status.js";
 
 function DeviceRow({ device }: { device: Device }) {
@@ -36,38 +37,39 @@ function DeviceRow({ device }: { device: Device }) {
         </Link>
       </TableCell>
       <TableCell>
-        <FreshnessIndicator timestamp={device.lastBackupAt} emptyLabel="No backups" />
+        <FreshnessIndicator timestamp={device.lastBackupAt} emptyLabelKey="freshness.noBackups" />
       </TableCell>
     </TableRow>
   );
 }
 
 export function DeviceList() {
+  const t = useTranslate();
   const { data: devices, isLoading, error } = useDevices();
 
   if (isLoading) {
-    return <p className="text-muted-foreground">Loading devices...</p>;
+    return <p className="text-muted-foreground">{t("deviceList.loading")}</p>;
   }
 
   if (error) {
-    return <p className="text-destructive">Error: {error.message}</p>;
+    return <p className="text-destructive">{t("common.error", { error: error.message })}</p>;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Devices</CardTitle>
+        <CardTitle>{t("deviceList.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         {!devices || devices.length === 0 ? (
-          <p className="text-muted-foreground">No devices registered.</p>
+          <p className="text-muted-foreground">{t("deviceList.noDevices")}</p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Backup</TableHead>
+                <TableHead>{t("deviceList.table.status")}</TableHead>
+                <TableHead>{t("deviceList.table.name")}</TableHead>
+                <TableHead>{t("deviceList.table.backup")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

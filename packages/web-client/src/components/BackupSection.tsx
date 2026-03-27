@@ -15,6 +15,7 @@ import {
 } from "@kioskkit/ui";
 import { useState } from "react";
 import { useBackupDownload, useRestoreBackup } from "../hooks/backups.js";
+import { useTranslate } from "../hooks/useTranslate.js";
 import { formatFileSize, formatRelativeTime } from "../lib/format.js";
 
 interface Backup {
@@ -30,6 +31,7 @@ interface BackupSectionProps {
 }
 
 export function BackupSection({ backups, deviceName, deviceOnline }: BackupSectionProps) {
+  const t = useTranslate();
   const [showAll, setShowAll] = useState(false);
   const download = useBackupDownload();
   const restore = useRestoreBackup(backups[0]?.id ?? "");
@@ -37,28 +39,26 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-base">Backups</CardTitle>
+        <CardTitle className="text-base">{t("backups.title")}</CardTitle>
         {backups.length > 0 && (
           <span className="text-muted-foreground text-xs">
-            Last backup: {formatRelativeTime(backups[0].createdAt)}
+            {t("backups.lastBackup", { time: formatRelativeTime(backups[0].createdAt) })}
           </span>
         )}
       </CardHeader>
       <CardContent>
         {restore.error && (
           <div className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {restore.error instanceof Error ? restore.error.message : "Restore failed"}
+            {restore.error instanceof Error ? restore.error.message : t("backups.restoreFailed")}
           </div>
         )}
         {restore.isSuccess && (
           <div className="mb-3 rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-            Backup restored successfully.
+            {t("backups.restoreSuccess")}
           </div>
         )}
         {backups.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No backups yet. Backups run daily when your device is online.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("backups.empty")}</p>
         ) : (
           <>
             <div className="divide-border divide-y">
@@ -77,26 +77,27 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                           disabled={deviceOnline === false || restore.isPending}
                         >
                           {restore.isPending && restore.variables === b.id
-                            ? "Restoring\u2026"
-                            : "Restore"}
+                            ? t("backups.restoring")
+                            : t("backups.restore")}
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Restore backup?</DialogTitle>
+                          <DialogTitle>{t("backups.restoreDialog.title")}</DialogTitle>
                           <DialogDescription>
-                            This will replace all data on {deviceName ?? "the device"} with the
-                            backup from {formatRelativeTime(b.createdAt)}. The current data will be
-                            backed up automatically before the restore.
+                            {t("backups.restoreDialog.description", {
+                              deviceName: deviceName ?? "the device",
+                              time: formatRelativeTime(b.createdAt),
+                            })}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
                           <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
+                            <Button variant="outline">{t("common.cancel")}</Button>
                           </DialogClose>
                           <DialogClose asChild>
                             <Button variant="destructive" onClick={() => restore.mutate(b.id)}>
-                              Restore
+                              {t("backups.restore")}
                             </Button>
                           </DialogClose>
                         </DialogFooter>
@@ -109,8 +110,8 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                       onClick={() => download.mutate(b.id)}
                     >
                       {download.isPending && download.variables === b.id
-                        ? "Downloading\u2026"
-                        : "Download"}
+                        ? t("backups.downloading")
+                        : t("backups.download")}
                     </Button>
                   </div>
                 </div>
@@ -122,7 +123,7 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                 className="text-primary mt-2 text-sm hover:underline"
                 onClick={() => setShowAll(!showAll)}
               >
-                {showAll ? "Show less" : `Show all (${backups.length})`}
+                {showAll ? t("backups.showLess") : t("backups.showAll", { count: backups.length })}
               </button>
             )}
           </>

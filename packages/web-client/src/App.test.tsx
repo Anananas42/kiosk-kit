@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import { IntlProvider } from "react-intl";
 import { describe, expect, it, vi } from "vitest";
+import enUS from "../lang/en-US.json";
 import { App } from "./App.js";
 
 /** Wrap data in the tRPC batch response format used by httpBatchLink. */
@@ -12,7 +14,13 @@ function renderWithProviders(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <IntlProvider locale="en-US" messages={enUS}>
+        {ui}
+      </IntlProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe("App", () => {
