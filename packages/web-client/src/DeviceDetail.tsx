@@ -16,6 +16,7 @@ export function DeviceDetail() {
   const [backupList, setBackupList] = useState<
     { id: string; sizeBytes: number; createdAt: string }[]
   >([]);
+  const [backupError, setBackupError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -29,7 +30,7 @@ export function DeviceDetail() {
       .finally(() => setLoading(false));
     fetchBackups(id)
       .then(setBackupList)
-      .catch(() => {});
+      .catch((err) => setBackupError(err instanceof Error ? err.message : String(err)));
   }, [id]);
 
   if (!id) return <p className="text-muted-foreground">Missing device ID.</p>;
@@ -160,13 +161,21 @@ export function DeviceDetail() {
       {!loading && !error && online && id && <OtaUpdateCard deviceId={id} />}
 
       {/* Backups section */}
-      {!loading && !error && (
-        <BackupSection
-          backups={backupList}
-          deviceName={device?.name}
-          deviceOnline={reachable ?? undefined}
-        />
-      )}
+      {!loading &&
+        !error &&
+        (backupError ? (
+          <Card>
+            <CardContent>
+              <p className="text-destructive">Failed to load backups: {backupError}</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <BackupSection
+            backups={backupList}
+            deviceName={device?.name}
+            deviceOnline={reachable ?? undefined}
+          />
+        ))}
     </div>
   );
 }

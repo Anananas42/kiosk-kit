@@ -53,13 +53,15 @@ export const devicesRouter = router({
         lastSeen = td.lastSeen;
         tailscaleIp = tailscaleIpFromDevice(td) ?? tailscaleIp;
 
-        // Persist lastSeen and tailscaleIp back to DB as fallback
         await ctx.db
           .update(devices)
           .set({ lastSeen: new Date(td.lastSeen), tailscaleIp })
           .where(eq(devices.id, device.id));
-      } catch {
-        // Tailscale API unavailable — fall back to DB-cached lastSeen, online: false
+      } catch (err) {
+        console.warn(
+          `[devices] Tailscale API error for device ${device.id}:`,
+          err instanceof Error ? err.message : err,
+        );
       }
 
       return {
@@ -136,6 +138,18 @@ export const devicesRouter = router({
       };
     }),
 
+  "devices.tailscaleStatus": adminProcedure
+    .output(z.object({ reachable: z.boolean(), error: z.string().nullable() }))
+    .query(async () => {
+      try {
+        const ts = getTailscaleClient();
+        await ts.listDevices();
+        return { reachable: true, error: null };
+      } catch (err) {
+        return { reachable: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }),
+
   "devices.delete": adminProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -170,15 +184,8 @@ async function getLastBackupMap(db: import("../../db/index.js").Db): Promise<Map
 }
 
 async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[]> {
-  let tailscaleDevices: TailscaleDevice[] = [];
-  let tailscaleReachable = false;
-  try {
-    const ts = getTailscaleClient();
-    tailscaleDevices = await ts.listDevices();
-    tailscaleReachable = true;
-  } catch {
-    // Tailscale API unavailable — fall back to DB-only
-  }
+  const ts = getTailscaleClient();
+  const tailscaleDevices = await ts.listDevices();
 
   const [dbDevices, lastBackupMap] = await Promise.all([
     db.select().from(devices),
@@ -229,28 +236,18 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
     });
   }
 
-  // Remove DB devices no longer in Tailscale (only if API was reachable)
-  if (tailscaleReachable) {
+  // Remove DB devices no longer in Tailscale.
+  // Guard: if Tailscale returned zero devices, it's likely a misconfiguration —
+  // don't wipe the entire device table.
+  if (tailscaleDevices.length > 0) {
     const staleIds = [...dbByNodeId.values()].map((d) => d.id);
     if (staleIds.length > 0) {
       await db.delete(devices).where(inArray(devices.id, staleIds));
     }
-  } else {
-    // Tailscale API was unavailable — keep DB devices as offline fallback
-    for (const dbDevice of dbByNodeId.values()) {
-      result.push({
-        id: dbDevice.id,
-        tailscaleNodeId: dbDevice.tailscaleNodeId,
-        userId: dbDevice.userId,
-        name: dbDevice.name,
-        tailscaleIp: dbDevice.tailscaleIp,
-        online: false,
-        lastSeen: dbDevice.lastSeen?.toISOString() ?? null,
-        lastBackupAt: lastBackupMap.get(dbDevice.id) ?? null,
-        hostname: dbDevice.name,
-        createdAt: dbDevice.createdAt.toISOString(),
-      });
-    }
+  } else if (dbDevices.length > 0) {
+    console.warn(
+      `[devices] Tailscale returned 0 devices but DB has ${dbDevices.length} — possible misconfiguration, skipping cleanup`,
+    );
   }
 
   if (isDev) {
@@ -286,8 +283,11 @@ async function listForCustomer(
           .update(devices)
           .set({ lastSeen: new Date(td.lastSeen) })
           .where(eq(devices.id, d.id));
-      } catch {
-        // Tailscale API unavailable — fall back to DB-cached lastSeen, online: false
+      } catch (err) {
+        console.warn(
+          `[devices] Tailscale API error for device ${d.id}:`,
+          err instanceof Error ? err.message : err,
+        );
       }
 
       return {

@@ -42,6 +42,7 @@ export default function Confirm({
   const [qty, setQty] = useState(1);
   const [confirmingStorno, setConfirmingStorno] = useState(false);
   const [existingQty, setExistingQty] = useState<number | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (error) setConfirmingStorno(false);
@@ -52,7 +53,7 @@ export default function Confirm({
     trpc["records.itemCount"]
       .query({ buyer, item: item.name, itemId: item.id, preorder: true })
       .then((data) => setExistingQty(data.count))
-      .catch(() => {});
+      .catch((err) => setFetchError(err instanceof Error ? err.message : String(err)));
   }, [isPreorder, buyer, item.name, item.id]);
 
   const unitPrice = parsePrice(item.price);
@@ -121,12 +122,14 @@ export default function Confirm({
             </div>
           )}
 
-          {error && (
+          {(error || fetchError) && (
             <div className="confirm-error">
-              <span>{error}</span>
-              <button className="confirm-error__dismiss" onClick={onErrorDismiss} type="button">
-                &#x2715;
-              </button>
+              <span>{error || fetchError}</span>
+              {error && (
+                <button className="confirm-error__dismiss" onClick={onErrorDismiss} type="button">
+                  &#x2715;
+                </button>
+              )}
             </div>
           )}
 
