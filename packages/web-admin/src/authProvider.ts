@@ -12,7 +12,7 @@ export const authProvider: AuthProvider = {
 
   checkAuth: async () => {
     const { user } = await trpc.me.query();
-    if (!user) {
+    if (!user || user.role !== "admin") {
       throw new Error("Not authenticated");
     }
   },
