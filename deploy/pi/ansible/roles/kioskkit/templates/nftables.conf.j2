@@ -34,14 +34,12 @@ table inet filter {
         # Established/related
         ct state established,related accept
 
-        # DHCP (needed for initial network config)
+        # DNS + DHCP (needed on any interface for initial network + Tailscale auth)
+        udp dport 53 accept
         udp dport { 67, 68 } accept
 
-        # WiFi — DNS and DHCP on wlan0
-        oifname "wlan0" udp dport 53 accept
-        oifname "wlan0" udp dport { 67, 68 } accept
-
-        # Tailscale (WireGuard UDP)
+        # Tailscale control plane (HTTPS for auth, WireGuard UDP for tunnel)
+        tcp dport 443 accept
         udp dport 41641 accept
     }
 }
