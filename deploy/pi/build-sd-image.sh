@@ -657,12 +657,6 @@ stamp_device() {
   local output_file="$OUTPUT_DIR/${stamp_label}.img"
   mv "$FINAL_IMAGE" "$output_file"
 
-  local bmap_file="$OUTPUT_DIR/${stamp_label}.bmap"
-  if command -v bmaptool >/dev/null 2>&1; then
-    bmaptool create "$output_file" -o "$bmap_file"
-    log "Block map: $bmap_file"
-  fi
-
   local size
   size=$(du -h "$output_file" | cut -f1)
   log ""
@@ -670,7 +664,7 @@ stamp_device() {
   log "  Output: $output_file"
   log "  Size:   $size"
   log ""
-  log "Flash with:"
+  log "Flash with (install bmap-tools for fast flashing — skips empty blocks):"
   local sd_cards
   sd_cards=$(lsblk -d -n -o NAME,SIZE,TRAN,MODEL -b 2>/dev/null \
     | awk '$3 == "usb" && $2+0 >= 2147483648 && $2+0 <= 274877906944 {print $1, $2, $4}' \
@@ -683,18 +677,19 @@ stamp_device() {
       done)
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      if [[ -f "$bmap_file" ]]; then
-        log "  sudo bmaptool copy $output_file ${card%% *}  # ${card#* } (fast, skips empty blocks)"
-      else
-        log "  sudo dd if=$output_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
-      fi
+      log "  sudo dd if=$output_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
     done <<< "$sd_cards"
   else
-    if [[ -f "$bmap_file" ]]; then
-      log "  sudo bmaptool copy $output_file /dev/sdX  # fast, skips empty blocks"
-    else
-      log "  sudo dd if=$output_file of=/dev/sdX bs=4M conv=fsync status=progress"
-    fi
+    log "  sudo dd if=$output_file of=/dev/sdX bs=4M conv=fsync status=progress"
+  fi
+  log ""
+  log "Fast flash (apt install bmap-tools, skips empty blocks):"
+  if [[ -n "$sd_cards" ]]; then
+    while IFS= read -r card; do
+      log "  sudo bmaptool copy --nobmap $output_file ${card%% *}  # ${card#* }"
+    done <<< "$sd_cards"
+  else
+    log "  sudo bmaptool copy --nobmap $output_file /dev/sdX"
   fi
 }
 
