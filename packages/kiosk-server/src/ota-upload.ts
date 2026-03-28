@@ -4,11 +4,19 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { Writable } from "node:stream";
 import { OtaResult, OtaStep } from "@kioskkit/shared";
 import { Hono } from "hono";
+import { writeStateFile } from "./lib/update-helpers.js";
 
+const STATE_DIR = "/data/ota";
 const PENDING_DIR = "/data/ota/pending";
 const STATE_FILE = "/data/ota/state.json";
 const ROOTFS_IMAGE = "/data/ota/pending/rootfs.img.zst";
 const PROGRESS_FILE = "/data/ota/pending/progress.json";
+
+interface OtaStateJson {
+  status?: string;
+  lastUpdate?: string;
+  lastResult?: string;
+}
 
 /**
  * POST /api/ota/upload — accepts a pushed OTA image from the web-server.
@@ -45,37 +53,40 @@ export function otaUploadRoute() {
       return c.json({ error: "Invalid Content-Length" }, 400);
     }
 
-    // Check for concurrent upload
-    let currentState: { status?: string } | null = null;
+    const body = c.req.raw.body;
+    if (!body) {
+      return c.json({ error: "Empty request body" }, 400);
+    }
+
+    // Check for concurrent upload or active operation
+    let currentState: OtaStateJson | null = null;
     try {
       const raw = await readFile(STATE_FILE, "utf-8");
-      currentState = JSON.parse(raw) as { status?: string };
+      currentState = JSON.parse(raw) as OtaStateJson;
     } catch {
       // No state file — fresh device
     }
 
-    if (currentState?.status === OtaStep.Uploading) {
-      return c.json({ error: "An upload is already in progress" }, 409);
+    if (
+      currentState?.status === OtaStep.Uploading ||
+      currentState?.status === OtaStep.Installing ||
+      currentState?.status === OtaStep.Rollback
+    ) {
+      return c.json({ error: "An operation is already in progress" }, 409);
     }
 
     await mkdir(PENDING_DIR, { recursive: true });
 
     // Write initial uploading state
     const stateBase = {
-      lastUpdate: (currentState as Record<string, unknown>)?.lastUpdate ?? null,
-      lastResult: (currentState as Record<string, unknown>)?.lastResult ?? null,
+      lastUpdate: currentState?.lastUpdate ?? null,
+      lastResult: currentState?.lastResult ?? null,
     };
     await writeState({ status: OtaStep.Uploading, version, ...stateBase });
 
     // Stream body to disk while computing SHA256
     const hash = createHash("sha256");
     let bytesReceived = 0;
-
-    const body = c.req.raw.body;
-    if (!body) {
-      await writeState({ status: OtaStep.Idle, ...stateBase });
-      return c.json({ error: "Empty request body" }, 400);
-    }
 
     try {
       const fileStream = createWriteStream(ROOTFS_IMAGE);
@@ -149,12 +160,22 @@ export function otaUploadRoute() {
       return c.json({ ok: true, bytesReceived });
     } catch (err) {
       await rm(PENDING_DIR, { recursive: true, force: true }).catch(() => {});
-      await writeState({
-        status: OtaStep.Idle,
-        ...stateBase,
-        lastUpdate: new Date().toISOString(),
-        lastResult: OtaResult.FailedUpload,
-      });
+      // Re-read state before writing — cancelUpload may have already reset it to idle.
+      let latestState: OtaStateJson | null = null;
+      try {
+        const raw = await readFile(STATE_FILE, "utf-8");
+        latestState = JSON.parse(raw) as OtaStateJson;
+      } catch {
+        // State file missing or corrupt — safe to write
+      }
+      if (latestState?.status === OtaStep.Uploading) {
+        await writeState({
+          status: OtaStep.Idle,
+          ...stateBase,
+          lastUpdate: new Date().toISOString(),
+          lastResult: OtaResult.FailedUpload,
+        });
+      }
       const message = err instanceof Error ? err.message : "Upload failed";
       return c.json({ error: message }, 500);
     }
@@ -163,7 +184,6 @@ export function otaUploadRoute() {
   return app;
 }
 
-async function writeState(state: Record<string, unknown>): Promise<void> {
-  await mkdir("/data/ota", { recursive: true });
-  await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
+async function writeState(state: object): Promise<void> {
+  await writeStateFile(STATE_DIR, STATE_FILE, state);
 }
