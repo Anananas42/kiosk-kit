@@ -3,12 +3,18 @@ import type { Store } from "../../db/store.js";
 import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
-const mockExecFile = vi.hoisted(() => vi.fn());
+const mockExecFilePromise = vi.hoisted(() => vi.fn());
 const mockRunPrivileged = vi.hoisted(() => vi.fn());
 
-vi.mock("node:child_process", () => ({
-  execFile: mockExecFile,
-}));
+vi.mock("node:child_process", () => {
+  // The service does `const execFile = promisify(execFileCb)`.
+  // We need promisify() to return our mock. Set the custom symbol
+  // so Node's util.promisify uses mockExecFilePromise directly.
+  const execFileFn = Object.assign(vi.fn(), {
+    [Symbol.for("nodejs.util.promisify.custom")]: mockExecFilePromise,
+  });
+  return { execFile: execFileFn };
+});
 
 vi.mock("../../privileged.js", () => ({
   runPrivileged: mockRunPrivileged,
@@ -29,22 +35,8 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
-    // execFile is used for isWifiEnabled (systemctl) and checkEthernet (cat)
-    mockExecFile.mockImplementation(
-      (
-        _cmd: string,
-        _args: string[],
-        cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
-      ) => {
-        if (cmd === "systemctl") {
-          cb(null, { stdout: "", stderr: "" });
-        } else if (cmd === "cat") {
-          cb(null, { stdout: "1", stderr: "" });
-        } else {
-          cb(new Error(`unexpected cmd: ${cmd}`), { stdout: "", stderr: "" });
-        }
-      },
-    );
+    // isWifiEnabled() and checkEthernet() use promisify(execFile)
+    mockExecFilePromise.mockResolvedValue({ stdout: "1", stderr: "" });
 
     // runPrivileged is used for wifi-scan and wifi-status
     mockRunPrivileged.mockImplementation((action: string) => {
