@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@kioskkit/ui";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
@@ -17,10 +17,36 @@ export function DeviceDetail() {
   const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(id);
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
+  const hasBeenOnline = useRef(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const prevStatusRef = useRef<DeviceStatus | null>(null);
+
+  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
+
+  // Track whether the device has been online at least once
+  if (status === DeviceStatus.Online) {
+    hasBeenOnline.current = true;
+  }
+
+  // Reload iframe when device comes back online
+  useEffect(() => {
+    if (
+      prevStatusRef.current !== null &&
+      prevStatusRef.current !== DeviceStatus.Online &&
+      status === DeviceStatus.Online &&
+      iframeRef.current
+    ) {
+      setIframeLoading(true);
+      iframeRef.current.src = `/api/devices/${id}/kiosk/admin/`;
+    }
+    prevStatusRef.current = status;
+  }, [status, id]);
 
   if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
 
-  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
+  const showIframe = !isLoading && !error && hasBeenOnline.current;
+  const showOverlay =
+    showIframe && (status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected);
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
@@ -71,9 +97,10 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* Offline / App Not Connected state */}
+      {/* Offline / App Not Connected — shown only when iframe has never loaded */}
       {!isLoading &&
         !error &&
+        !hasBeenOnline.current &&
         (status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected) && (
           <Card className="flex flex-1 items-center justify-center">
             <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
@@ -130,8 +157,8 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* Iframe for online device */}
-      {!isLoading && !error && status === DeviceStatus.Online && (
+      {/* Iframe with connection overlay */}
+      {showIframe && (
         <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
@@ -143,11 +170,44 @@ export function DeviceDetail() {
               </div>
             )}
             <iframe
+              ref={iframeRef}
               src={`/api/devices/${id}/kiosk/admin/`}
               title="Device Admin"
               onLoad={() => setIframeLoading(false)}
               className={`h-full w-full border-0 ${iframeLoading ? "hidden" : "block"}`}
             />
+            {showOverlay && (
+              <div className="bg-background/80 absolute inset-0 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+                <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
+                  <svg
+                    className="text-muted-foreground h-7 w-7"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    role="img"
+                    aria-label={status === DeviceStatus.Offline ? "Offline" : "App not connected"}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d={
+                        status === DeviceStatus.Offline
+                          ? "M3 3l18 18M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"
+                          : "M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                      }
+                    />
+                  </svg>
+                </div>
+                <p className="text-foreground font-medium">
+                  {status === DeviceStatus.Offline
+                    ? t("deviceDetail.overlay.offline")
+                    : t("deviceDetail.overlay.appNotConnected")}
+                </p>
+                <DeviceStatusBadge status={status} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
