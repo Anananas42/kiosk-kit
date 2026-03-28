@@ -76,7 +76,6 @@ export const devicesRouter = router({
         online,
         lastSeen,
         hostname: device.name,
-        userLinked: device.userId !== null,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -111,7 +110,6 @@ export const devicesRouter = router({
         online: false,
         lastSeen: null,
         hostname: device.name,
-        userLinked: device.userId !== null,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -139,7 +137,6 @@ export const devicesRouter = router({
         online: false,
         lastSeen: null,
         hostname: device.name,
-        userLinked: device.userId !== null,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -211,7 +208,6 @@ export const devicesRouter = router({
         online: false,
         lastSeen: null,
         hostname: updated.name,
-        userLinked: updated.userId !== null,
         createdAt: updated.createdAt.toISOString(),
       };
     }),
@@ -322,7 +318,6 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
       lastSeen: td.lastSeen,
       lastBackupAt: lastBackupMap.get(dbDevice.id) ?? null,
       hostname: td.hostname,
-      userLinked: dbDevice.userId !== null,
       createdAt: dbDevice.createdAt.toISOString(),
     });
   }
@@ -390,7 +385,6 @@ async function listForCustomer(
         lastSeen,
         lastBackupAt: lastBackupMap.get(d.id) ?? null,
         hostname: d.name,
-        userLinked: d.userId !== null,
         createdAt: d.createdAt.toISOString(),
       };
     }),

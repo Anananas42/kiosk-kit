@@ -62,7 +62,6 @@ export const DeviceSchema = z.object({
   lastSeen: z.string().nullable(),
   lastBackupAt: z.string().nullable().optional(),
   hostname: z.string(),
-  userLinked: z.boolean(),
   createdAt: z.coerce.string(),
 });
 
