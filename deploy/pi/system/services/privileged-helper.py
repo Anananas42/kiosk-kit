@@ -31,6 +31,8 @@ CONN_TIMEOUT_SECS = 10
 
 # Whitelist of allowed actions → script filenames.
 ALLOWED_ACTIONS = {
+    "wifi-scan": "wifi-scan.sh",
+    "wifi-status": "wifi-status.sh",
     "wifi-enable": "wifi-enable.sh",
     "wifi-disable": "wifi-disable.sh",
     "wifi-connect": "wifi-connect.sh",

@@ -6,32 +6,6 @@ import { runPrivileged } from "../../privileged.js";
 
 const execFile = promisify(execFileCb);
 
-const SCRIPTS_DIR = "/opt/kioskkit/system";
-
-async function runScript(script: string, args: string[] = []): Promise<string> {
-  const path = `${SCRIPTS_DIR}/${script}`;
-  try {
-    const { stdout } = await execFile(path, args);
-    return stdout;
-  } catch (err: unknown) {
-    const message = parseScriptError(err);
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
-  }
-}
-
-function parseScriptError(err: unknown): string {
-  const stderr = (err as { stderr?: string }).stderr ?? "";
-  const stdout = (err as { stdout?: string }).stdout ?? "";
-  const output = stderr || stdout;
-  try {
-    const parsed = JSON.parse(output) as { error?: string };
-    if (parsed.error) return parsed.error;
-  } catch {
-    // not JSON
-  }
-  return output.trim() || "Script failed";
-}
-
 function parseJson<T>(stdout: string, label: string): T {
   try {
     return JSON.parse(stdout) as T;
@@ -68,8 +42,8 @@ export async function getWifiStatus(): Promise<WifiStatus> {
   }
 
   const [scanOutput, statusOutput] = await Promise.all([
-    runScript("wifi-scan.sh"),
-    runScript("wifi-status.sh"),
+    runPrivileged("wifi-scan"),
+    runPrivileged("wifi-status"),
   ]);
 
   const scanned = parseJson<WifiNetwork[]>(scanOutput, "wifi-scan");

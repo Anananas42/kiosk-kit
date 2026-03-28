@@ -5,11 +5,11 @@
 set -euo pipefail
 
 # Trigger a fresh scan (may fail if one is already running — that's fine)
-wpa_cli -i wlan0 scan >/dev/null 2>&1 || true
+/sbin/wpa_cli -i wlan0 scan >/dev/null 2>&1 || true
 sleep 2
 
-RAW=$(wpa_cli -i wlan0 scan_results 2>/dev/null) || {
-    echo '{"error": "wpa_cli scan_results failed"}'
+RAW=$(/sbin/wpa_cli -i wlan0 scan_results 2>/dev/null) || {
+    echo '{"error": "/sbin/wpa_cli scan_results failed"}'
     exit 1
 }
 

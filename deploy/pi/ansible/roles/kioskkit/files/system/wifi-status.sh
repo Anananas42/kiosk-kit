@@ -8,14 +8,14 @@ CONF="/etc/wpa_supplicant/wpa_supplicant-wlan0.conf"
 
 # Current connection
 CURRENT="null"
-WPA_STATUS=$(wpa_cli -i wlan0 status 2>/dev/null) || true
+WPA_STATUS=$(/sbin/wpa_cli -i wlan0 status 2>/dev/null) || true
 
 CONNECTED_SSID=$(echo "$WPA_STATUS" | grep -oP '^ssid=\K.*' || true)
 WPA_STATE=$(echo "$WPA_STATUS" | grep -oP '^wpa_state=\K.*' || true)
 
 if [ "$WPA_STATE" = "COMPLETED" ] && [ -n "$CONNECTED_SSID" ]; then
     # Get signal strength
-    SIGNAL_POLL=$(wpa_cli -i wlan0 signal_poll 2>/dev/null) || true
+    SIGNAL_POLL=$(/sbin/wpa_cli -i wlan0 signal_poll 2>/dev/null) || true
     RSSI=$(echo "$SIGNAL_POLL" | grep -oP '^RSSI=\K-?[0-9]+' || echo "0")
 
     # Escape SSID for JSON
