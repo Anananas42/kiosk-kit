@@ -381,6 +381,7 @@ export enum AppUpdateStep {
 
 export enum AppUpdateResult {
   Success = "success",
+  RolledBack = "rolled_back",
   FailedHealthCheck = "failed_health_check",
   FailedInstall = "failed_install",
   FailedUpload = "failed_upload",

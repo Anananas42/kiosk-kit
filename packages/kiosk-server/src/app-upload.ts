@@ -11,6 +11,12 @@ const BUNDLE_FILE = "/data/app-update/pending/app-bundle.tar.gz";
 const PROGRESS_FILE = "/data/app-update/pending/progress.json";
 const VERSION_FILE = "/data/app-update/pending/version";
 
+interface UploadStateJson {
+  status?: string;
+  lastUpdate?: string;
+  lastResult?: string;
+}
+
 /**
  * POST /api/app/upload — accepts a pushed app bundle from the web-server.
  *
@@ -59,21 +65,20 @@ export function appUploadRoute() {
     }
 
     // Check for concurrent upload
-    interface StateJson {
-      status?: string;
-      lastUpdate?: string;
-      lastResult?: string;
-    }
-    let currentState: StateJson | null = null;
+    let currentState: UploadStateJson | null = null;
     try {
       const raw = await readFile(STATE_FILE, "utf-8");
-      currentState = JSON.parse(raw) as StateJson;
+      currentState = JSON.parse(raw) as UploadStateJson;
     } catch {
       // No state file — fresh device
     }
 
-    if (currentState?.status === AppUpdateStep.Uploading) {
-      return c.json({ error: "An upload is already in progress" }, 409);
+    if (
+      currentState?.status === AppUpdateStep.Uploading ||
+      currentState?.status === AppUpdateStep.Installing ||
+      currentState?.status === AppUpdateStep.RollingBack
+    ) {
+      return c.json({ error: "An operation is already in progress" }, 409);
     }
 
     await mkdir(PENDING_DIR, { recursive: true });

@@ -41,7 +41,7 @@ rm -rf "$ROLLBACK_DIR"
 log "Restarting kioskkit.service..."
 systemctl restart kioskkit.service
 
-write_state "{\"status\":\"idle\",\"lastUpdate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"lastResult\":\"success\"}"
+write_state "{\"status\":\"idle\",\"lastUpdate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"lastResult\":\"rolled_back\"}"
 
 log "Rollback complete."
 exit 0
