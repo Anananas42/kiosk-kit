@@ -48,7 +48,10 @@ export function DeviceDetail() {
                 {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </span>
             )}
-            <DeviceStatusBadge status={status} loading={statusLoading} />
+            <DeviceStatusBadge
+              status={status}
+              loading={statusLoading && (device?.online ?? false)}
+            />
           </div>
         )}
       </div>

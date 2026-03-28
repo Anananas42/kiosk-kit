@@ -25,7 +25,7 @@ function DeviceRow({ device }: { device: Device }) {
   return (
     <TableRow>
       <TableCell>
-        <DeviceStatusBadge status={status} loading={statusLoading} />
+        <DeviceStatusBadge status={status} loading={statusLoading && device.online} />
       </TableCell>
       <TableCell>
         <Link to={`/devices/${device.id}`} className="font-medium text-foreground hover:underline">

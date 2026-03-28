@@ -26,6 +26,6 @@ export function useDeviceStatus(
     queryFn: () => fetchDeviceStatus(id!),
     enabled: !!id,
     staleTime: 0,
-    refetchInterval: options?.refetchInterval,
+    refetchInterval: options?.refetchInterval ?? 5_000,
   });
 }
