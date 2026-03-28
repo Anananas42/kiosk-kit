@@ -1,13 +1,13 @@
 import type { KioskSettings } from "@kioskkit/shared";
 import { Button, Input, Label } from "@kioskkit/ui";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { useData, useFormStatus } from "../hooks.js";
+import { toast } from "sonner";
+import { useData } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
 export function SettingsTab() {
   const fetcher = useCallback(() => trpc["admin.settings.get"].query(), []);
   const { data: settings, error, loading, reload } = useData(fetcher);
-  const form = useFormStatus();
   const [draft, setDraft] = useState<KioskSettings | null>(null);
 
   useEffect(() => {
@@ -20,14 +20,13 @@ export function SettingsTab() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!draft) return;
-    form.clear();
     trpc["admin.settings.update"]
       .mutate(draft)
       .then(() => {
-        form.setSuccess("Settings saved");
+        toast.success("Settings saved");
         reload();
       })
-      .catch((err: Error) => form.setError(err.message));
+      .catch((err: Error) => toast.error(err.message));
   };
 
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
@@ -36,9 +35,6 @@ export function SettingsTab() {
 
   return (
     <form onSubmit={handleSubmit}>
-      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
-      {form.success && <p className="my-2 text-success">{form.success}</p>}
-
       <div className="mb-4">
         <Label className="mb-1 block text-xs text-muted-foreground">Idle Dim (ms)</Label>
         <Input
