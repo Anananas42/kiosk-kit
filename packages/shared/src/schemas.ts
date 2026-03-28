@@ -62,6 +62,7 @@ export const DeviceSchema = z.object({
   lastSeen: z.string().nullable(),
   lastBackupAt: z.string().nullable().optional(),
   hostname: z.string(),
+  userLinked: z.boolean(),
   createdAt: z.coerce.string(),
 });
 
@@ -80,6 +81,15 @@ export const DeviceUpdateInputSchema = z.object({
 });
 
 export type DeviceUpdateInput = z.infer<typeof DeviceUpdateInputSchema>;
+
+export const DeviceClaimInputSchema = z.object({
+  code: z
+    .string()
+    .length(9)
+    .regex(/^\d{9}$/),
+});
+
+export type DeviceClaimInput = z.infer<typeof DeviceClaimInputSchema>;
 
 // ── Buyer schemas ───────────────────────────────────────────────────
 

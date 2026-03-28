@@ -4,10 +4,12 @@ import type { Database as SQLiteDatabase } from "better-sqlite3";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { backupRoute } from "./backup.js";
+import type { Db } from "./db/index.js";
 import type { Store } from "./db/store.js";
 import { otaUploadRoute } from "./ota-upload.js";
 import { restoreRoute } from "./restore.js";
 import { healthRoute } from "./routes/health.js";
+import { pairingRoute } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 
 /** Mutable holder so all routes always see the latest db references after a restore. */
@@ -16,7 +18,7 @@ export interface AppContext {
   store: Store;
 }
 
-export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string) {
+export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string, db: Db) {
   const ctx: AppContext = { sqlite, store };
 
   const app = new Hono();
@@ -29,6 +31,7 @@ export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string)
   app.use("/api/*", cors());
 
   app.route("/api/health", healthRoute());
+  app.route("/api/pairing", pairingRoute(db));
   app.route("/api/backup", backupRoute(ctx));
   app.route("/api/ota/upload", otaUploadRoute());
   app.route("/api/restore", restoreRoute(ctx, dataDir));

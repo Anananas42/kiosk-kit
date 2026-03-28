@@ -13,6 +13,7 @@ export function makeLocalDevice(userId: string | null): Device {
     online: true,
     lastSeen: null,
     hostname: "local-kiosk",
+    userLinked: userId !== null,
     createdAt: new Date(0).toISOString(),
   };
 }

@@ -66,6 +66,9 @@ const deviceRow = {
   tailscaleIp: "100.64.1.5",
   userId: "user-1",
   name: "Kiosk",
+  pairingCode: null,
+  userLinked: false,
+  lastSeen: null,
   createdAt: new Date("2025-01-01T00:00:00Z"),
 };
 
