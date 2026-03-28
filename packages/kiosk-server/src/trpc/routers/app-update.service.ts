@@ -1,12 +1,16 @@
-import { execFile as execFileCb } from "node:child_process";
-import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
+import { rm } from "node:fs/promises";
 import { type AppUpdateStatus, AppUpdateStep } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
+import {
+  dirExists,
+  type ProgressJson,
+  readJsonFile,
+  readTextFile,
+  runSudoScript,
+  writeStateFile,
+} from "../../lib/update-helpers.js";
 
-const execFile = promisify(execFileCb);
-
-const SCRIPTS_DIR = "/opt/kioskkit/system";
+const STATE_DIR = "/data/app-update";
 const STATE_FILE = "/data/app-update/state.json";
 const VERSION_FILE = "/etc/kioskkit/app-version";
 const PKG_VERSION_FILE = "/opt/kioskkit/package.json";
@@ -22,62 +26,8 @@ interface StateJson {
   lastResult?: AppUpdateStatus["lastResult"];
 }
 
-interface ProgressJson {
-  version: string;
-  progress: number;
-  bytesReceived: number;
-  bytesTotal: number;
-}
-
-async function readJsonFile<T>(path: string): Promise<T | null> {
-  try {
-    const content = await readFile(path, "utf-8");
-    return JSON.parse(content) as T;
-  } catch {
-    return null;
-  }
-}
-
-async function readTextFile(path: string): Promise<string | null> {
-  try {
-    return (await readFile(path, "utf-8")).trim();
-  } catch {
-    return null;
-  }
-}
-
-async function writeStateFile(state: StateJson): Promise<void> {
-  await mkdir("/data/app-update", { recursive: true });
-  await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
-}
-
-async function dirExists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function runSudoScript(script: string, args: string[] = []): Promise<string> {
-  const path = `${SCRIPTS_DIR}/${script}`;
-  try {
-    const { stdout } = await execFile("sudo", [path, ...args]);
-    return stdout;
-  } catch (err: unknown) {
-    const stderr = (err as { stderr?: string }).stderr ?? "";
-    const stdout = (err as { stdout?: string }).stdout ?? "";
-    const output = stderr || stdout;
-    let message: string;
-    try {
-      const parsed = JSON.parse(output) as { error?: string };
-      message = parsed.error ?? (output.trim() || "Script failed");
-    } catch {
-      message = output.trim() || "Script failed";
-    }
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
-  }
+async function writeState(state: StateJson): Promise<void> {
+  await writeStateFile(STATE_DIR, STATE_FILE, state);
 }
 
 async function readAppVersion(): Promise<string | null> {
@@ -128,7 +78,7 @@ export async function installApp(): Promise<void> {
     });
   }
 
-  await writeStateFile({
+  await writeState({
     ...currentState,
     status: AppUpdateStep.Installing,
   });
@@ -148,7 +98,7 @@ export async function cancelUpload(): Promise<void> {
 
   await rm(PENDING_DIR, { recursive: true, force: true });
 
-  await writeStateFile({
+  await writeState({
     status: AppUpdateStep.Idle,
     lastUpdate: currentState.lastUpdate,
     lastResult: currentState.lastResult,
@@ -176,7 +126,7 @@ export async function rollbackApp(): Promise<void> {
     });
   }
 
-  await writeStateFile({
+  await writeState({
     status: AppUpdateStep.RollingBack,
     lastUpdate: currentState?.lastUpdate ?? null,
     lastResult: currentState?.lastResult ?? null,

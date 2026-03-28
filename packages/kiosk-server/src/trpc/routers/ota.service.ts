@@ -1,12 +1,15 @@
-import { execFile as execFileCb } from "node:child_process";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
+import { rm } from "node:fs/promises";
 import { type OtaStatus, OtaStep } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
+import {
+  type ProgressJson,
+  readJsonFile,
+  readTextFile,
+  runSudoScript,
+  writeStateFile,
+} from "../../lib/update-helpers.js";
 
-const execFile = promisify(execFileCb);
-
-const SCRIPTS_DIR = "/opt/kioskkit/system";
+const STATE_DIR = "/data/ota";
 const STATE_FILE = "/data/ota/state.json";
 const BOOT_SLOT_FILE = "/data/ota/boot-slot";
 const VERSION_FILE = "/etc/kioskkit/version";
@@ -21,53 +24,8 @@ interface StateJson {
   lastResult?: OtaStatus["lastResult"];
 }
 
-interface ProgressJson {
-  version: string;
-  progress: number;
-  bytesReceived: number;
-  bytesTotal: number;
-}
-
-async function readJsonFile<T>(path: string): Promise<T | null> {
-  try {
-    const content = await readFile(path, "utf-8");
-    return JSON.parse(content) as T;
-  } catch {
-    return null;
-  }
-}
-
-async function readTextFile(path: string): Promise<string | null> {
-  try {
-    return (await readFile(path, "utf-8")).trim();
-  } catch {
-    return null;
-  }
-}
-
-async function writeStateFile(state: StateJson): Promise<void> {
-  await mkdir("/data/ota", { recursive: true });
-  await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
-}
-
-async function runSudoScript(script: string, args: string[] = []): Promise<string> {
-  const path = `${SCRIPTS_DIR}/${script}`;
-  try {
-    const { stdout } = await execFile("sudo", [path, ...args]);
-    return stdout;
-  } catch (err: unknown) {
-    const stderr = (err as { stderr?: string }).stderr ?? "";
-    const stdout = (err as { stdout?: string }).stdout ?? "";
-    const output = stderr || stdout;
-    let message: string;
-    try {
-      const parsed = JSON.parse(output) as { error?: string };
-      message = parsed.error ?? (output.trim() || "Script failed");
-    } catch {
-      message = output.trim() || "Script failed";
-    }
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
-  }
+async function writeState(state: StateJson): Promise<void> {
+  await writeStateFile(STATE_DIR, STATE_FILE, state);
 }
 
 export async function getOtaStatus(): Promise<OtaStatus> {
@@ -108,7 +66,7 @@ export async function installAndReboot(): Promise<void> {
     });
   }
 
-  await writeStateFile({
+  await writeState({
     ...currentState,
     status: OtaStep.Installing,
   });
@@ -128,7 +86,7 @@ export async function cancelUpload(): Promise<void> {
 
   await rm(PENDING_DIR, { recursive: true, force: true });
 
-  await writeStateFile({
+  await writeState({
     status: OtaStep.Idle,
     lastUpdate: currentState.lastUpdate,
     lastResult: currentState.lastResult,
@@ -138,7 +96,7 @@ export async function cancelUpload(): Promise<void> {
 export async function rollbackAndReboot(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
-  await writeStateFile({
+  await writeState({
     status: OtaStep.Rollback,
     lastUpdate: currentState?.lastUpdate ?? null,
     lastResult: currentState?.lastResult ?? null,
