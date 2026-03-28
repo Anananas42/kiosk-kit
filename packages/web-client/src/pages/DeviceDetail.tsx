@@ -1,9 +1,10 @@
-import { Card, CardContent } from "@kioskkit/ui";
+import { Card, CardContent, Spinner } from "@kioskkit/ui";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
+import { StatusCard } from "../components/StatusCard.js";
 import { useBackups } from "../hooks/backups.js";
 import { useDevice, useDeviceStatus } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
@@ -58,25 +59,27 @@ export function DeviceDetail() {
 
       {/* Error state */}
       {!isLoading && error && (
-        <Card className="flex flex-1 items-center justify-center">
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+        <StatusCard
+          icon={
             <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
               <span className="text-muted-foreground text-xl">?</span>
             </div>
-            <p className="text-muted-foreground">{t("deviceDetail.notFoundDescription")}</p>
+          }
+          title={t("deviceDetail.notFoundDescription")}
+          action={
             <Link to="/" className="text-sm text-primary hover:underline">
               {t("deviceDetail.backToDashboard")}
             </Link>
-          </CardContent>
-        </Card>
+          }
+        />
       )}
 
       {/* Offline / App Not Connected state */}
       {!isLoading &&
         !error &&
         (status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected) && (
-          <Card className="flex flex-1 items-center justify-center">
-            <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
+          <StatusCard
+            icon={
               <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
                 <svg
                   className="text-muted-foreground h-7 w-7"
@@ -99,35 +102,33 @@ export function DeviceDetail() {
                   />
                 </svg>
               </div>
-              <div>
-                <p className="text-foreground font-medium">
-                  {status === DeviceStatus.Offline
-                    ? t("deviceDetail.offline.title")
-                    : t("deviceDetail.appNotConnected.title")}
+            }
+            title={
+              status === DeviceStatus.Offline
+                ? t("deviceDetail.offline.title")
+                : t("deviceDetail.appNotConnected.title")
+            }
+            description={
+              status === DeviceStatus.Offline
+                ? t("deviceDetail.offline.description")
+                : t("deviceDetail.appNotConnected.description")
+            }
+            action={
+              device?.lastSeen && status === DeviceStatus.Offline ? (
+                <p className="text-muted-foreground text-xs">
+                  {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
                 </p>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {status === DeviceStatus.Offline
-                    ? t("deviceDetail.offline.description")
-                    : t("deviceDetail.appNotConnected.description")}
-                </p>
-                {device?.lastSeen && status === DeviceStatus.Offline && (
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              ) : undefined
+            }
+          />
         )}
 
       {/* Loading state */}
       {isLoading && (
-        <Card className="flex flex-1 items-center justify-center">
-          <CardContent className="flex items-center gap-2 py-16">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            <span className="text-muted-foreground text-sm">{t("deviceDetail.loadingDevice")}</span>
-          </CardContent>
-        </Card>
+        <StatusCard
+          icon={<Spinner className="h-4 w-4" />}
+          title={t("deviceDetail.loadingDevice")}
+        />
       )}
 
       {/* Iframe for online device */}
