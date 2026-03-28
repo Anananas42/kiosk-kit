@@ -35,6 +35,7 @@ export {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
+export { Skeleton } from "./components/ui/skeleton";
 export { Spinner } from "./components/ui/spinner";
 export {
   Table,

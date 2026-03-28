@@ -1,4 +1,4 @@
-import { Button } from "@kioskkit/ui";
+import { Button, Spinner } from "@kioskkit/ui";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { logout } from "./api/auth.js";
 import { useAuth } from "./hooks/auth.js";
@@ -13,7 +13,7 @@ export function App() {
   if (loading) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-4">
-        <p className="text-muted-foreground">{t("common.loading")}</p>
+        <Spinner className="size-6 text-muted-foreground" />
       </div>
     );
   }

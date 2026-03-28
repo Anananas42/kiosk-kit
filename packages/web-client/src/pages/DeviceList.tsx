@@ -4,6 +4,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -44,7 +45,39 @@ export function DeviceList() {
   const { data: devices, isLoading, error } = useDevices();
 
   if (isLoading) {
-    return <p className="text-muted-foreground">{t("deviceList.loading")}</p>;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("deviceList.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("deviceList.table.status")}</TableHead>
+                <TableHead>{t("deviceList.table.name")}</TableHead>
+                <TableHead>{t("deviceList.table.backup")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {["skeleton-1", "skeleton-2", "skeleton-3", "skeleton-4"].map((key) => (
+                <TableRow key={key}>
+                  <TableCell>
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (error) {

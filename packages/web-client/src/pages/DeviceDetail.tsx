@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@kioskkit/ui";
+import { Card, CardContent, Skeleton } from "@kioskkit/ui";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
@@ -122,10 +122,9 @@ export function DeviceDetail() {
 
       {/* Loading state */}
       {isLoading && (
-        <Card className="flex flex-1 items-center justify-center">
-          <CardContent className="flex items-center gap-2 py-16">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            <span className="text-muted-foreground text-sm">{t("deviceDetail.loadingDevice")}</span>
+        <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
+          <CardContent className="flex-1 p-0">
+            <Skeleton className="h-full w-full rounded-none" />
           </CardContent>
         </Card>
       )}
