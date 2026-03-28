@@ -1,6 +1,7 @@
 import { Button } from "@kioskkit/ui";
 import { useCallback, useState } from "react";
-import { useData, useFormStatus } from "../../hooks.js";
+import { toast } from "sonner";
+import { useData } from "../../hooks.js";
 import { trpc } from "../../trpc.js";
 import { AvailableNetworkList } from "./AvailableNetworkList.js";
 import { ConnectedNetwork } from "./ConnectedNetwork.js";
@@ -12,26 +13,24 @@ import { useNetworkActions } from "./useNetworkActions.js";
 export function NetworkTab() {
   const fetcher = useCallback(() => trpc["admin.network.list"].query(), []);
   const { data: status, error, loading, reload } = useData(fetcher);
-  const form = useFormStatus();
   const [toggling, setToggling] = useState(false);
 
   const actions = useNetworkActions({
     status,
     reload,
-    onError: form.setError,
-    onClearError: form.clear,
+    onError: (msg: string) => toast.error(msg),
+    onClearError: () => {},
   });
 
   const handleToggleWifi = () => {
     if (!status) return;
     setToggling(true);
-    form.clear();
     const action = status.enabled
       ? trpc["admin.network.disable"].mutate()
       : trpc["admin.network.enable"].mutate();
     action
       .then(() => reload())
-      .catch((err: Error) => form.setError(err.message))
+      .catch((err: Error) => toast.error(err.message))
       .finally(() => setToggling(false));
   };
 
@@ -58,8 +57,6 @@ export function NetworkTab() {
           </Button>
         )}
       </div>
-
-      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
 
       {!status.enabled && <p className="italic text-muted-foreground">WiFi is disabled.</p>}
 
@@ -88,8 +85,8 @@ export function NetworkTab() {
 
           <HiddenNetworkForm
             onConnected={reload}
-            onError={form.setError}
-            onClearError={form.clear}
+            onError={(msg: string) => toast.error(msg)}
+            onClearError={() => {}}
           />
 
           {actions.showForgetWarning && (
