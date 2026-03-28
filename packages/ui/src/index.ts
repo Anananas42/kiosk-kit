@@ -1,4 +1,3 @@
-export type { BadgeProps } from "./components/ui/badge";
 export { Badge, badgeVariants } from "./components/ui/badge";
 export type { ButtonProps } from "./components/ui/button";
 export { Button, buttonVariants } from "./components/ui/button";
@@ -36,6 +35,7 @@ export {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
+export { Spinner } from "./components/ui/spinner";
 export {
   Table,
   TableBody,
@@ -46,7 +46,6 @@ export {
   TableHeader,
   TableRow,
 } from "./components/ui/table";
-
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 
 export { cn } from "./lib/utils";

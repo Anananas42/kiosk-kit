@@ -14,7 +14,7 @@ export function DeviceDetail() {
   const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { data: device, isLoading, error } = useDevice(id);
-  const { data: appResponding } = useDeviceStatus(id);
+  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(id);
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
 
@@ -41,14 +41,14 @@ export function DeviceDetail() {
             <span className="text-foreground font-medium">{device?.name}</span>
           )}
         </div>
-        {!isLoading && !error && status !== null && (
+        {!isLoading && !error && (
           <div className="flex items-center gap-2">
             {device?.lastSeen && status === DeviceStatus.Offline && (
               <span className="text-muted-foreground text-xs">
                 {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </span>
             )}
-            <DeviceStatusBadge status={status} />
+            <DeviceStatusBadge status={status} loading={statusLoading} />
           </div>
         )}
       </div>

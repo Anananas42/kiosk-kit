@@ -19,17 +19,13 @@ import { useTranslate } from "../hooks/useTranslate.js";
 import { deriveDeviceStatus } from "../lib/device-status.js";
 
 function DeviceRow({ device }: { device: Device }) {
-  const { data: appResponding } = useDeviceStatus(device.id);
+  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(device.id);
   const status = deriveDeviceStatus(device.online, appResponding);
 
   return (
     <TableRow>
       <TableCell>
-        {status ? (
-          <DeviceStatusBadge status={status} />
-        ) : (
-          <span className="text-muted-foreground text-xs">…</span>
-        )}
+        <DeviceStatusBadge status={status} loading={statusLoading} />
       </TableCell>
       <TableCell>
         <Link to={`/devices/${device.id}`} className="font-medium text-foreground hover:underline">

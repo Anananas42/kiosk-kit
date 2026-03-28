@@ -1,4 +1,4 @@
-import { Badge } from "@kioskkit/ui";
+import { Badge, Spinner } from "@kioskkit/ui";
 import type { MessageKey } from "../hooks/useTranslate.js";
 import { useTranslate } from "../hooks/useTranslate.js";
 import { DeviceStatus } from "../lib/device-status.js";
@@ -24,12 +24,18 @@ const config: Record<
   },
 };
 
-export function DeviceStatusBadge({ status }: { status: DeviceStatus }) {
+export function DeviceStatusBadge({
+  status,
+  loading,
+}: {
+  status: DeviceStatus;
+  loading?: boolean;
+}) {
   const t = useTranslate();
   const { labelKey, dotClass, variant } = config[status];
   return (
-    <Badge variant={variant} className="flex w-fit items-center gap-1.5">
-      <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />
+    <Badge variant={variant}>
+      {loading ? <Spinner /> : <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />}
       {t(labelKey)}
     </Badge>
   );

@@ -11,6 +11,7 @@ export default defineConfig({
     alias: {
       "@kioskkit/shared": path.resolve(__dirname, "../shared/src/index.ts"),
       "@kioskkit/ui": path.resolve(__dirname, "../ui/src/index.ts"),
+      "@/": path.resolve(__dirname, "../ui/src") + "/",
     },
   },
   server: {
