@@ -59,10 +59,15 @@ export function appUploadRoute() {
     }
 
     // Check for concurrent upload
-    let currentState: { status?: string } | null = null;
+    interface StateJson {
+      status?: string;
+      lastUpdate?: string;
+      lastResult?: string;
+    }
+    let currentState: StateJson | null = null;
     try {
       const raw = await readFile(STATE_FILE, "utf-8");
-      currentState = JSON.parse(raw) as { status?: string };
+      currentState = JSON.parse(raw) as StateJson;
     } catch {
       // No state file — fresh device
     }
@@ -75,8 +80,8 @@ export function appUploadRoute() {
 
     // Write initial uploading state
     const stateBase = {
-      lastUpdate: (currentState as Record<string, unknown>)?.lastUpdate ?? null,
-      lastResult: (currentState as Record<string, unknown>)?.lastResult ?? null,
+      lastUpdate: currentState?.lastUpdate ?? null,
+      lastResult: currentState?.lastResult ?? null,
     };
     await writeState({ status: AppUpdateStep.Uploading, version, ...stateBase });
 

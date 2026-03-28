@@ -78,10 +78,20 @@ done
 
 rm -rf "$STAGING_DIR"
 
+# --- Fix ownership ---
+
+KIOSK_USER="${KIOSKKIT_USER:-kiosk}"
+log "Setting ownership to $KIOSK_USER..."
+for part in "${APP_PARTS[@]}"; do
+  if [[ -e "$INSTALL_DIR/$part" ]]; then
+    chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR/$part"
+  fi
+done
+
 # --- Clear Chromium cache ---
 
 log "Clearing Chromium cache..."
-rm -rf /home/kiosk/.cache/chromium
+rm -rf "/home/$KIOSK_USER/.cache/chromium"
 
 # --- Restart service ---
 
