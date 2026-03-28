@@ -25,6 +25,7 @@
   "deviceDetail.appNotConnected.description": "The device is on the network but the kiosk app is not responding.",
   "deviceDetail.lastSeen": "Last seen {time}",
   "deviceDetail.overlay.offline": "Device is offline",
+  "deviceDetail.overlay.appNotConnected": "App is not responding",
   "deviceDetail.loadingDevice": "Loading device\u2026",
   "deviceDetail.loadingManagement": "Loading device management\u2026",
   "deviceDetail.backupError": "Failed to load backups: {error}",

@@ -1,3 +1,4 @@
 {
-  "deviceDetail.overlay.offline": "Zařízení je offline"
+  "deviceDetail.overlay.offline": "Zařízení je offline",
+  "deviceDetail.overlay.appNotConnected": "Aplikace neodpovídá"
 }

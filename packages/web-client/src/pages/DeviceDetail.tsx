@@ -2,7 +2,7 @@ import { Card, CardContent, Spinner } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
-import { ConnectionOverlay, OfflineIcon } from "../components/ConnectionOverlay.js";
+import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
 import { StatusCard } from "../components/StatusCard.js";
@@ -19,21 +19,22 @@ export function DeviceDetail() {
   const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(id);
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
-  const [hasBeenReachable, setHasBeenReachable] = useState(false);
+  const [hasBeenOnline, setHasBeenOnline] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
-  const tailscaleOnline = device?.online ?? false;
-  const status = deriveDeviceStatus(tailscaleOnline, appResponding);
+  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
 
-  // When Tailscale comes online: mark reachable and remount iframe
+  // When status transitions to Online: mark as been-online and remount iframe
   useEffect(() => {
-    if (!tailscaleOnline) return;
-    setHasBeenReachable(true);
+    if (status !== DeviceStatus.Online) return;
+    setHasBeenOnline(true);
     setIframeKey((k) => k + 1);
     setIframeLoading(true);
-  }, [tailscaleOnline]);
+  }, [status]);
 
   if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
+
+  const isDisconnected = status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected;
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
@@ -61,7 +62,10 @@ export function DeviceDetail() {
                 {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </span>
             )}
-            <DeviceStatusBadge status={status} loading={statusLoading && tailscaleOnline} />
+            <DeviceStatusBadge
+              status={status}
+              loading={statusLoading && (device?.online ?? false)}
+            />
           </div>
         )}
       </div>
@@ -91,14 +95,26 @@ export function DeviceDetail() {
         />
       )}
 
-      {/* Offline — device was never reachable during this visit */}
-      {!isLoading && !error && !hasBeenReachable && status === DeviceStatus.Offline && (
+      {/* Disconnected — device was never online during this visit */}
+      {!isLoading && !error && !hasBeenOnline && isDisconnected && (
         <StatusCard
-          icon={<OfflineIcon />}
-          title={t("deviceDetail.offline.title")}
-          description={t("deviceDetail.offline.description")}
+          icon={
+            <DisconnectedIcon
+              status={status as DeviceStatus.Offline | DeviceStatus.AppNotConnected}
+            />
+          }
+          title={
+            status === DeviceStatus.Offline
+              ? t("deviceDetail.offline.title")
+              : t("deviceDetail.appNotConnected.title")
+          }
+          description={
+            status === DeviceStatus.Offline
+              ? t("deviceDetail.offline.description")
+              : t("deviceDetail.appNotConnected.description")
+          }
           action={
-            device?.lastSeen ? (
+            device?.lastSeen && status === DeviceStatus.Offline ? (
               <p className="text-muted-foreground text-xs">
                 {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </p>
@@ -108,7 +124,7 @@ export function DeviceDetail() {
       )}
 
       {/* Iframe with connection overlay */}
-      {!isLoading && !error && hasBeenReachable && (
+      {!isLoading && !error && hasBeenOnline && (
         <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
@@ -126,7 +142,11 @@ export function DeviceDetail() {
               onLoad={() => setIframeLoading(false)}
               className={`h-full w-full border-0 ${iframeLoading ? "hidden" : "block"}`}
             />
-            {status === DeviceStatus.Offline && <ConnectionOverlay />}
+            {isDisconnected && (
+              <ConnectionOverlay
+                status={status as DeviceStatus.Offline | DeviceStatus.AppNotConnected}
+              />
+            )}
           </CardContent>
         </Card>
       )}
