@@ -1,16 +1,16 @@
 import {
-  type Device,
   DeviceAssignInputSchema,
   DeviceSchema,
   DeviceStatusSchema,
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
-import { eq, max } from "drizzle-orm";
+import { asc, eq, isNotNull, isNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { backups, devices } from "../../db/schema.js";
+import { enrichWithTailscale } from "../../services/device-enrichment.js";
 import { getDeviceStatus } from "../../services/device-status.js";
-import { getCachedDevice, getTailscaleClient } from "../../services/tailscale.js";
+import { getTailscaleClient } from "../../services/tailscale.js";
 import { adminProcedure, router } from "../trpc.js";
 
 export const adminDevicesRouter = router({
@@ -27,42 +27,42 @@ export const adminDevicesRouter = router({
       return { status: await getDeviceStatus(device) };
     }),
 
-  "devices.listAll": adminProcedure.output(z.array(DeviceSchema)).query(async ({ ctx }) => {
-    const [dbDevices, lastBackupMap] = await Promise.all([
-      ctx.db.select().from(devices),
-      getLastBackupMap(ctx.db),
-    ]);
+  "devices.get": adminProcedure
+    .input(z.object({ id: z.uuid() }))
+    .output(DeviceSchema)
+    .query(async ({ ctx, input }) => {
+      const [device] = await ctx.db.select().from(devices).where(eq(devices.id, input.id));
 
-    const list: Device[] = await Promise.all(
-      dbDevices.map(async (d) => {
-        let online = false;
-        let lastSeen: string | null = d.lastSeen?.toISOString() ?? null;
+      if (!device) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
+      }
 
-        try {
-          const td = await getCachedDevice(d.tailscaleNodeId);
-          online = td.online;
-          lastSeen = td.lastSeen;
-        } catch {
-          // Tailscale API unavailable — use DB fallback
-        }
+      return enrichWithTailscale(ctx.db, device);
+    }),
 
-        return {
-          id: d.id,
-          tailscaleNodeId: d.tailscaleNodeId,
-          userId: d.userId,
-          name: d.name,
-          tailscaleIp: d.tailscaleIp,
-          online,
-          lastSeen,
+  "devices.listAll": adminProcedure
+    .input(z.object({ assigned: z.boolean().optional() }).optional())
+    .output(z.array(DeviceSchema))
+    .query(async ({ ctx, input }) => {
+      let query = ctx.db.select().from(devices).$dynamic();
+      if (input?.assigned === true) {
+        query = query.where(isNotNull(devices.userId));
+      } else if (input?.assigned === false) {
+        query = query.where(isNull(devices.userId));
+      }
+      query = query.orderBy(asc(devices.createdAt));
+
+      const [dbDevices, lastBackupMap] = await Promise.all([query, getLastBackupMap(ctx.db)]);
+
+      const list = await Promise.all(
+        dbDevices.map(async (d) => ({
+          ...(await enrichWithTailscale(ctx.db, d)),
           lastBackupAt: lastBackupMap.get(d.id) ?? null,
-          hostname: d.name,
-          createdAt: d.createdAt.toISOString(),
-        };
-      }),
-    );
+        })),
+      );
 
-    return list;
-  }),
+      return list;
+    }),
 
   "devices.assign": adminProcedure
     .input(DeviceAssignInputSchema)
@@ -86,7 +86,7 @@ export const adminDevicesRouter = router({
         tailscaleIp: device.tailscaleIp,
         online: false,
         lastSeen: null,
-        hostname: device.name,
+        hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -113,7 +113,7 @@ export const adminDevicesRouter = router({
         tailscaleIp: device.tailscaleIp,
         online: false,
         lastSeen: null,
-        hostname: device.name,
+        hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),
       };
     }),

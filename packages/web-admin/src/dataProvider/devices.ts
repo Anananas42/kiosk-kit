@@ -7,20 +7,16 @@ function toStringId(id: Identifier): string {
 
 export const devicesDataProvider: DataProvider = {
   getList: async (_resource, params) => {
-    const all = await trpc["devices.listAll"].query();
     const filter = params?.filter ?? {};
-    const data = all.filter((d) => {
-      if (filter.online !== undefined) {
-        const online = filter.online === "true" || filter.online === true;
-        if (d.online !== online) return false;
-      }
-      if (filter.assigned !== undefined) {
-        const assigned = filter.assigned === "true" || filter.assigned === true;
-        if (assigned && !d.userId) return false;
-        if (!assigned && d.userId) return false;
-      }
-      return true;
-    });
+    const assigned =
+      filter.assigned !== undefined
+        ? filter.assigned === "true" || filter.assigned === true
+        : undefined;
+    const all = await trpc["devices.listAll"].query({ assigned });
+    const data =
+      filter.online !== undefined
+        ? all.filter((d) => d.online === (filter.online === "true" || filter.online === true))
+        : all;
     return { data, total: data.length };
   },
 
@@ -32,9 +28,10 @@ export const devicesDataProvider: DataProvider = {
   },
 
   getMany: async (_resource, params) => {
-    const ids = params.ids.map(toStringId);
-    const all = await trpc["devices.listAll"].query();
-    return { data: all.filter((d) => ids.includes(d.id)) };
+    const data = await Promise.all(
+      params.ids.map((id) => trpc["devices.get"].query({ id: toStringId(id) })),
+    );
+    return { data };
   },
 
   getManyReference: async (_resource, params) => {

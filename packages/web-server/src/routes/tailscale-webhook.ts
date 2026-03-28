@@ -101,6 +101,7 @@ async function handleNodeCreated(db: Db, nodeId: string): Promise<void> {
       tailscaleNodeId: nodeId,
       tailscaleIp: ip,
       name: td.hostname,
+      hostname: td.hostname,
       pairingCode,
     })
     .returning();

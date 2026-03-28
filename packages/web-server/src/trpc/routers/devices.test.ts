@@ -76,6 +76,7 @@ const deviceRow = {
   tailscaleIp: "100.64.1.5",
   userId: "user-1",
   name: "Kiosk",
+  hostname: "kiosk-1",
   pairingCode: null,
   lastSeen: null,
   createdAt: new Date("2025-01-01T00:00:00Z"),
@@ -99,18 +100,24 @@ describe("devices procedures", () => {
   });
 
   describe("devices.get", () => {
-    it("returns device for owner", async () => {
-      const caller = callerFor(customerUser, createMockDb([deviceRow]));
+    it("returns device with tailscaleIp and hostname for admin", async () => {
+      const caller = callerFor(adminUser, createMockDb([deviceRow]));
       const result = await caller["devices.get"]({ id: deviceRow.id });
       expect(result.name).toBe("Kiosk");
-      expect(result.tailscaleIp).toBeUndefined();
+      expect(result.hostname).toBe("kiosk-1");
+      expect(result.tailscaleIp).toBe("100.64.1.5");
     });
 
     it("throws NOT_FOUND when device missing", async () => {
-      const caller = callerFor(customerUser, createMockDb([]));
+      const caller = callerFor(adminUser, createMockDb([]));
       await expect(
         caller["devices.get"]({ id: "d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a" }),
       ).rejects.toThrow(TRPCError);
+    });
+
+    it("throws FORBIDDEN for customers", async () => {
+      const caller = callerFor(customerUser, createMockDb([deviceRow]));
+      await expect(caller["devices.get"]({ id: deviceRow.id })).rejects.toThrow(TRPCError);
     });
   });
 
@@ -188,7 +195,7 @@ describe("devices procedures", () => {
       addresses: ["100.64.1.5"],
       online: true,
       lastSeen: new Date().toISOString(),
-      hostname: "test",
+      hostname: "test-host",
     };
 
     it("returns online when tailscale online and health responds OK", async () => {

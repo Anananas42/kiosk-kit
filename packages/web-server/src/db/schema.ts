@@ -27,6 +27,7 @@ export const devices = pgTable("devices", {
   tailscaleIp: text("tailscale_ip"),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   name: text("name").notNull(),
+  hostname: text("hostname"),
   pairingCode: text("pairing_code").unique(),
   lastSeen: timestamp("last_seen", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

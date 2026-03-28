@@ -111,7 +111,7 @@ describe("tailscale webhook", () => {
     // Verify pairing code was passed to the insert
     const mockValues = (db as unknown as { values: ReturnType<typeof vi.fn> }).values;
     expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({ pairingCode: derivePairingCode("n-1") }),
+      expect.objectContaining({ pairingCode: derivePairingCode("n-1"), hostname: "kiosk-1" }),
     );
 
     vi.unstubAllEnvs();

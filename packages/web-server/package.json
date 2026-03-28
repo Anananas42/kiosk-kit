@@ -26,6 +26,7 @@
     "@kioskkit/shared": "workspace:*",
     "@trpc/server": "^11.15.0",
     "arctic": "^3.7.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.7.4",

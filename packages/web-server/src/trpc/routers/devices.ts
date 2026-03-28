@@ -10,9 +10,9 @@ import { and, eq, isNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { DEVICE_TIMEOUT_MS } from "../../config.js";
 import { backups, devices } from "../../db/schema.js";
+import { enrichWithTailscale } from "../../services/device-enrichment.js";
 import { fetchDeviceProxy } from "../../services/device-network.js";
 import { getDeviceStatus } from "../../services/device-status.js";
-import { getCachedDevice } from "../../services/tailscale.js";
 import { authedProcedure, router } from "../trpc.js";
 
 export const devicesRouter = router({
@@ -29,39 +29,8 @@ export const devicesRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
       }
 
-      // Fetch live status from Tailscale API (cached 30s)
-      let online = false;
-      let lastSeen: string | null = device.lastSeen?.toISOString() ?? null;
-      let { tailscaleIp } = device;
-
-      try {
-        const td = await getCachedDevice(device.tailscaleNodeId);
-        online = td.online;
-        lastSeen = td.lastSeen;
-        const tsIp = td.addresses.find((a) => a.startsWith("100.")) ?? null;
-        tailscaleIp = tsIp ?? tailscaleIp;
-
-        await ctx.db
-          .update(devices)
-          .set({ lastSeen: new Date(td.lastSeen), tailscaleIp })
-          .where(eq(devices.id, device.id));
-      } catch (err) {
-        console.warn(
-          `[devices] Tailscale API error for device ${device.id}:`,
-          err instanceof Error ? err.message : err,
-        );
-      }
-
-      return {
-        id: device.id,
-        tailscaleNodeId: device.tailscaleNodeId,
-        userId: device.userId,
-        name: device.name,
-        online,
-        lastSeen,
-        hostname: device.name,
-        createdAt: device.createdAt.toISOString(),
-      };
+      const { tailscaleIp: _, ...rest } = await enrichWithTailscale(ctx.db, device);
+      return rest;
     }),
 
   "devices.status": authedProcedure
@@ -126,7 +95,7 @@ export const devicesRouter = router({
         name: updated.name,
         online: false,
         lastSeen: null,
-        hostname: updated.name,
+        hostname: updated.hostname,
         createdAt: updated.createdAt.toISOString(),
       };
     }),
@@ -152,7 +121,7 @@ export const devicesRouter = router({
         name: device.name,
         online: false,
         lastSeen: null,
-        hostname: device.name,
+        hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -187,41 +156,10 @@ async function listForCustomer(
     getLastBackupMap(db),
   ]);
 
-  const list: Device[] = await Promise.all(
+  return Promise.all(
     dbDevices.map(async (d) => {
-      let online = false;
-      let lastSeen: string | null = d.lastSeen?.toISOString() ?? null;
-
-      try {
-        const td = await getCachedDevice(d.tailscaleNodeId);
-        online = td.online;
-        lastSeen = td.lastSeen;
-
-        // Persist lastSeen back to DB as fallback
-        await db
-          .update(devices)
-          .set({ lastSeen: new Date(td.lastSeen) })
-          .where(eq(devices.id, d.id));
-      } catch (err) {
-        console.warn(
-          `[devices] Tailscale API error for device ${d.id}:`,
-          err instanceof Error ? err.message : err,
-        );
-      }
-
-      return {
-        id: d.id,
-        tailscaleNodeId: d.tailscaleNodeId,
-        userId: d.userId,
-        name: d.name,
-        online,
-        lastSeen,
-        lastBackupAt: lastBackupMap.get(d.id) ?? null,
-        hostname: d.name,
-        createdAt: d.createdAt.toISOString(),
-      };
+      const { tailscaleIp: _, ...rest } = await enrichWithTailscale(db, d);
+      return { ...rest, lastBackupAt: lastBackupMap.get(d.id) ?? null };
     }),
   );
-
-  return list;
 }
