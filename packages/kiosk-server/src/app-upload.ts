@@ -4,7 +4,9 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { Writable } from "node:stream";
 import { AppUpdateResult, AppUpdateStep } from "@kioskkit/shared";
 import { Hono } from "hono";
+import { writeStateFile } from "./lib/update-helpers.js";
 
+const STATE_DIR = "/data/app-update";
 const PENDING_DIR = "/data/app-update/pending";
 const STATE_FILE = "/data/app-update/state.json";
 const BUNDLE_FILE = "/data/app-update/pending/app-bundle.tar.gz";
@@ -194,7 +196,6 @@ export function appUploadRoute() {
   return app;
 }
 
-async function writeState(state: Record<string, unknown>): Promise<void> {
-  await mkdir("/data/app-update", { recursive: true });
-  await writeFile(STATE_FILE, JSON.stringify(state, null, 2));
+async function writeState(state: object): Promise<void> {
+  await writeStateFile(STATE_DIR, STATE_FILE, state);
 }
