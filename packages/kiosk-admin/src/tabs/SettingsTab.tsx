@@ -11,16 +11,10 @@ export function SettingsTab() {
   const fetcher = useCallback(() => trpc["admin.settings.get"].query(), []);
   const { data: settings, error, loading, reload } = useData(fetcher);
   const [draft, setDraft] = useState<KioskSettings | null>(null);
-  const [version, setVersion] = useState("dev");
 
-  useEffect(() => {
-    trpc["admin.appUpdate.status"]
-      .query()
-      .then((res) => {
-        if (res.currentVersion) setVersion(res.currentVersion);
-      })
-      .catch(() => {});
-  }, []);
+  const versionFetcher = useCallback(() => trpc["admin.appUpdate.status"].query(), []);
+  const { data: appStatus } = useData(versionFetcher);
+  const version = appStatus?.currentVersion || "dev";
 
   useEffect(() => {
     if (settings) setDraft({ ...settings });
