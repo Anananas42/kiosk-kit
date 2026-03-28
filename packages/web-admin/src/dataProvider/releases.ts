@@ -6,8 +6,20 @@ function toStringId(id: Identifier): string {
 }
 
 export const releasesDataProvider: DataProvider = {
-  getList: async () => {
-    const data = await trpc["releases.list"].query();
+  getList: async (_resource, params) => {
+    const all = await trpc["releases.list"].query();
+    const filter = params?.filter ?? {};
+    const data = all.filter((r) => {
+      if (filter.isPublished !== undefined) {
+        const published = filter.isPublished === "true" || filter.isPublished === true;
+        if (r.isPublished !== published) return false;
+      }
+      if (filter.isArchived !== undefined) {
+        const archived = filter.isArchived === "true" || filter.isArchived === true;
+        if (r.isArchived !== archived) return false;
+      }
+      return true;
+    });
     return { data, total: data.length };
   },
 

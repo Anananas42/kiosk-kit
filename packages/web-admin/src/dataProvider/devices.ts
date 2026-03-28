@@ -6,8 +6,21 @@ function toStringId(id: Identifier): string {
 }
 
 export const devicesDataProvider: DataProvider = {
-  getList: async () => {
-    const data = await trpc["devices.listAll"].query();
+  getList: async (_resource, params) => {
+    const all = await trpc["devices.listAll"].query();
+    const filter = params?.filter ?? {};
+    const data = all.filter((d) => {
+      if (filter.online !== undefined) {
+        const online = filter.online === "true" || filter.online === true;
+        if (d.online !== online) return false;
+      }
+      if (filter.assigned !== undefined) {
+        const assigned = filter.assigned === "true" || filter.assigned === true;
+        if (assigned && !d.userId) return false;
+        if (!assigned && d.userId) return false;
+      }
+      return true;
+    });
     return { data, total: data.length };
   },
 

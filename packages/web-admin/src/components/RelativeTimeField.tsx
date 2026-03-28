@@ -1,4 +1,6 @@
-export function formatRelativeTime(dateString: string | null | undefined): string {
+import { type FieldProps, useRecordContext } from "react-admin";
+
+function formatRelativeTime(dateString: string | null | undefined): string {
   if (!dateString) return "Unknown";
 
   const now = Date.now();
@@ -17,18 +19,10 @@ export function formatRelativeTime(dateString: string | null | undefined): strin
   return `${months}mo ago`;
 }
 
-export function OnlineStatusField({ record }: { record?: { online?: boolean } }) {
-  const online = record?.online ?? false;
+export function RelativeTimeField({ source }: FieldProps & { source: string }) {
+  const record = useRecordContext();
+  const value = record?.[source] as string | null | undefined;
   return (
-    <span
-      style={{
-        display: "inline-block",
-        width: 10,
-        height: 10,
-        borderRadius: "50%",
-        backgroundColor: online ? "#4caf50" : "#f44336",
-      }}
-      title={online ? "Online" : "Offline"}
-    />
+    <span title={value ? new Date(value).toLocaleString() : ""}>{formatRelativeTime(value)}</span>
   );
 }
