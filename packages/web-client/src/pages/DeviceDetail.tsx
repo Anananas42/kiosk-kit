@@ -1,4 +1,4 @@
-import { Card, CardContent, Spinner } from "@kioskkit/ui";
+import { Card, CardContent, Skeleton, Spinner } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
@@ -89,10 +89,11 @@ export function DeviceDetail() {
 
       {/* Loading state */}
       {isLoading && (
-        <StatusCard
-          icon={<Spinner className="h-4 w-4" />}
-          title={t("deviceDetail.loadingDevice")}
-        />
+        <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
+          <CardContent className="flex-1 p-0">
+            <Skeleton className="h-full w-full rounded-none" />
+          </CardContent>
+        </Card>
       )}
 
       {/* Disconnected — device was never online during this visit */}
@@ -125,7 +126,7 @@ export function DeviceDetail() {
 
       {/* Iframe with connection overlay */}
       {!isLoading && !error && hasBeenOnline && (
-        <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
+        <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
               <div className="flex items-center gap-2 p-4">
