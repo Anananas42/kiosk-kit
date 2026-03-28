@@ -13,6 +13,13 @@ export function useConnectMutation(onSuccess?: () => void) {
       onSuccess?.();
       queryClient.invalidateQueries({ queryKey: queryKeys.network.status() });
     },
-    onError: () => toast.error("Could not connect — check password and try again"),
+    onError: (error: Error) => {
+      const message = error.message;
+      if (message) {
+        toast.error(`Connection failed: ${message}`);
+      } else {
+        toast.error("Could not connect — check password and try again");
+      }
+    },
   });
 }

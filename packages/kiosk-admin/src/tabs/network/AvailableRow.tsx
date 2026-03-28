@@ -1,16 +1,22 @@
 import type { WifiNetwork } from "@kioskkit/shared";
-import { Badge, Button, Input, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Badge, Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { PasswordInput } from "./PasswordInput.js";
 import { SignalIcon } from "./SignalIcon.js";
 import { useConnectMutation } from "./useConnectMutation.js";
 
-export function AvailableRow({ network }: { network: WifiNetwork }) {
-  const [expanded, setExpanded] = useState(false);
+interface AvailableRowProps {
+  network: WifiNetwork;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+export function AvailableRow({ network, expanded, onToggle }: AvailableRowProps) {
   const [password, setPassword] = useState("");
 
   const connectMutation = useConnectMutation(() => {
-    setExpanded(false);
+    onToggle();
     setPassword("");
   });
 
@@ -27,7 +33,7 @@ export function AvailableRow({ network }: { network: WifiNetwork }) {
       <TableRow
         className="cursor-pointer hover:bg-secondary"
         onClick={() => {
-          setExpanded(!expanded);
+          onToggle();
           setPassword("");
         }}
       >
@@ -43,13 +49,11 @@ export function AvailableRow({ network }: { network: WifiNetwork }) {
           <TableCell colSpan={4}>
             <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
               {network.security === "wpa" && (
-                <Input
-                  type="password"
-                  placeholder="Password"
+                <PasswordInput
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={setPassword}
                   disabled={connectMutation.isPending}
-                  className="w-auto min-w-[200px]"
+                  ssid={network.ssid}
                 />
               )}
               <Button type="submit" size="sm" disabled={connectMutation.isPending}>

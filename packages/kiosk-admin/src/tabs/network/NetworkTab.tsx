@@ -28,10 +28,12 @@ function needsForgetWarning(status: WifiStatus, ssid: string): boolean {
 export function NetworkTab() {
   const invalidateNetwork = useInvalidateNetwork();
   const [forgetWarningSsid, setForgetWarningSsid] = useState<string | null>(null);
+  const [expandedNetwork, setExpandedNetwork] = useState<string | null>(null);
 
   const { data: status, isLoading } = useQuery({
     queryKey: queryKeys.network.status(),
     queryFn: () => trpc["admin.network.list"].query(),
+    refetchInterval: (query) => (query.state.data?.enabled ? 10_000 : false),
   });
 
   const toggleWifiMutation = useMutation({
@@ -58,6 +60,10 @@ export function NetworkTab() {
       return;
     }
     forgetMutation.mutate(ssid);
+  };
+
+  const handleToggle = (ssid: string) => {
+    setExpandedNetwork((prev) => (prev === ssid ? null : ssid));
   };
 
   if (isLoading) {
@@ -126,6 +132,8 @@ export function NetworkTab() {
                         network={net}
                         forgettingSsid={forgettingSsid}
                         onForget={handleForget}
+                        expanded={expandedNetwork === net.ssid}
+                        onToggle={() => handleToggle(net.ssid)}
                       />
                     ))}
                   </>
@@ -134,7 +142,12 @@ export function NetworkTab() {
                   <>
                     <SectionLabel label="Available" />
                     {availableUnsaved.map((net) => (
-                      <AvailableRow key={net.ssid} network={net} />
+                      <AvailableRow
+                        key={net.ssid}
+                        network={net}
+                        expanded={expandedNetwork === net.ssid}
+                        onToggle={() => handleToggle(net.ssid)}
+                      />
                     ))}
                   </>
                 )}
