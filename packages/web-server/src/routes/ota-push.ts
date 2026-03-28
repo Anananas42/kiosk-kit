@@ -3,18 +3,11 @@ import { Hono } from "hono";
 import { OTA_FETCH_TIMEOUT_MS, OTA_PUSH_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices, releases } from "../db/schema.js";
-import { LOCAL_DEVICE_ID } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
-const isDev = process.env.NODE_ENV === "development";
-
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
-  if (isDev && deviceId === LOCAL_DEVICE_ID) {
-    return { id: LOCAL_DEVICE_ID, tailscaleNodeId: "local-dev", tailscaleIp: null, userId };
-  }
-
   const conditions =
     role === "admin"
       ? eq(devices.id, deviceId)

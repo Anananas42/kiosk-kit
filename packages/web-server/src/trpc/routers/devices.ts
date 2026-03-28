@@ -2,7 +2,6 @@ import {
   type Device,
   DeviceClaimInputSchema,
   DeviceSchema,
-  DeviceStatus,
   DeviceStatusSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
@@ -10,22 +9,16 @@ import { and, eq, isNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { DEVICE_TIMEOUT_MS } from "../../config.js";
 import { backups, devices } from "../../db/schema.js";
-import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
 import { fetchDeviceProxy } from "../../services/device-network.js";
+import { getDeviceStatus } from "../../services/device-status.js";
 import { getCachedDevice } from "../../services/tailscale.js";
 import { authedProcedure, router } from "../trpc.js";
-
-const isDev = process.env.NODE_ENV === "development";
 
 export const devicesRouter = router({
   "devices.get": authedProcedure
     .input(z.object({ id: z.uuid() }))
     .output(DeviceSchema)
     .query(async ({ ctx, input }) => {
-      if (isDev && input.id === LOCAL_DEVICE_ID) {
-        return makeLocalDevice(ctx.user.id);
-      }
-
       const [device] = await ctx.db
         .select()
         .from(devices)
@@ -83,34 +76,7 @@ export const devicesRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
       }
 
-      // Check Tailscale connectivity
-      let tailscaleOnline = false;
-      if (isDev && device.id === LOCAL_DEVICE_ID) {
-        tailscaleOnline = true;
-      } else {
-        try {
-          const td = await getCachedDevice(device.tailscaleNodeId);
-          tailscaleOnline = td.online;
-        } catch {
-          return { status: DeviceStatus.Offline };
-        }
-      }
-
-      if (!tailscaleOnline) {
-        return { status: DeviceStatus.Offline };
-      }
-
-      // Tailscale says online — check app health
-      try {
-        const res = await fetchDeviceProxy(
-          { id: device.id, tailscaleIp: device.tailscaleIp },
-          "/api/health",
-          { signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS) },
-        );
-        return { status: res.ok ? DeviceStatus.Online : DeviceStatus.AppNotConnected };
-      } catch {
-        return { status: DeviceStatus.AppNotConnected };
-      }
+      return { status: await getDeviceStatus(device) };
     }),
 
   "devices.list": authedProcedure.output(z.array(DeviceSchema)).query(async ({ ctx }) => {
@@ -229,10 +195,6 @@ async function listForCustomer(
       };
     }),
   );
-
-  if (isDev) {
-    list.push(makeLocalDevice(userId));
-  }
 
   return list;
 }

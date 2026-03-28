@@ -1,9 +1,6 @@
 import { SocksClient } from "socks";
 import { Agent, buildConnector } from "undici";
 import { DEVICE_PORT } from "../config.js";
-import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID } from "../local-dev.js";
-
-const isDev = process.env.NODE_ENV === "development";
 
 interface DeviceLike {
   id: string;
@@ -42,9 +39,6 @@ function getSocksAgent(): Agent | undefined {
 }
 
 function getDeviceOrigin(device: DeviceLike): string {
-  if (isDev && device.id === LOCAL_DEVICE_ID) {
-    return `http://${LOCAL_DEVICE_HOST}`;
-  }
   return `http://${device.tailscaleIp}:${DEVICE_PORT}`;
 }
 

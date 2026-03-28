@@ -2,19 +2,31 @@ import {
   type Device,
   DeviceAssignInputSchema,
   DeviceSchema,
+  DeviceStatusSchema,
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { eq, max } from "drizzle-orm";
 import { z } from "zod";
 import { backups, devices } from "../../db/schema.js";
-import { makeLocalDevice } from "../../local-dev.js";
+import { getDeviceStatus } from "../../services/device-status.js";
 import { getCachedDevice, getTailscaleClient } from "../../services/tailscale.js";
 import { adminProcedure, router } from "../trpc.js";
 
-const isDev = process.env.NODE_ENV === "development";
-
 export const adminDevicesRouter = router({
+  "devices.status": adminProcedure
+    .input(z.object({ id: z.uuid() }))
+    .output(z.object({ status: DeviceStatusSchema }))
+    .query(async ({ ctx, input }) => {
+      const [device] = await ctx.db.select().from(devices).where(eq(devices.id, input.id));
+
+      if (!device) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
+      }
+
+      return { status: await getDeviceStatus(device) };
+    }),
+
   "devices.listAll": adminProcedure.output(z.array(DeviceSchema)).query(async ({ ctx }) => {
     const [dbDevices, lastBackupMap] = await Promise.all([
       ctx.db.select().from(devices),
@@ -48,10 +60,6 @@ export const adminDevicesRouter = router({
         };
       }),
     );
-
-    if (isDev) {
-      list.push(makeLocalDevice(null));
-    }
 
     return list;
   }),

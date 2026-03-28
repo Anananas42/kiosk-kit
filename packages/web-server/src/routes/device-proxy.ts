@@ -3,18 +3,11 @@ import { Hono } from "hono";
 import { PROXY_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
-import { LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
-const isDev = process.env.NODE_ENV === "development";
-
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
-  if (isDev && deviceId === LOCAL_DEVICE_ID) {
-    return { id: LOCAL_DEVICE_ID, tailscaleNodeId: "local-dev", tailscaleIp: null, userId };
-  }
-
   const conditions =
     role === "admin"
       ? eq(devices.id, deviceId)
@@ -54,10 +47,6 @@ export function deviceProxyRoutes(db: Db) {
     const queryString = new URL(c.req.url).search;
     const path = `/${kioskPath}${queryString}`;
 
-    // In dev, route admin SPA requests to the kiosk-admin Vite dev server
-    const useAdminDevServer =
-      isDev && device.id === LOCAL_DEVICE_ID && kioskPath.startsWith("admin");
-
     try {
       const headers = new Headers(c.req.raw.headers);
       for (const h of [
@@ -81,9 +70,7 @@ export function deviceProxyRoutes(db: Db) {
         duplex: "half",
       };
 
-      const res = useAdminDevServer
-        ? await fetch(`http://${LOCAL_KIOSK_ADMIN_HOST}${path}`, fetchInit)
-        : await fetchDeviceProxy(device, path, fetchInit);
+      const res = await fetchDeviceProxy(device, path, fetchInit);
 
       // Inject <base> into admin HTML so relative asset paths and API calls
       // resolve through the proxy prefix.
