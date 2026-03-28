@@ -37,6 +37,13 @@ export function appUploadRoute() {
       );
     }
 
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]{0,127}$/.test(version)) {
+      return c.json(
+        { error: "Invalid X-App-Version: alphanumeric, dots, hyphens only, max 128 chars" },
+        400,
+      );
+    }
+
     if (!/^[a-f0-9]{64}$/.test(sha256)) {
       return c.json({ error: "Invalid X-SHA256: must be 64 hex characters" }, 400);
     }
@@ -44,6 +51,11 @@ export function appUploadRoute() {
     const bytesTotal = Number(contentLength);
     if (!Number.isFinite(bytesTotal) || bytesTotal <= 0) {
       return c.json({ error: "Invalid Content-Length" }, 400);
+    }
+
+    const body = c.req.raw.body;
+    if (!body) {
+      return c.json({ error: "Empty request body" }, 400);
     }
 
     // Check for concurrent upload
@@ -71,12 +83,6 @@ export function appUploadRoute() {
     // Stream body to disk while computing SHA256
     const hash = createHash("sha256");
     let bytesReceived = 0;
-
-    const body = c.req.raw.body;
-    if (!body) {
-      await writeState({ status: AppUpdateStep.Idle, ...stateBase });
-      return c.json({ error: "Empty request body" }, 400);
-    }
 
     try {
       const fileStream = createWriteStream(BUNDLE_FILE);

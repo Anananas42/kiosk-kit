@@ -1,16 +1,8 @@
 ---
-- name: Create app-update scripts directory
-  ansible.builtin.file:
-    path: "{{ kioskkit_install_dir }}/system/scripts"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
 - name: Deploy app-update scripts
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../system/scripts/{{ item }}"
-    dest: "{{ kioskkit_install_dir }}/system/scripts/{{ item }}"
+    dest: "{{ kioskkit_install_dir }}/system/{{ item }}"
     owner: root
     group: root
     mode: "0755"

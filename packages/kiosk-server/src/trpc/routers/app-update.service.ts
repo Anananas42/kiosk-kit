@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 
 const execFile = promisify(execFileCb);
 
-const SCRIPTS_DIR = "/opt/kioskkit/system/scripts";
+const SCRIPTS_DIR = "/opt/kioskkit/system";
 const STATE_FILE = "/data/app-update/state.json";
 const VERSION_FILE = "/etc/kioskkit/app-version";
 const PKG_VERSION_FILE = "/opt/kioskkit/package.json";
@@ -111,7 +111,10 @@ export async function getAppUpdateStatus(): Promise<AppUpdateStatus> {
 export async function installApp(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
-  if (currentState?.status === AppUpdateStep.Installing) {
+  if (
+    currentState?.status === AppUpdateStep.Installing ||
+    currentState?.status === AppUpdateStep.RollingBack
+  ) {
     throw new TRPCError({
       code: "CONFLICT",
       message: "Installation is already in progress",
@@ -155,6 +158,16 @@ export async function cancelUpload(): Promise<void> {
 export async function rollbackApp(): Promise<void> {
   const currentState = await readJsonFile<StateJson>(STATE_FILE);
 
+  if (
+    currentState?.status === AppUpdateStep.Installing ||
+    currentState?.status === AppUpdateStep.RollingBack
+  ) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "Cannot rollback while an install or rollback is in progress",
+    });
+  }
+
   const hasRollback = await dirExists(ROLLBACK_DIR);
   if (!hasRollback) {
     throw new TRPCError({
@@ -164,7 +177,7 @@ export async function rollbackApp(): Promise<void> {
   }
 
   await writeStateFile({
-    status: AppUpdateStep.Installing,
+    status: AppUpdateStep.RollingBack,
     lastUpdate: currentState?.lastUpdate ?? null,
     lastResult: currentState?.lastResult ?? null,
   } as StateJson);

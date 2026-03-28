@@ -52,7 +52,7 @@ rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
 
 log "Extracting tarball to staging..."
-tar -xzf "$TARBALL" -C "$STAGING_DIR"
+tar -xzf "$TARBALL" -C "$STAGING_DIR" --no-absolute-names
 
 # --- Prepare rollback ---
 

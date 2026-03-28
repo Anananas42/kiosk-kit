@@ -132,6 +132,17 @@ describe("admin.appUpdate.status", () => {
     expect(result.currentVersion).toBe("0.5.0");
   });
 
+  it("handles corrupt state.json gracefully", async () => {
+    mockFiles({
+      "/data/app-update/state.json": "not valid json{{{",
+    });
+
+    const caller = createCaller({ store });
+    const result = await caller["admin.appUpdate.status"]();
+
+    expect(result.status).toBe(AppUpdateStep.Idle);
+  });
+
   it("includes upload progress when uploading", async () => {
     const progress = {
       version: "2.0.0",
@@ -178,6 +189,18 @@ describe("admin.appUpdate.install", () => {
     );
   });
 
+  it("rejects if rolling back", async () => {
+    mockFiles({
+      "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.RollingBack }),
+    });
+
+    const caller = createCaller({ store });
+
+    await expect(caller["admin.appUpdate.install"]()).rejects.toThrow(
+      "Installation is already in progress",
+    );
+  });
+
   it("calls install script when bundle is downloaded", async () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Downloaded }),
@@ -190,9 +213,20 @@ describe("admin.appUpdate.install", () => {
     expect(result).toEqual({ ok: true });
     expect(mockExecFile).toHaveBeenCalledWith(
       "sudo",
-      ["/opt/kioskkit/system/scripts/app-update.sh", "/data/app-update/pending/app-bundle.tar.gz"],
+      ["/opt/kioskkit/system/app-update.sh", "/data/app-update/pending/app-bundle.tar.gz"],
       expect.any(Function),
     );
+  });
+
+  it("throws on install script failure", async () => {
+    mockFiles({
+      "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Downloaded }),
+    });
+    mockSudoFailure(JSON.stringify({ error: "Health check failed" }));
+
+    const caller = createCaller({ store });
+
+    await expect(caller["admin.appUpdate.install"]()).rejects.toThrow("Health check failed");
   });
 });
 
@@ -243,7 +277,7 @@ describe("admin.appUpdate.rollback", () => {
     expect(result).toEqual({ ok: true });
     expect(mockExecFile).toHaveBeenCalledWith(
       "sudo",
-      ["/opt/kioskkit/system/scripts/app-rollback.sh"],
+      ["/opt/kioskkit/system/app-rollback.sh"],
       expect.any(Function),
     );
   });
@@ -255,6 +289,32 @@ describe("admin.appUpdate.rollback", () => {
     const caller = createCaller({ store });
 
     await expect(caller["admin.appUpdate.rollback"]()).rejects.toThrow("No rollback available");
+  });
+
+  it("rejects during active install", async () => {
+    mockFiles({
+      "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Installing }),
+    });
+    mockRollbackExists(true);
+
+    const caller = createCaller({ store });
+
+    await expect(caller["admin.appUpdate.rollback"]()).rejects.toThrow(
+      "Cannot rollback while an install or rollback is in progress",
+    );
+  });
+
+  it("rejects during active rollback", async () => {
+    mockFiles({
+      "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.RollingBack }),
+    });
+    mockRollbackExists(true);
+
+    const caller = createCaller({ store });
+
+    await expect(caller["admin.appUpdate.rollback"]()).rejects.toThrow(
+      "Cannot rollback while an install or rollback is in progress",
+    );
   });
 
   it("throws on script failure", async () => {

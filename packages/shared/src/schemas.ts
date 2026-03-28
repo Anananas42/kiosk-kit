@@ -376,6 +376,7 @@ export enum AppUpdateStep {
   Uploading = "uploading",
   Downloaded = "downloaded",
   Installing = "installing",
+  RollingBack = "rolling_back",
 }
 
 export enum AppUpdateResult {
