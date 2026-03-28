@@ -758,10 +758,11 @@ stamp_device() {
       done)
   if [[ -n "$sd_cards" ]]; then
     while IFS= read -r card; do
-      log "  sudo umount ${card%% *}? 2>/dev/null; sudo dd if=$host_file of=${card%% *} bs=4M conv=fsync status=progress  # ${card#* }"
+      local dev="${card%% *}"
+      log "  SD=${dev}; sudo umount \${SD}? 2>/dev/null; sudo dd if=$host_file of=\${SD} bs=4M conv=fsync status=progress  # ${card#* }"
     done <<< "$sd_cards"
   else
-    log "  sudo umount /dev/sdX? 2>/dev/null; sudo dd if=$host_file of=/dev/sdX bs=4M conv=fsync status=progress"
+    log "  SD=/dev/sdX; sudo umount \${SD}? 2>/dev/null; sudo dd if=$host_file of=\${SD} bs=4M conv=fsync status=progress"
   fi
 }
 
