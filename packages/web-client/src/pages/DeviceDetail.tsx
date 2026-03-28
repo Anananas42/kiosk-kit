@@ -1,7 +1,8 @@
-import { Card, CardContent, Skeleton } from "@kioskkit/ui";
-import { useState } from "react";
+import { Card, CardContent, Skeleton, Spinner } from "@kioskkit/ui";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
+import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
 import { StatusCard } from "../components/StatusCard.js";
@@ -18,10 +19,22 @@ export function DeviceDetail() {
   const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(id);
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
+  const [hasBeenOnline, setHasBeenOnline] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+
+  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
+
+  // When status transitions to Online: mark as been-online and remount iframe
+  useEffect(() => {
+    if (status !== DeviceStatus.Online) return;
+    setHasBeenOnline(true);
+    setIframeKey((k) => k + 1);
+    setIframeLoading(true);
+  }, [status]);
 
   if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
 
-  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
+  const isDisconnected = status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected;
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
@@ -74,55 +87,6 @@ export function DeviceDetail() {
         />
       )}
 
-      {/* Offline / App Not Connected state */}
-      {!isLoading &&
-        !error &&
-        (status === DeviceStatus.Offline || status === DeviceStatus.AppNotConnected) && (
-          <StatusCard
-            icon={
-              <div className="bg-muted flex h-14 w-14 items-center justify-center rounded-full">
-                <svg
-                  className="text-muted-foreground h-7 w-7"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  role="img"
-                  aria-label="Disconnected"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d={
-                      status === DeviceStatus.Offline
-                        ? "M3 3l18 18M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"
-                        : "M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-                    }
-                  />
-                </svg>
-              </div>
-            }
-            title={
-              status === DeviceStatus.Offline
-                ? t("deviceDetail.offline.title")
-                : t("deviceDetail.appNotConnected.title")
-            }
-            description={
-              status === DeviceStatus.Offline
-                ? t("deviceDetail.offline.description")
-                : t("deviceDetail.appNotConnected.description")
-            }
-            action={
-              device?.lastSeen && status === DeviceStatus.Offline ? (
-                <p className="text-muted-foreground text-xs">
-                  {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
-                </p>
-              ) : undefined
-            }
-          />
-        )}
-
       {/* Loading state */}
       {isLoading && (
         <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
@@ -132,24 +96,58 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* Iframe for online device */}
-      {!isLoading && !error && status === DeviceStatus.Online && (
+      {/* Disconnected — device was never online during this visit */}
+      {!isLoading && !error && !hasBeenOnline && isDisconnected && (
+        <StatusCard
+          icon={
+            <DisconnectedIcon
+              status={status as DeviceStatus.Offline | DeviceStatus.AppNotConnected}
+            />
+          }
+          title={
+            status === DeviceStatus.Offline
+              ? t("deviceDetail.offline.title")
+              : t("deviceDetail.appNotConnected.title")
+          }
+          description={
+            status === DeviceStatus.Offline
+              ? t("deviceDetail.offline.description")
+              : t("deviceDetail.appNotConnected.description")
+          }
+          action={
+            device?.lastSeen && status === DeviceStatus.Offline ? (
+              <p className="text-muted-foreground text-xs">
+                {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
+              </p>
+            ) : undefined
+          }
+        />
+      )}
+
+      {/* Iframe with connection overlay */}
+      {!isLoading && !error && hasBeenOnline && (
         <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
               <div className="flex items-center gap-2 p-4">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <Spinner className="h-4 w-4" />
                 <span className="text-muted-foreground text-sm">
                   {t("deviceDetail.loadingManagement")}
                 </span>
               </div>
             )}
             <iframe
+              key={iframeKey}
               src={`/api/devices/${id}/kiosk/admin/`}
               title="Device Admin"
               onLoad={() => setIframeLoading(false)}
               className={`h-full w-full border-0 ${iframeLoading ? "hidden" : "block"}`}
             />
+            {isDisconnected && (
+              <ConnectionOverlay
+                status={status as DeviceStatus.Offline | DeviceStatus.AppNotConnected}
+              />
+            )}
           </CardContent>
         </Card>
       )}
