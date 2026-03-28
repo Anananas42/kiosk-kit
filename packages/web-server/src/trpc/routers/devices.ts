@@ -3,6 +3,7 @@ import {
   DeviceClaimInputSchema,
   DeviceSchema,
   DeviceStatusSchema,
+  DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { and, eq, isNull, max } from "drizzle-orm";
@@ -127,6 +128,32 @@ export const devicesRouter = router({
         lastSeen: null,
         hostname: updated.name,
         createdAt: updated.createdAt.toISOString(),
+      };
+    }),
+
+  "devices.rename": authedProcedure
+    .input(DeviceUpdateInputSchema)
+    .output(DeviceSchema)
+    .mutation(async ({ ctx, input }) => {
+      const [device] = await ctx.db
+        .update(devices)
+        .set({ name: input.name })
+        .where(and(eq(devices.id, input.id), eq(devices.userId, ctx.user.id)))
+        .returning();
+
+      if (!device) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
+      }
+
+      return {
+        id: device.id,
+        tailscaleNodeId: device.tailscaleNodeId,
+        userId: device.userId,
+        name: device.name,
+        online: false,
+        lastSeen: null,
+        hostname: device.name,
+        createdAt: device.createdAt.toISOString(),
       };
     }),
 });
