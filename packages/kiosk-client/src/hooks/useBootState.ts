@@ -78,7 +78,16 @@ export function useBootState() {
         if (state === BootState.ConnectingCloud) {
           const connected = await fetchTailscaleConnected();
           if (connected) {
-            setState(BootState.Pairing);
+            const pairing = await fetchPairingStatus();
+            if (pairing.code) {
+              setPairingCode(pairing.code);
+              if (pairing.consumed) {
+                setState(BootState.Ready);
+              } else {
+                setState(BootState.Pairing);
+              }
+            }
+            // If code is empty, stay in ConnectingCloud and retry next cycle
           }
           return;
         }
