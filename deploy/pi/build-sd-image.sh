@@ -831,7 +831,7 @@ stamp_device() {
   log "  Output: $host_file"
   log "  Size:   $size"
   log ""
-  log "Flash with (install bmap-tools for fast flashing — skips empty blocks):"
+  log "Flash to SD card:"
   local sd_cards
   sd_cards=$(lsblk -d -n -o NAME,SIZE,TRAN,MODEL -b 2>/dev/null \
     | awk '$3 == "usb" && $2+0 >= 2147483648 && $2+0 <= 274877906944 {print $1, $2, $4}' \
@@ -848,16 +848,6 @@ stamp_device() {
     done <<< "$sd_cards"
   else
     log "  sudo umount /dev/sdX? 2>/dev/null; sudo dd if=$host_file of=/dev/sdX bs=4M conv=fsync status=progress"
-  fi
-  log ""
-  log "Fast flash (apt install bmap-tools, skips empty blocks):"
-  log "  bmaptool create $host_file -o ${host_file%.img}.bmap"
-  if [[ -n "$sd_cards" ]]; then
-    while IFS= read -r card; do
-      log "  sudo umount ${card%% *}? 2>/dev/null; sudo bmaptool copy $host_file ${card%% *}  # ${card#* }"
-    done <<< "$sd_cards"
-  else
-    log "  sudo umount /dev/sdX? 2>/dev/null; sudo bmaptool copy $host_file /dev/sdX"
   fi
 }
 
