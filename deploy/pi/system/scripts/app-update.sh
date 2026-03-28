@@ -3,6 +3,10 @@
 #
 # Usage: app-update.sh <tarball-path>
 #
+# Uses symlink-based atomic swap:
+#   /opt/kioskkit/releases/<timestamp>/  — extracted app bundle
+#   /opt/kioskkit/current -> releases/<timestamp>  — atomic symlink swap
+#
 # The tarball contains a pre-built bundle with fully resolved node_modules
 # (production deps only, native modules cross-compiled for arm64).
 # No pnpm install or build step needed on-device.
@@ -12,15 +16,11 @@ set -euo pipefail
 DATA_DIR="/data/app-update"
 STATE_FILE="$DATA_DIR/state.json"
 INSTALL_DIR="/opt/kioskkit"
-STAGING_DIR="$INSTALL_DIR/.staging"
-ROLLBACK_DIR="$INSTALL_DIR/.rollback"
+RELEASES_DIR="$INSTALL_DIR/releases"
 VERSION_FILE="/etc/kioskkit/app-version"
 HEALTH_URL="http://localhost:3001/api/health"
 HEALTH_TIMEOUT=60
 POLL_INTERVAL=2
-
-# Files/dirs that are part of the app bundle
-APP_PARTS=(packages node_modules package.json pnpm-workspace.yaml pnpm-lock.yaml)
 
 log() { echo "[app-update] $*"; }
 
@@ -45,48 +45,40 @@ if [[ ! -f "$TARBALL" ]]; then
   exit 1
 fi
 
-# --- Extract to staging ---
+# --- Record current release for rollback ---
 
-log "Removing previous staging dir..."
-rm -rf "$STAGING_DIR"
-mkdir -p "$STAGING_DIR"
+PREVIOUS_RELEASE=""
+if [[ -L "$INSTALL_DIR/current" ]]; then
+  PREVIOUS_RELEASE=$(readlink -f "$INSTALL_DIR/current")
+fi
 
-log "Extracting tarball to staging..."
-tar -xzf "$TARBALL" -C "$STAGING_DIR" --no-absolute-names
+# --- Extract to new release directory ---
 
-# --- Prepare rollback ---
+RELEASE_TS=$(date +%s)
+NEW_RELEASE="$RELEASES_DIR/$RELEASE_TS"
 
-log "Removing previous rollback dir..."
-rm -rf "$ROLLBACK_DIR"
-mkdir -p "$ROLLBACK_DIR"
+mkdir -p "$RELEASES_DIR"
+rm -rf "$NEW_RELEASE"
+mkdir -p "$NEW_RELEASE"
 
-log "Moving current app files to rollback..."
-for part in "${APP_PARTS[@]}"; do
-  if [[ -e "$INSTALL_DIR/$part" ]]; then
-    mv "$INSTALL_DIR/$part" "$ROLLBACK_DIR/$part"
-  fi
-done
-
-# --- Swap staging into place ---
-
-log "Moving staging contents into place..."
-for part in "${APP_PARTS[@]}"; do
-  if [[ -e "$STAGING_DIR/$part" ]]; then
-    mv "$STAGING_DIR/$part" "$INSTALL_DIR/$part"
-  fi
-done
-
-rm -rf "$STAGING_DIR"
+log "Extracting tarball to $NEW_RELEASE..."
+tar -xzf "$TARBALL" -C "$NEW_RELEASE" --no-absolute-names
 
 # --- Fix ownership ---
 
 KIOSK_USER="${KIOSKKIT_USER:-kiosk}"
 log "Setting ownership to $KIOSK_USER..."
-for part in "${APP_PARTS[@]}"; do
-  if [[ -e "$INSTALL_DIR/$part" ]]; then
-    chown -R "$KIOSK_USER:$KIOSK_USER" "$INSTALL_DIR/$part"
-  fi
-done
+chown -R "$KIOSK_USER:$KIOSK_USER" "$NEW_RELEASE"
+
+# --- Create data symlink inside release (for cwd-relative access) ---
+
+ln -sfn "$INSTALL_DIR/data" "$NEW_RELEASE/data"
+
+# --- Atomic symlink swap ---
+
+log "Swapping current symlink to $NEW_RELEASE..."
+ln -sfn "releases/$RELEASE_TS" "$INSTALL_DIR/current.tmp"
+mv -T "$INSTALL_DIR/current.tmp" "$INSTALL_DIR/current"
 
 # --- Clear Chromium cache ---
 
@@ -117,7 +109,7 @@ done
 if [[ "$healthy" == "true" ]]; then
   log "Health check passed."
 
-  # Read version from the pending metadata or header
+  # Read version from the pending metadata
   VERSION=""
   if [[ -f "$DATA_DIR/pending/version" ]]; then
     VERSION=$(cat "$DATA_DIR/pending/version")
@@ -132,6 +124,18 @@ if [[ "$healthy" == "true" ]]; then
   # Clean up pending dir
   rm -rf "$DATA_DIR/pending"
 
+  # Clean up old releases (keep current + previous only)
+  if [[ -n "$PREVIOUS_RELEASE" && -d "$PREVIOUS_RELEASE" && "$PREVIOUS_RELEASE" != "$NEW_RELEASE" ]]; then
+    # Remove any release that isn't current or previous
+    for dir in "$RELEASES_DIR"/*/; do
+      dir="${dir%/}"
+      if [[ "$dir" != "$NEW_RELEASE" && "$dir" != "$PREVIOUS_RELEASE" ]]; then
+        log "Removing old release: $dir"
+        rm -rf "$dir"
+      fi
+    done
+  fi
+
   write_state "{\"status\":\"idle\",\"lastUpdate\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"lastResult\":\"success\"}"
 
   log "App update complete."
@@ -139,17 +143,15 @@ if [[ "$healthy" == "true" ]]; then
 else
   log "Health check FAILED — rolling back..."
 
-  # Remove failed app files
-  for part in "${APP_PARTS[@]}"; do
-    rm -rf "${INSTALL_DIR:?}/$part"
-  done
+  if [[ -n "$PREVIOUS_RELEASE" && -d "$PREVIOUS_RELEASE" ]]; then
+    # Atomic swap back to previous release
+    local_relative=$(basename "$PREVIOUS_RELEASE")
+    ln -sfn "releases/$local_relative" "$INSTALL_DIR/current.tmp"
+    mv -T "$INSTALL_DIR/current.tmp" "$INSTALL_DIR/current"
 
-  # Restore from rollback
-  for part in "${APP_PARTS[@]}"; do
-    if [[ -e "$ROLLBACK_DIR/$part" ]]; then
-      mv "$ROLLBACK_DIR/$part" "$INSTALL_DIR/$part"
-    fi
-  done
+    # Remove failed release
+    rm -rf "$NEW_RELEASE"
+  fi
 
   systemctl restart kioskkit.service
 

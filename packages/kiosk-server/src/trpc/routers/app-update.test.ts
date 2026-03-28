@@ -9,6 +9,7 @@ const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
 const mockRm = vi.hoisted(() => vi.fn());
+const mockReaddir = vi.hoisted(() => vi.fn());
 const mockAccess = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({
@@ -20,6 +21,7 @@ vi.mock("node:fs/promises", () => ({
   writeFile: mockWriteFile,
   mkdir: mockMkdir,
   rm: mockRm,
+  readdir: mockReaddir,
   access: mockAccess,
 }));
 
@@ -33,10 +35,11 @@ function mockFiles(files: Record<string, string>) {
   });
 }
 
-function mockRollbackExists(exists: boolean) {
-  mockAccess.mockImplementation((path: string) => {
-    if (path === "/opt/kioskkit/.rollback") {
-      return exists ? Promise.resolve() : Promise.reject(new Error("ENOENT"));
+function mockReleaseCount(count: number) {
+  mockReaddir.mockImplementation((path: string) => {
+    if (path === "/opt/kioskkit/releases") {
+      const entries = Array.from({ length: count }, (_, i) => String(1711612800 + i));
+      return Promise.resolve(entries);
     }
     return Promise.reject(new Error("ENOENT"));
   });
@@ -77,7 +80,8 @@ beforeEach(() => {
   mockMkdir.mockResolvedValue(undefined);
   mockWriteFile.mockResolvedValue(undefined);
   mockRm.mockResolvedValue(undefined);
-  mockRollbackExists(false);
+  mockAccess.mockRejectedValue(new Error("ENOENT"));
+  mockReleaseCount(0);
 });
 
 describe("admin.appUpdate.status", () => {
@@ -90,7 +94,7 @@ describe("admin.appUpdate.status", () => {
       }),
       "/etc/kioskkit/app-version": "1.0.0",
     });
-    mockRollbackExists(true);
+    mockReleaseCount(2);
 
     const caller = createCaller({ store });
     const result = await caller["admin.appUpdate.status"]();
@@ -123,7 +127,7 @@ describe("admin.appUpdate.status", () => {
 
   it("falls back to package.json version when app-version file missing", async () => {
     mockFiles({
-      "/opt/kioskkit/package.json": JSON.stringify({ version: "0.5.0" }),
+      "/opt/kioskkit/current/package.json": JSON.stringify({ version: "0.5.0" }),
     });
 
     const caller = createCaller({ store });
@@ -141,6 +145,26 @@ describe("admin.appUpdate.status", () => {
     const result = await caller["admin.appUpdate.status"]();
 
     expect(result.status).toBe(AppUpdateStep.Idle);
+  });
+
+  it("rollback not available with single release", async () => {
+    mockFiles({});
+    mockReleaseCount(1);
+
+    const caller = createCaller({ store });
+    const result = await caller["admin.appUpdate.status"]();
+
+    expect(result.rollbackAvailable).toBe(false);
+  });
+
+  it("rollback available with two releases", async () => {
+    mockFiles({});
+    mockReleaseCount(2);
+
+    const caller = createCaller({ store });
+    const result = await caller["admin.appUpdate.status"]();
+
+    expect(result.rollbackAvailable).toBe(true);
   });
 
   it("includes upload progress when uploading", async () => {
@@ -264,11 +288,11 @@ describe("admin.appUpdate.cancelUpload", () => {
 });
 
 describe("admin.appUpdate.rollback", () => {
-  it("calls rollback script when rollback dir exists", async () => {
+  it("calls rollback script when previous release exists", async () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Idle }),
     });
-    mockRollbackExists(true);
+    mockReleaseCount(2);
     mockSudoSuccess();
 
     const caller = createCaller({ store });
@@ -282,9 +306,9 @@ describe("admin.appUpdate.rollback", () => {
     );
   });
 
-  it("rejects when no rollback available", async () => {
+  it("rejects when no previous release available", async () => {
     mockFiles({});
-    mockRollbackExists(false);
+    mockReleaseCount(1);
 
     const caller = createCaller({ store });
 
@@ -295,7 +319,7 @@ describe("admin.appUpdate.rollback", () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Installing }),
     });
-    mockRollbackExists(true);
+    mockReleaseCount(2);
 
     const caller = createCaller({ store });
 
@@ -308,7 +332,7 @@ describe("admin.appUpdate.rollback", () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.RollingBack }),
     });
-    mockRollbackExists(true);
+    mockReleaseCount(2);
 
     const caller = createCaller({ store });
 
@@ -319,7 +343,7 @@ describe("admin.appUpdate.rollback", () => {
 
   it("throws on script failure", async () => {
     mockFiles({});
-    mockRollbackExists(true);
+    mockReleaseCount(2);
     mockSudoFailure(JSON.stringify({ error: "Rollback failed" }));
 
     const caller = createCaller({ store });

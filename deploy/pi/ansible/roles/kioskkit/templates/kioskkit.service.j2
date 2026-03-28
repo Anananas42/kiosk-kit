@@ -7,7 +7,7 @@ After=network.target
 Type=simple
 User={{ kioskkit_user }}
 Group={{ kioskkit_user }}
-WorkingDirectory={{ kioskkit_install_dir }}
+WorkingDirectory={{ kioskkit_install_dir }}/current
 ExecStart=/usr/bin/node packages/kiosk-server/dist/index.js
 EnvironmentFile=-{{ kioskkit_install_dir }}/.env
 {% if kioskkit_device_id %}

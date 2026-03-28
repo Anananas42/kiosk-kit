@@ -2,7 +2,7 @@ import { rm } from "node:fs/promises";
 import { type AppUpdateStatus, AppUpdateStep } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import {
-  dirExists,
+  countDirEntries,
   type ProgressJson,
   readJsonFile,
   readTextFile,
@@ -13,11 +13,11 @@ import {
 const STATE_DIR = "/data/app-update";
 const STATE_FILE = "/data/app-update/state.json";
 const VERSION_FILE = "/etc/kioskkit/app-version";
-const PKG_VERSION_FILE = "/opt/kioskkit/package.json";
+const PKG_VERSION_FILE = "/opt/kioskkit/current/package.json";
 const PROGRESS_FILE = "/data/app-update/pending/progress.json";
 const PENDING_DIR = "/data/app-update/pending";
 const BUNDLE_FILE = "/data/app-update/pending/app-bundle.tar.gz";
-const ROLLBACK_DIR = "/opt/kioskkit/.rollback";
+const RELEASES_DIR = "/opt/kioskkit/releases";
 
 interface StateJson {
   status: AppUpdateStatus["status"];
@@ -41,11 +41,11 @@ async function readAppVersion(): Promise<string | null> {
 }
 
 export async function getAppUpdateStatus(): Promise<AppUpdateStatus> {
-  const [state, version, progress, rollbackExists] = await Promise.all([
+  const [state, version, progress, releaseCount] = await Promise.all([
     readJsonFile<StateJson>(STATE_FILE),
     readAppVersion(),
     readJsonFile<ProgressJson>(PROGRESS_FILE),
-    dirExists(ROLLBACK_DIR),
+    countDirEntries(RELEASES_DIR),
   ]);
 
   return {
@@ -54,7 +54,7 @@ export async function getAppUpdateStatus(): Promise<AppUpdateStatus> {
     upload: state?.status === AppUpdateStep.Uploading && progress ? progress : null,
     lastUpdate: state?.lastUpdate ?? null,
     lastResult: state?.lastResult ?? null,
-    rollbackAvailable: rollbackExists,
+    rollbackAvailable: releaseCount >= 2,
   };
 }
 
@@ -118,8 +118,8 @@ export async function rollbackApp(): Promise<void> {
     });
   }
 
-  const hasRollback = await dirExists(ROLLBACK_DIR);
-  if (!hasRollback) {
+  const releaseCount = await countDirEntries(RELEASES_DIR);
+  if (releaseCount < 2) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: "No rollback available",

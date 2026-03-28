@@ -1,5 +1,5 @@
 import { execFile as execFileCb } from "node:child_process";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { TRPCError } from "@trpc/server";
 
@@ -37,6 +37,15 @@ export async function dirExists(path: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+export async function countDirEntries(path: string): Promise<number> {
+  try {
+    const entries = await readdir(path);
+    return entries.length;
+  } catch {
+    return 0;
   }
 }
 
