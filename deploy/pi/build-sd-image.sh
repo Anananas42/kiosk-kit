@@ -57,91 +57,10 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker is required when running outside a container" >&2; exit 1; }
 
   # --- Host-side app build (native speed, before Docker) ---
-  echo "==> Building application on host (native speed)..."
+  # shellcheck source=lib/build-app.sh
+  source "$SCRIPT_DIR/lib/build-app.sh"
   APP_STAGE="$SCRIPT_DIR/.work/app-stage"
-  rm -rf "$APP_STAGE"
-  mkdir -p "$APP_STAGE"
-
-  # Include-list: only files needed on the Pi. Everything else is excluded.
-  rsync -a --delete \
-    --include='package.json' \
-    --include='pnpm-lock.yaml' \
-    --include='pnpm-workspace.yaml' \
-    --include='turbo.json' \
-    --include='tsconfig.base.json' \
-    --include='packages/' \
-    --include='packages/kiosk-server/***' \
-    --include='packages/kiosk-client/***' \
-    --include='packages/kiosk-admin/***' \
-    --include='packages/shared/***' \
-    --include='packages/ui/***' \
-    --exclude='**/node_modules' \
-    --exclude='*' \
-    "$REPO_ROOT/" "$APP_STAGE/"
-
-  node -e "
-    const pkg = require('$APP_STAGE/package.json');
-    delete pkg.devDependencies;
-    delete pkg.scripts.prepare;
-    require('fs').writeFileSync('$APP_STAGE/package.json', JSON.stringify(pkg, null, 2) + '\n');
-  "
-
-  (cd "$APP_STAGE" && pnpm install --no-frozen-lockfile \
-    --filter @kioskkit/kiosk-server \
-    --filter @kioskkit/kiosk-client \
-    --filter @kioskkit/kiosk-admin \
-    --filter @kioskkit/shared \
-    --filter @kioskkit/ui) || { echo "ERROR: Host pnpm install failed" >&2; exit 1; }
-
-  (cd "$APP_STAGE" && NODE_ENV=production pnpm \
-    --filter @kioskkit/shared \
-    --filter @kioskkit/ui \
-    --filter @kioskkit/kiosk-server \
-    --filter @kioskkit/kiosk-client \
-    --filter @kioskkit/kiosk-admin \
-    build) || { echo "ERROR: Host pnpm build failed" >&2; exit 1; }
-
-  (cd "$APP_STAGE" && CI=true pnpm install --no-frozen-lockfile --prod \
-    --filter @kioskkit/kiosk-server \
-    --filter @kioskkit/kiosk-client \
-    --filter @kioskkit/kiosk-admin \
-    --filter @kioskkit/shared \
-    --filter @kioskkit/ui) || { echo "ERROR: Host pnpm prune failed" >&2; exit 1; }
-
-  # Cross-compile better-sqlite3 for arm64 inside a Bookworm container so the
-  # binary links against the same glibc as Pi OS (2.36), not the host's newer one.
-  echo "==> Cross-compiling better-sqlite3 for arm64 (Bookworm container)..."
-  BS3_DIR=$(echo "$APP_STAGE"/node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3)
-  [[ -d "$BS3_DIR" ]] || { echo "ERROR: better-sqlite3 not found in staging dir" >&2; exit 1; }
-  BS3_REL="${BS3_DIR#"$APP_STAGE"/}"
-  docker run --rm \
-    -v "$APP_STAGE:/src" \
-    -w "/src/$BS3_REL" \
-    node:24-bookworm-slim bash -c '
-      apt-get update -qq && \
-      apt-get install -y -qq --no-install-recommends \
-        gcc g++ gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-        python3 make >/dev/null 2>&1 && \
-      rm -rf build && \
-      CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
-      CC_host=gcc CXX_host=g++ \
-      npx --yes node-gyp rebuild --arch=arm64
-    ' || { echo "ERROR: better-sqlite3 cross-compilation failed" >&2; exit 1; }
-
-  # Verify the binary won't hit a glibc mismatch on the Pi at runtime.
-  # Pi OS Bookworm ships glibc 2.36 — fail loudly if the binary needs newer.
-  PI_OS_GLIBC="2.36"
-  BS3_NODE="$BS3_DIR/build/Release/better_sqlite3.node"
-  MAX_GLIBC=$(readelf -V "$BS3_NODE" 2>/dev/null \
-    | grep -oP 'GLIBC_\K[0-9.]+' | sort -V | tail -1)
-  if [ -n "$MAX_GLIBC" ] && [ "$(printf '%s\n%s' "$PI_OS_GLIBC" "$MAX_GLIBC" | sort -V | tail -1)" != "$PI_OS_GLIBC" ]; then
-    echo "ERROR: better_sqlite3.node requires GLIBC_$MAX_GLIBC but Pi OS has GLIBC_$PI_OS_GLIBC" >&2
-    echo "       The cross-compile container's glibc is too new for the target." >&2
-    exit 1
-  fi
-  echo "    glibc check passed (binary needs GLIBC_$MAX_GLIBC, Pi has GLIBC_$PI_OS_GLIBC)"
-
-  echo "==> Host build complete."
+  build_app_stage "$REPO_ROOT" "$APP_STAGE"
 
   echo "==> Building SD image builder Docker image..."
   docker build -t kioskkit-sd-builder "$SCRIPT_DIR"
