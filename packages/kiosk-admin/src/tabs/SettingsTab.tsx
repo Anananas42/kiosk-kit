@@ -14,7 +14,7 @@ export function SettingsTab() {
 
   const versionFetcher = useCallback(() => trpc["admin.appUpdate.status"].query(), []);
   const { data: appStatus } = useData(versionFetcher);
-  const version = appStatus?.currentVersion || "dev";
+  const version = appStatus?.currentVersion;
 
   useEffect(() => {
     if (settings) setDraft({ ...settings });
@@ -98,7 +98,7 @@ export function SettingsTab() {
       </div>
       <Button type="submit">Save Settings</Button>
       <p className="mt-3 text-xs text-muted-foreground">
-        {version} · Built {__BUILD_DATE__}
+        {version ? `${version} · ` : ""}Built {__BUILD_DATE__}
       </p>
     </form>
   );
