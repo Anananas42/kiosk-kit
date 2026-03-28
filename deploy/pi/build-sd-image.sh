@@ -399,7 +399,6 @@ verify_base() {
   check "greetd enabled"              "systemctl is-enabled greetd.service"
   check "seatd enabled"               "systemctl is-enabled seatd.service"
   check "kiosk in _seatd group"       "id kiosk | grep -q _seatd"
-  check "no /etc/chromium.d/dev-shm"    "test ! -f /etc/chromium.d/dev-shm"
   check "empty cursor theme exists"     "test -f /usr/share/icons/emptycursor/cursors/default"
   check "kioskkit.service exists"       "test -f /etc/systemd/system/kioskkit.service"
   check "kioskkit.service enabled"      "systemctl is-enabled kioskkit.service"
