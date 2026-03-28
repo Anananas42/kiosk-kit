@@ -63,33 +63,37 @@ export function useBootState() {
   useEffect(() => {
     if (state === BootState.Ready) return;
 
+    async function pollNetwork() {
+      const net = await fetchNetworkStatus();
+      if (!net.hasNetwork) {
+        setState(net.hasSavedWifi ? BootState.NoNetworkHasWifi : BootState.NoNetworkNoWifi);
+      } else {
+        setState(BootState.ConnectingCloud);
+      }
+    }
+
+    async function pollCloudAndPairingCode() {
+      const connected = await fetchTailscaleConnected();
+      if (!connected) return;
+      const pairing = await fetchPairingStatus();
+      if (!pairing.code) return; // Code not yet derived, retry next cycle
+      setPairingCode(pairing.code);
+      setState(pairing.consumed ? BootState.Ready : BootState.Pairing);
+    }
+
+    async function pollPairingConsumed() {
+      const pairing = await fetchPairingStatus();
+      setPairingCode(pairing.code);
+      if (pairing.consumed) {
+        setState(BootState.Ready);
+      }
+    }
+
     async function pollOnce() {
       try {
-        if (isNetworkCheckState(state)) {
-          const net = await fetchNetworkStatus();
-          if (!net.hasNetwork) {
-            setState(net.hasSavedWifi ? BootState.NoNetworkHasWifi : BootState.NoNetworkNoWifi);
-          } else {
-            setState(BootState.ConnectingCloud);
-          }
-          return;
-        }
-
-        if (state === BootState.ConnectingCloud) {
-          const connected = await fetchTailscaleConnected();
-          if (connected) {
-            setState(BootState.Pairing);
-          }
-          return;
-        }
-
-        if (state === BootState.Pairing) {
-          const pairing = await fetchPairingStatus();
-          setPairingCode(pairing.code);
-          if (pairing.consumed) {
-            setState(BootState.Ready);
-          }
-        }
+        if (isNetworkCheckState(state)) return pollNetwork();
+        if (state === BootState.ConnectingCloud) return pollCloudAndPairingCode();
+        if (state === BootState.Pairing) return pollPairingConsumed();
       } catch {
         // On error, stay in current state and retry next cycle
       }

@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import type { Db } from "../db/index.js";
 import { pairingState } from "../db/schema.js";
-import { env } from "../env.js";
+import { env, initPairingCode } from "../env.js";
 
 function ensureRow(db: Db): void {
   const row = db.select().from(pairingState).where(eq(pairingState.id, 1)).get();
@@ -32,7 +32,12 @@ export function pairingRoute(db: Db) {
         200: { description: "Pairing code and consumed status" },
       },
     }),
-    (c) => c.json({ code: env.pairingCode, consumed: isConsumed(db) }),
+    async (c) => {
+      if (!env.pairingCode) {
+        await initPairingCode();
+      }
+      return c.json({ code: env.pairingCode, consumed: isConsumed(db) });
+    },
   );
 
   app.post(
