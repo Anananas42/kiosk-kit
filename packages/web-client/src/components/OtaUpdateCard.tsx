@@ -171,8 +171,13 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
         {cardState === CardState.UpdateAvailable && (
           <div className="flex items-center justify-between">
             <p className="text-sm">{t("ota.updateAvailable", { version: latestVersion ?? "" })}</p>
-            <Button size="sm" onClick={handleDownload} disabled={actionLoading}>
-              {otaDownload.isPending ? t("ota.starting") : t("ota.download")}
+            <Button
+              size="sm"
+              onClick={handleDownload}
+              loading={otaDownload.isPending}
+              disabled={actionLoading}
+            >
+              {t("ota.download")}
             </Button>
           </div>
         )}
