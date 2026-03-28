@@ -29,19 +29,29 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
+    // execFile is used for isWifiEnabled (systemctl) and checkEthernet (cat)
     mockExecFile.mockImplementation(
       (
         cmd: string,
         _args: string[],
         cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
       ) => {
-        if (cmd.includes("wifi-scan")) {
-          cb(null, { stdout: scanResult, stderr: "" });
+        if (cmd === "systemctl") {
+          cb(null, { stdout: "", stderr: "" });
+        } else if (cmd === "cat") {
+          cb(null, { stdout: "1", stderr: "" });
         } else {
-          cb(null, { stdout: statusResult, stderr: "" });
+          cb(new Error(`unexpected cmd: ${cmd}`), { stdout: "", stderr: "" });
         }
       },
     );
+
+    // runPrivileged is used for wifi-scan and wifi-status
+    mockRunPrivileged.mockImplementation((action: string) => {
+      if (action === "wifi-scan") return Promise.resolve(scanResult);
+      if (action === "wifi-status") return Promise.resolve(statusResult);
+      return Promise.reject(new Error(`unexpected action: ${action}`));
+    });
 
     const caller = createCaller({ store });
     const result = await caller["admin.network.list"]();
