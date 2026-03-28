@@ -10,6 +10,7 @@ import { otaUploadRoute } from "./ota-upload.js";
 import { restoreRoute } from "./restore.js";
 import { healthRoute } from "./routes/health.js";
 import { pairingRoute } from "./routes/pairing.js";
+import { tailscaleRoute } from "./routes/tailscale.js";
 import { appRouter } from "./trpc/router.js";
 
 /** Mutable holder so all routes always see the latest db references after a restore. */
@@ -32,6 +33,7 @@ export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string,
 
   app.route("/api/health", healthRoute());
   app.route("/api/pairing", pairingRoute(db));
+  app.route("/api/tailscale", tailscaleRoute());
   app.route("/api/backup", backupRoute(ctx));
   app.route("/api/ota/upload", otaUploadRoute());
   app.route("/api/restore", restoreRoute(ctx, dataDir));
