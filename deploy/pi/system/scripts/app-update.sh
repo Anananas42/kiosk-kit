@@ -62,7 +62,7 @@ rm -rf "$NEW_RELEASE"
 mkdir -p "$NEW_RELEASE"
 
 log "Extracting tarball to $NEW_RELEASE..."
-tar -xzf "$TARBALL" -C "$NEW_RELEASE" --no-absolute-names
+tar -xzf "$TARBALL" -C "$NEW_RELEASE"
 
 # --- Fix ownership ---
 

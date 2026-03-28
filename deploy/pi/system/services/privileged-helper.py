@@ -39,6 +39,8 @@ ALLOWED_ACTIONS = {
     "wifi-forget": "wifi-forget.sh",
     "ota-install": "ota-install.sh",
     "ota-rollback": "ota-rollback.sh",
+    "app-update": "app-update.sh",
+    "app-rollback": "app-rollback.sh",
 }
 
 
