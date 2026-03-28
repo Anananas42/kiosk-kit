@@ -93,6 +93,15 @@ export function deviceProxyRoutes(db: Db) {
         ? await fetch(`http://${LOCAL_KIOSK_ADMIN_HOST}${path}`, fetchInit)
         : await fetchDeviceProxy(device, path, fetchInit);
 
+      // Inject <base> into HTML so asset paths resolve through the proxy
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("text/html")) {
+        const html = await res.text();
+        const proxyBase = `/api/devices/${c.req.param("id")}/kiosk/`;
+        const rewritten = html.replace("<head>", `<head><base href="${proxyBase}">`);
+        return c.html(rewritten, res.status as 200);
+      }
+
       return new Response(res.body, {
         status: res.status,
         headers: res.headers,
