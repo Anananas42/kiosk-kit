@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
-import { derivePairingCode } from "@kioskkit/shared";
+import { derivePairingCode } from "@kioskkit/shared/pairing";
 import { config } from "dotenv";
 
 const root = resolve(import.meta.dirname, "../../..");

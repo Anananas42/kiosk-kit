@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { derivePairingCode } from "@kioskkit/shared";
+import { derivePairingCode } from "@kioskkit/shared/pairing";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../db/index.js";

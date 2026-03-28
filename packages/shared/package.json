@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./pairing": {
+      "import": "./dist/pairing.js",
+      "types": "./dist/pairing.d.ts"
     }
   },
   "scripts": {

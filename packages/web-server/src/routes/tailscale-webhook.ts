@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { derivePairingCode } from "@kioskkit/shared";
+import { derivePairingCode } from "@kioskkit/shared/pairing";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Db } from "../db/index.js";
