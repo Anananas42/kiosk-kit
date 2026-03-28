@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   base: "./",
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   resolve: {
     alias: {
       "@kioskkit/shared": path.resolve(__dirname, "../shared/src/index.ts"),
