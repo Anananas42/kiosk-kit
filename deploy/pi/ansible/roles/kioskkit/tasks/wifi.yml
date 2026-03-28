@@ -19,6 +19,8 @@
     - wifi-connect.sh
     - wifi-forget.sh
     - wifi-status.sh
+    - wifi-enable.sh
+    - wifi-disable.sh
 
 - name: Deploy WiFi sudoers rules
   ansible.builtin.template:
