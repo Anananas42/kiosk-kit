@@ -5,10 +5,22 @@ import { toast } from "sonner";
 import { useData } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
+declare const __BUILD_DATE__: string;
+
 export function SettingsTab() {
   const fetcher = useCallback(() => trpc["admin.settings.get"].query(), []);
   const { data: settings, error, loading, reload } = useData(fetcher);
   const [draft, setDraft] = useState<KioskSettings | null>(null);
+  const [version, setVersion] = useState("dev");
+
+  useEffect(() => {
+    trpc["admin.appUpdate.status"]
+      .query()
+      .then((res) => {
+        if (res.currentVersion) setVersion(res.currentVersion);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (settings) setDraft({ ...settings });
@@ -91,6 +103,9 @@ export function SettingsTab() {
         />
       </div>
       <Button type="submit">Save Settings</Button>
+      <p className="mt-8 text-xs text-muted-foreground">
+        {version} · Built {__BUILD_DATE__}
+      </p>
     </form>
   );
 }
