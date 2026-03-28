@@ -29,19 +29,24 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
+    // isWifiEnabled() uses execFile to check systemctl; resolve to simulate wifi enabled
+    // checkEthernet() uses execFile to read carrier file; return "1" for ethernet connected
     mockExecFile.mockImplementation(
       (
-        cmd: string,
+        _cmd: string,
         _args: string[],
         cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
       ) => {
-        if (cmd.includes("wifi-scan")) {
-          cb(null, { stdout: scanResult, stderr: "" });
-        } else {
-          cb(null, { stdout: statusResult, stderr: "" });
-        }
+        cb(null, { stdout: "1", stderr: "" });
       },
     );
+
+    // getWifiStatus() uses runPrivileged for wifi-scan and wifi-status
+    mockRunPrivileged.mockImplementation((cmd: string) => {
+      if (cmd === "wifi-scan") return Promise.resolve(scanResult);
+      if (cmd === "wifi-status") return Promise.resolve(statusResult);
+      return Promise.reject(new Error(`Unexpected command: ${cmd}`));
+    });
 
     const caller = createCaller({ store });
     const result = await caller["admin.network.list"]();
