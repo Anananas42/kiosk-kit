@@ -22,14 +22,10 @@
     - wifi-enable.sh
     - wifi-disable.sh
 
-- name: Deploy WiFi sudoers rules
-  ansible.builtin.template:
-    src: sudoers-wifi.j2
-    dest: /etc/sudoers.d/wifi
-    owner: root
-    group: root
-    mode: "0440"
-    validate: "visudo -cf %s"
+- name: Remove WiFi sudoers rules (replaced by privileged helper)
+  ansible.builtin.file:
+    path: /etc/sudoers.d/wifi
+    state: absent
 
 - name: Enable wpa_supplicant for wlan0
   ansible.builtin.systemd:

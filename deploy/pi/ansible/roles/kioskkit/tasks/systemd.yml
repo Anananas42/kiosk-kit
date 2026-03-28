@@ -1,4 +1,16 @@
 ---
+- name: Deploy privileged helper service
+  ansible.builtin.template:
+    src: kioskkit-privileged.service.j2
+    dest: /etc/systemd/system/kioskkit-privileged.service
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable privileged helper service
+  ansible.builtin.systemd:
+    name: kioskkit-privileged.service
+    enabled: true
+
 - name: Deploy kioskkit systemd service
   ansible.builtin.template:
     src: kioskkit.service.j2

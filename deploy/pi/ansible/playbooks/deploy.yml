@@ -81,6 +81,22 @@
         group: "{{ kioskkit_user | default('kiosk') }}"
         mode: "0755"
 
+    - name: Create system services directory
+      ansible.builtin.file:
+        path: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/services"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy privileged helper
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../system/services/privileged-helper.py"
+        dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/services/privileged-helper.py"
+        owner: root
+        group: root
+        mode: "0755"
+
     - name: Create labwc config directory
       ansible.builtin.file:
         path: "/home/{{ kioskkit_user | default('kiosk') }}/.config/labwc"

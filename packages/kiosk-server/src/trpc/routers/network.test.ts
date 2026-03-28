@@ -4,27 +4,18 @@ import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
 const mockExecFile = vi.hoisted(() => vi.fn());
+const mockRunPrivileged = vi.hoisted(() => vi.fn());
+
 vi.mock("node:child_process", () => ({
   execFile: mockExecFile,
 }));
 
+vi.mock("../../privileged.js", () => ({
+  runPrivileged: mockRunPrivileged,
+}));
+
 const createCaller = createCallerFactory(appRouter);
 const store = {} as unknown as Store;
-
-function mockScript(stdout: string) {
-  mockExecFile.mockImplementation((_cmd: string, _args: string[], cb: Function) => {
-    cb(null, { stdout, stderr: "" });
-  });
-}
-
-function mockScriptFailure(errorJson: string) {
-  mockExecFile.mockImplementation((_cmd: string, _args: string[], cb: Function) => {
-    const err = new Error("Script failed") as Error & { stdout: string; stderr: string };
-    err.stdout = errorJson;
-    err.stderr = "";
-    cb(err);
-  });
-}
 
 describe("admin.network.list", () => {
   it("returns merged WiFi status from scripts", async () => {
@@ -38,13 +29,19 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
-    mockExecFile.mockImplementation((cmd: string, _args: string[], cb: Function) => {
-      if (cmd.includes("wifi-scan")) {
-        cb(null, { stdout: scanResult, stderr: "" });
-      } else {
-        cb(null, { stdout: statusResult, stderr: "" });
-      }
-    });
+    mockExecFile.mockImplementation(
+      (
+        cmd: string,
+        _args: string[],
+        cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
+      ) => {
+        if (cmd.includes("wifi-scan")) {
+          cb(null, { stdout: scanResult, stderr: "" });
+        } else {
+          cb(null, { stdout: statusResult, stderr: "" });
+        }
+      },
+    );
 
     const caller = createCaller({ store });
     const result = await caller["admin.network.list"]();
@@ -61,7 +58,7 @@ describe("admin.network.list", () => {
 
 describe("admin.network.connect", () => {
   it("connects to a network with password", async () => {
-    mockScript(JSON.stringify({ ok: true }));
+    mockRunPrivileged.mockResolvedValue("");
     const caller = createCaller({ store });
 
     const result = await caller["admin.network.connect"]({
@@ -70,28 +67,20 @@ describe("admin.network.connect", () => {
     });
     expect(result).toEqual({ ok: true });
 
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/wifi-connect.sh", "MyNetwork", "secret123"],
-      expect.any(Function),
-    );
+    expect(mockRunPrivileged).toHaveBeenCalledWith("wifi-connect", ["MyNetwork", "secret123"]);
   });
 
   it("connects to an open network without password", async () => {
-    mockScript(JSON.stringify({ ok: true }));
+    mockRunPrivileged.mockResolvedValue("");
     const caller = createCaller({ store });
 
     await caller["admin.network.connect"]({ ssid: "OpenNet" });
 
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/wifi-connect.sh", "OpenNet"],
-      expect.any(Function),
-    );
+    expect(mockRunPrivileged).toHaveBeenCalledWith("wifi-connect", ["OpenNet"]);
   });
 
   it("throws tRPC error on script failure", async () => {
-    mockScriptFailure(JSON.stringify({ error: "Wrong password" }));
+    mockRunPrivileged.mockRejectedValue(new Error("Wrong password"));
     const caller = createCaller({ store });
 
     await expect(
@@ -102,21 +91,17 @@ describe("admin.network.connect", () => {
 
 describe("admin.network.forget", () => {
   it("forgets a saved network", async () => {
-    mockScript(JSON.stringify({ ok: true }));
+    mockRunPrivileged.mockResolvedValue("");
     const caller = createCaller({ store });
 
     const result = await caller["admin.network.forget"]({ ssid: "OldNetwork" });
     expect(result).toEqual({ ok: true });
 
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/wifi-forget.sh", "OldNetwork"],
-      expect.any(Function),
-    );
+    expect(mockRunPrivileged).toHaveBeenCalledWith("wifi-forget", ["OldNetwork"]);
   });
 
   it("throws tRPC error on script failure", async () => {
-    mockScriptFailure(JSON.stringify({ error: "Network not found" }));
+    mockRunPrivileged.mockRejectedValue(new Error("Network not found"));
     const caller = createCaller({ store });
 
     await expect(caller["admin.network.forget"]({ ssid: "Unknown" })).rejects.toThrow(

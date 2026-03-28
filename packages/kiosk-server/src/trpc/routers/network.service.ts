@@ -2,6 +2,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import type { WifiNetwork, WifiStatus } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
+import { runPrivileged } from "../../privileged.js";
 
 const execFile = promisify(execFileCb);
 
@@ -11,17 +12,6 @@ async function runScript(script: string, args: string[] = []): Promise<string> {
   const path = `${SCRIPTS_DIR}/${script}`;
   try {
     const { stdout } = await execFile(path, args);
-    return stdout;
-  } catch (err: unknown) {
-    const message = parseScriptError(err);
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
-  }
-}
-
-async function runSudoScript(script: string, args: string[] = []): Promise<string> {
-  const path = `${SCRIPTS_DIR}/${script}`;
-  try {
-    const { stdout } = await execFile("sudo", [path, ...args]);
     return stdout;
   } catch (err: unknown) {
     const message = parseScriptError(err);
@@ -106,17 +96,17 @@ export async function getWifiStatus(): Promise<WifiStatus> {
 export async function connectToWifi(ssid: string, password?: string): Promise<void> {
   const args = [ssid];
   if (password) args.push(password);
-  await runSudoScript("wifi-connect.sh", args);
+  await runPrivileged("wifi-connect", args);
 }
 
 export async function forgetWifi(ssid: string): Promise<void> {
-  await runSudoScript("wifi-forget.sh", [ssid]);
+  await runPrivileged("wifi-forget", [ssid]);
 }
 
 export async function enableWifi(): Promise<void> {
-  await runSudoScript("wifi-enable.sh");
+  await runPrivileged("wifi-enable");
 }
 
 export async function disableWifi(): Promise<void> {
-  await runSudoScript("wifi-disable.sh");
+  await runPrivileged("wifi-disable");
 }

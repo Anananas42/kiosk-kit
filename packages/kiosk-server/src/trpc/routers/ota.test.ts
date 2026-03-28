@@ -4,14 +4,14 @@ import type { Store } from "../../db/store.js";
 import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
-const mockExecFile = vi.hoisted(() => vi.fn());
+const mockRunPrivileged = vi.hoisted(() => vi.fn());
 const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
 const mockRm = vi.hoisted(() => vi.fn());
 
-vi.mock("node:child_process", () => ({
-  execFile: mockExecFile,
+vi.mock("../../privileged.js", () => ({
+  runPrivileged: mockRunPrivileged,
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -29,36 +29,6 @@ function mockFiles(files: Record<string, string>) {
     if (path in files) return Promise.resolve(files[path]);
     return Promise.reject(new Error(`ENOENT: no such file: ${path}`));
   });
-}
-
-function mockSudoSuccess(stdout = "") {
-  mockExecFile.mockImplementation(
-    (
-      _cmd: string,
-      _args: string[],
-      cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
-    ) => {
-      cb(null, { stdout, stderr: "" });
-    },
-  );
-}
-
-function mockSudoFailure(errorOutput: string) {
-  mockExecFile.mockImplementation(
-    (
-      _cmd: string,
-      _args: string[],
-      cb: (err: unknown, result?: { stdout: string; stderr: string }) => void,
-    ) => {
-      const err = new Error("Script failed") as Error & {
-        stdout: string;
-        stderr: string;
-      };
-      err.stdout = errorOutput;
-      err.stderr = "";
-      cb(err);
-    },
-  );
 }
 
 beforeEach(() => {
@@ -170,21 +140,19 @@ describe("admin.ota.install", () => {
     );
   });
 
-  it("calls install script when image is downloaded", async () => {
+  it("calls install via privileged helper when image is downloaded", async () => {
     mockFiles({
       "/data/ota/state.json": JSON.stringify({ status: OtaStep.Downloaded }),
     });
-    mockSudoSuccess();
+    mockRunPrivileged.mockResolvedValue("");
 
     const caller = createCaller({ store });
     const result = await caller["admin.ota.install"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/ota-install.sh", "/data/ota/pending/rootfs.img.zst"],
-      expect.any(Function),
-    );
+    expect(mockRunPrivileged).toHaveBeenCalledWith("ota-install", [
+      "/data/ota/pending/rootfs.img.zst",
+    ]);
   });
 });
 
@@ -222,26 +190,22 @@ describe("admin.ota.cancelUpload", () => {
 });
 
 describe("admin.ota.rollback", () => {
-  it("calls rollback script from any state", async () => {
+  it("calls rollback via privileged helper", async () => {
     mockFiles({
       "/data/ota/state.json": JSON.stringify({ status: OtaStep.Confirming }),
     });
-    mockSudoSuccess();
+    mockRunPrivileged.mockResolvedValue("");
 
     const caller = createCaller({ store });
     const result = await caller["admin.ota.rollback"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/ota-rollback.sh"],
-      expect.any(Function),
-    );
+    expect(mockRunPrivileged).toHaveBeenCalledWith("ota-rollback");
   });
 
   it("works when no state file exists", async () => {
     mockFiles({});
-    mockSudoSuccess();
+    mockRunPrivileged.mockResolvedValue("");
 
     const caller = createCaller({ store });
     const result = await caller["admin.ota.rollback"]();
@@ -251,7 +215,7 @@ describe("admin.ota.rollback", () => {
 
   it("throws on script failure", async () => {
     mockFiles({});
-    mockSudoFailure(JSON.stringify({ error: "Rollback failed" }));
+    mockRunPrivileged.mockRejectedValue(new Error("Rollback failed"));
 
     const caller = createCaller({ store });
 

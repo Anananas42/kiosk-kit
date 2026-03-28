@@ -1,0 +1,23 @@
+# Managed by Ansible — do not edit manually.
+# Privileged helper for kioskkit. Runs as root and executes whitelisted
+# system scripts (WiFi, OTA) on behalf of the sandboxed kioskkit service.
+[Unit]
+Description=KioskKit Privileged Helper
+Before=kioskkit.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 {{ kioskkit_install_dir }}/system/services/privileged-helper.py
+RuntimeDirectory=kioskkit
+Restart=always
+RestartSec=2
+
+# Sandboxing — runs as root but still limit attack surface
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

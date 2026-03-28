@@ -20,14 +20,10 @@
     - ota-rollback.sh
     - boot-confirm.sh
 
-- name: Deploy OTA sudoers rules
-  ansible.builtin.template:
-    src: sudoers-ota.j2
-    dest: /etc/sudoers.d/kioskkit-ota
-    owner: root
-    group: root
-    mode: "0440"
-    validate: "visudo -cf %s"
+- name: Remove OTA sudoers rules (replaced by privileged helper)
+  ansible.builtin.file:
+    path: /etc/sudoers.d/kioskkit-ota
+    state: absent
 
 - name: Deploy boot-confirm service
   ansible.builtin.copy:

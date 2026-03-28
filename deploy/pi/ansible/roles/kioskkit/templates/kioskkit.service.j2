@@ -1,7 +1,8 @@
 # Managed by Ansible — do not edit manually.
 [Unit]
 Description=KioskKit App
-After=network.target
+After=network.target kioskkit-privileged.service
+Requires=kioskkit-privileged.service
 
 [Service]
 Type=simple
@@ -21,9 +22,11 @@ ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths={{ kioskkit_install_dir }}/data /data/kioskkit
 PrivateTmp=true
+NoNewPrivileges=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
+RestrictSUIDSGID=true
 
 [Install]
 WantedBy=multi-user.target
