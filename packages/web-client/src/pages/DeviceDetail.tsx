@@ -1,5 +1,5 @@
 import { DeviceStatus } from "@kioskkit/shared";
-import { Card, CardContent, Skeleton, Spinner } from "@kioskkit/ui";
+import { Card, CardContent, InlineEdit, Skeleton, Spinner } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
@@ -8,7 +8,7 @@ import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
 import { StatusCard } from "../components/StatusCard.js";
 import { useBackups } from "../hooks/backups.js";
-import { useDevice, useDeviceStatus } from "../hooks/devices.js";
+import { useDevice, useDeviceStatus, useRenameDevice } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
 import { formatRelativeTime } from "../lib/format.js";
 
@@ -21,6 +21,7 @@ export function DeviceDetail() {
   const [iframeLoading, setIframeLoading] = useState(true);
   const [hasBeenOnline, setHasBeenOnline] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const renameMutation = useRenameDevice();
 
   // When status transitions to Online: mark as been-online and remount iframe
   useEffect(() => {
@@ -50,7 +51,16 @@ export function DeviceDetail() {
           ) : error ? (
             <span className="text-destructive">{t("deviceDetail.notFound")}</span>
           ) : (
-            <span className="text-foreground font-medium">{device?.name}</span>
+            <InlineEdit
+              value={device?.name ?? ""}
+              disabled={renameMutation.isPending}
+              className="text-sm font-medium"
+              onSave={(name) => {
+                const trimmed = name.trim();
+                if (!trimmed || !id || trimmed === device?.name) return;
+                renameMutation.mutate({ id, name: trimmed });
+              }}
+            />
           )}
         </div>
         {!isLoading && !error && (
