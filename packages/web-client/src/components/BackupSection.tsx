@@ -74,11 +74,10 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                         <Button
                           variant="outline"
                           size="sm"
+                          loading={restore.isPending && restore.variables === b.id}
                           disabled={deviceOnline === false || restore.isPending}
                         >
-                          {restore.isPending && restore.variables === b.id
-                            ? t("backups.restoring")
-                            : t("backups.restore")}
+                          {t("backups.restore")}
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -106,12 +105,10 @@ export function BackupSection({ backups, deviceName, deviceOnline }: BackupSecti
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={download.isPending && download.variables === b.id}
+                      loading={download.isPending && download.variables === b.id}
                       onClick={() => download.mutate(b.id)}
                     >
-                      {download.isPending && download.variables === b.id
-                        ? t("backups.downloading")
-                        : t("backups.download")}
+                      {t("backups.download")}
                     </Button>
                   </div>
                 </div>
