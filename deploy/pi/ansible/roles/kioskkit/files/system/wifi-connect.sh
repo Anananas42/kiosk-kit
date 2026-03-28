@@ -47,7 +47,7 @@ HEADER
 fi
 
 # Find highest existing priority
-MAX_PRIO=$(grep -oP 'priority=\K[0-9]+' "$CONF" 2>/dev/null | sort -rn | head -1)
+MAX_PRIO=$(grep -oP 'priority=\K[0-9]+' "$CONF" 2>/dev/null | sort -rn | head -1 || true)
 NEW_PRIO=$(( ${MAX_PRIO:-0} + 1 ))
 
 # Remove existing network block for this SSID (if any) to avoid duplicates

@@ -17,7 +17,9 @@ ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
-PrivateTmp=true
+# PrivateTmp disabled: wpa_cli creates a temporary client socket that
+# wpa_supplicant must see — a private mount namespace breaks this.
+PrivateTmp=false
 
 [Install]
 WantedBy=multi-user.target
