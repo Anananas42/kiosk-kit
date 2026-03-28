@@ -9,7 +9,6 @@ const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
 const mockRm = vi.hoisted(() => vi.fn());
-const mockRename = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({
   execFile: mockExecFile,
@@ -20,7 +19,6 @@ vi.mock("node:fs/promises", () => ({
   writeFile: mockWriteFile,
   mkdir: mockMkdir,
   rm: mockRm,
-  rename: mockRename,
 }));
 
 const createCaller = createCallerFactory(appRouter);
@@ -68,7 +66,6 @@ beforeEach(() => {
   mockMkdir.mockResolvedValue(undefined);
   mockWriteFile.mockResolvedValue(undefined);
   mockRm.mockResolvedValue(undefined);
-  mockRename.mockResolvedValue(undefined);
 });
 
 describe("admin.ota.status", () => {

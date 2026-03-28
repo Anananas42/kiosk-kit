@@ -16,6 +16,7 @@ const VERSION_FILE = "/etc/kioskkit/app-version";
 const PKG_VERSION_FILE = "/opt/kioskkit/current/package.json";
 const PROGRESS_FILE = "/data/app-update/pending/progress.json";
 const PENDING_DIR = "/data/app-update/pending";
+// Must match the sudoers rule in deploy/pi/ansible/roles/kioskkit/templates/sudoers-app-update.j2
 const BUNDLE_FILE = "/data/app-update/pending/app-bundle.tar.gz";
 const RELEASES_DIR = "/opt/kioskkit/releases";
 

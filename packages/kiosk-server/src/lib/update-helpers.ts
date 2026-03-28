@@ -1,10 +1,6 @@
-import { execFile as execFileCb, spawn } from "node:child_process";
-import { access, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
-import { TRPCError } from "@trpc/server";
-
-const execFile = promisify(execFileCb);
 
 const SCRIPTS_DIR = "/opt/kioskkit/system";
 
@@ -32,15 +28,6 @@ export async function readTextFile(path: string): Promise<string | null> {
   }
 }
 
-export async function dirExists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function countDirEntries(path: string): Promise<number> {
   try {
     const entries = await readdir(path);
@@ -65,6 +52,11 @@ export async function writeStateFile(
  * Spawn a sudo script detached so it survives the Node process being killed
  * (e.g. by systemctl restart). Returns immediately — caller should set state
  * before calling and let the script write final state.
+ *
+ * This is used instead of the OTA service's runSudoScript/execFile pattern
+ * because app-update restarts the Node process (systemctl restart) rather than
+ * rebooting the whole system. The detached spawn ensures the script outlives
+ * the process it kills.
  */
 export function spawnDetachedSudoScript(script: string, args: string[] = []): void {
   const path = `${SCRIPTS_DIR}/${script}`;
@@ -73,24 +65,4 @@ export function spawnDetachedSudoScript(script: string, args: string[] = []): vo
     stdio: "ignore",
   });
   child.unref();
-}
-
-export async function runSudoScript(script: string, args: string[] = []): Promise<string> {
-  const path = `${SCRIPTS_DIR}/${script}`;
-  try {
-    const { stdout } = await execFile("sudo", [path, ...args]);
-    return stdout;
-  } catch (err: unknown) {
-    const stderr = (err as { stderr?: string }).stderr ?? "";
-    const stdout = (err as { stdout?: string }).stdout ?? "";
-    const output = stderr || stdout;
-    let message: string;
-    try {
-      const parsed = JSON.parse(output) as { error?: string };
-      message = parsed.error ?? (output.trim() || "Script failed");
-    } catch {
-      message = output.trim() || "Script failed";
-    }
-    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
-  }
 }
