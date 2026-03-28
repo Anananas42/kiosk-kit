@@ -40,5 +40,15 @@ jobs:
 
       - uses: rharkor/caching-for-turbo@v2.3.11
 
+      - name: Check Drizzle migrations are up to date
+        run: |
+          DATABASE_URL=postgres://unused@localhost/unused pnpm --filter @kioskkit/web-server db:generate
+          pnpm --filter @kioskkit/kiosk-server db:generate
+          if [ -n "$(git diff --name-only -- '*/drizzle/*')" ]; then
+            echo "::error::Drizzle schema is out of sync with migration files. Run 'pnpm --filter <package> db:generate' and commit the result."
+            git diff --name-only -- '*/drizzle/*'
+            exit 1
+          fi
+
       - name: Lint, typecheck, test, build
         run: pnpm turbo lint typecheck test build
