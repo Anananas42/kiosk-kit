@@ -1,61 +1,57 @@
-import { Button, Input } from "@kioskkit/ui";
-import { type FormEvent, useState } from "react";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner } from "@kioskkit/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { FormEvent } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
 
-interface HiddenNetworkFormProps {
-  onConnected: () => void;
-  onError: (msg: string) => void;
-  onClearError: () => void;
-}
-
-export function HiddenNetworkForm({ onConnected, onError, onClearError }: HiddenNetworkFormProps) {
+export function HiddenNetworkForm() {
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
-  const [connecting, setConnecting] = useState(false);
 
-  const reset = () => {
-    setShowForm(false);
-    setSsid("");
-    setPassword("");
-  };
+  const connectMutation = useMutation({
+    mutationFn: (input: { ssid: string; password?: string }) =>
+      trpc["admin.network.connect"].mutate(input),
+    onSuccess: () => {
+      toast.success("Connected");
+      setShowForm(false);
+      setSsid("");
+      setPassword("");
+      queryClient.invalidateQueries({ queryKey: queryKeys.network.status() });
+    },
+    onError: () => toast.error("Could not connect — check password and try again"),
+  });
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!ssid.trim()) return;
-    setConnecting(true);
-    onClearError();
-    trpc["admin.network.connect"]
-      .mutate({ ssid: ssid.trim(), password: password || undefined })
-      .then(() => {
-        reset();
-        onConnected();
-      })
-      .catch(() => onError("Could not connect — check password and try again"))
-      .finally(() => setConnecting(false));
+    connectMutation.mutate({ ssid: ssid.trim(), password: password || undefined });
   };
 
   if (!showForm) {
     return (
-      <div className="mt-6">
-        <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
-          Connect to hidden network
-        </Button>
-      </div>
+      <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+        Connect to hidden network
+      </Button>
     );
   }
 
   return (
-    <div className="mt-6">
-      <form className="rounded-md bg-secondary p-4" onSubmit={handleSubmit}>
-        <h3 className="mb-4 text-sm font-semibold">Hidden Network</h3>
-        <div className="flex flex-wrap items-center gap-2">
+    <Card>
+      <CardHeader>
+        <CardTitle>Hidden Network</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
           <Input
             type="text"
             placeholder="Network name (SSID)"
             value={ssid}
             onChange={(e) => setSsid(e.target.value)}
-            disabled={connecting}
+            disabled={connectMutation.isPending}
             className="w-auto min-w-[200px]"
           />
           <Input
@@ -63,17 +59,27 @@ export function HiddenNetworkForm({ onConnected, onError, onClearError }: Hidden
             placeholder="Password (optional)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={connecting}
+            disabled={connectMutation.isPending}
             className="w-auto min-w-[200px]"
           />
-          <Button type="submit" size="sm" disabled={connecting || !ssid.trim()}>
-            {connecting ? "Connecting..." : "Connect"}
+          <Button type="submit" size="sm" disabled={connectMutation.isPending || !ssid.trim()}>
+            {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
+            Connect
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={reset}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowForm(false);
+              setSsid("");
+              setPassword("");
+            }}
+          >
             Cancel
           </Button>
-        </div>
-      </form>
-    </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
