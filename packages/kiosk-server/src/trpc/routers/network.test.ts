@@ -29,19 +29,28 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
+    // isWifiEnabled() and checkEthernet() use execFile
     mockExecFile.mockImplementation(
       (
         cmd: string,
         _args: string[],
         cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
       ) => {
-        if (cmd.includes("wifi-scan")) {
-          cb(null, { stdout: scanResult, stderr: "" });
+        if (cmd === "cat") {
+          cb(null, { stdout: "1\n", stderr: "" });
         } else {
-          cb(null, { stdout: statusResult, stderr: "" });
+          // systemctl is-active succeeds → wifi enabled
+          cb(null, { stdout: "", stderr: "" });
         }
       },
     );
+
+    // wifi-scan and wifi-status use runPrivileged
+    mockRunPrivileged.mockImplementation((script: string) => {
+      if (script === "wifi-scan") return Promise.resolve(scanResult);
+      if (script === "wifi-status") return Promise.resolve(statusResult);
+      return Promise.reject(new Error(`Unexpected script: ${script}`));
+    });
 
     const caller = createCaller({ store });
     const result = await caller["admin.network.list"]();
