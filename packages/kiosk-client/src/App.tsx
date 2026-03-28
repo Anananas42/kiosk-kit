@@ -9,12 +9,14 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import LoadingDots from "./components/LoadingDots.js";
 import SuccessFlash from "./components/SuccessFlash.js";
+import { BootState, useBootState } from "./hooks/useBootState.js";
 import { useCatalog } from "./hooks/useCatalog.js";
 import { useHealth } from "./hooks/useHealth.js";
 import { useIdleDim } from "./hooks/useIdleDim.js";
 import { useInactivityReset } from "./hooks/useInactivityReset.js";
 import { I18nProvider } from "./i18n/index.js";
 import { useT } from "./i18n/useT.js";
+import BootScreen from "./screens/BootScreen.js";
 import BuyerSelect from "./screens/BuyerSelect.js";
 import CategorySelect from "./screens/CategorySelect.js";
 import Confirm from "./screens/Confirm.js";
@@ -55,6 +57,7 @@ const INITIAL_STATE: AppState = {
 };
 
 export default function App() {
+  const { state: bootState, pairingCode } = useBootState();
   const {
     catalog,
     buyers,
@@ -64,6 +67,14 @@ export default function App() {
     error: catalogError,
     loading: catalogLoading,
   } = useCatalog();
+
+  if (bootState !== BootState.Ready) {
+    return (
+      <I18nProvider locale={settings.locale}>
+        <BootScreen state={bootState} pairingCode={pairingCode} />
+      </I18nProvider>
+    );
+  }
 
   return (
     <I18nProvider locale={settings.locale}>

@@ -42,6 +42,11 @@ export const HEALTH_CHECK_INTERVAL_MS = 15_000;
 // How often the client reloads catalog data from the server
 export const CATALOG_RELOAD_INTERVAL_MS = 5 * 60_000;
 
+// Boot state machine polling intervals
+export const BOOT_NETWORK_POLL_MS = 3_000;
+export const BOOT_TAILSCALE_POLL_MS = 3_000;
+export const BOOT_PAIRING_POLL_MS = 4_000;
+
 // --- Default kiosk settings ---
 
 import type { KioskSettings, PreorderConfig } from "./types.js";

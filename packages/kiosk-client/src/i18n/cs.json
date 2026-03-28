@@ -74,5 +74,15 @@
 
   "common.back": "Zpět",
   "common.loading": "Načítám",
-  "common.sending": "Odesílám"
+  "common.sending": "Odesílám",
+
+  "boot.connecting": "Připojování",
+  "boot.plugEthernet": "Připojte ethernetový kabel",
+  "boot.plugEthernetHint": "Pro zahájení připojte ethernetový kabel",
+  "boot.noInternet": "Žádné internetové připojení",
+  "boot.noInternetHint": "Čekám na obnovení připojení",
+  "boot.connectingCloud": "Připojování ke cloudu",
+  "boot.connectingCloudHint": "Navazuji zabezpečené spojení",
+  "boot.pairingTitle": "Zadejte tento kód ve vašem dashboardu",
+  "boot.pairingHint": "Čekám na spárování zařízení"
 }
