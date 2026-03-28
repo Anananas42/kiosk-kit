@@ -103,7 +103,7 @@ export function SettingsTab() {
         />
       </div>
       <Button type="submit">Save Settings</Button>
-      <p className="mt-8 text-xs text-muted-foreground">
+      <p className="mt-3 text-xs text-muted-foreground">
         {version} · Built {__BUILD_DATE__}
       </p>
     </form>
