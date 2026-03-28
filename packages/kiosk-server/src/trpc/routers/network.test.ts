@@ -8,6 +8,7 @@ const mockRunPrivileged = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({
   execFile: mockExecFile,
+  spawn: vi.fn(() => ({ unref: vi.fn() })),
 }));
 
 vi.mock("../../privileged.js", () => ({
