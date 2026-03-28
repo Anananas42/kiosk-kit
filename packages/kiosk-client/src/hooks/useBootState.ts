@@ -3,7 +3,7 @@ import {
   BOOT_PAIRING_POLL_MS,
   BOOT_TAILSCALE_POLL_MS,
 } from "@kioskkit/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "../trpc.js";
 
 export enum BootState {
@@ -57,49 +57,63 @@ async function fetchPairingStatus(): Promise<{ code: string; consumed: boolean }
 export function useBootState() {
   const [state, setState] = useState<BootState>(BootState.Connecting);
   const [pairingCode, setPairingCode] = useState<string>("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const poll = useCallback(async () => {
-    if (state === BootState.Ready) return;
-
-    try {
-      if (isNetworkCheckState(state)) {
-        const net = await fetchNetworkStatus();
-        if (!net.hasNetwork) {
-          setState(net.hasSavedWifi ? BootState.NoNetworkHasWifi : BootState.NoNetworkNoWifi);
-          return;
-        }
-        setState(BootState.ConnectingCloud);
-        return;
-      }
-
-      if (state === BootState.ConnectingCloud) {
-        const connected = await fetchTailscaleConnected();
-        if (!connected) return;
-        setState(BootState.Pairing);
-        return;
-      }
-
-      if (state === BootState.Pairing) {
-        const pairing = await fetchPairingStatus();
-        setPairingCode(pairing.code);
-        if (pairing.consumed) {
-          setState(BootState.Ready);
-        }
-      }
-    } catch {
-      // On error, stay in current state and retry next poll
-    }
-  }, [state]);
+  const cancelledRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (state === BootState.Ready) return;
 
-    poll();
+    cancelledRef.current = false;
 
-    timerRef.current = setInterval(poll, getPollInterval(state));
-    return () => clearInterval(timerRef.current);
-  }, [state, poll]);
+    async function pollOnce() {
+      try {
+        if (isNetworkCheckState(state)) {
+          const net = await fetchNetworkStatus();
+          if (cancelledRef.current) return;
+          if (!net.hasNetwork) {
+            setState(net.hasSavedWifi ? BootState.NoNetworkHasWifi : BootState.NoNetworkNoWifi);
+          } else {
+            setState(BootState.ConnectingCloud);
+          }
+          return;
+        }
+
+        if (state === BootState.ConnectingCloud) {
+          const connected = await fetchTailscaleConnected();
+          if (cancelledRef.current) return;
+          if (connected) {
+            setState(BootState.Pairing);
+          }
+          return;
+        }
+
+        if (state === BootState.Pairing) {
+          const pairing = await fetchPairingStatus();
+          if (cancelledRef.current) return;
+          setPairingCode(pairing.code);
+          if (pairing.consumed) {
+            setState(BootState.Ready);
+          }
+        }
+      } catch {
+        // On error, stay in current state and retry next cycle
+      }
+    }
+
+    async function loop() {
+      await pollOnce();
+      if (!cancelledRef.current) {
+        timeoutRef.current = setTimeout(loop, getPollInterval(state));
+      }
+    }
+
+    loop();
+
+    return () => {
+      cancelledRef.current = true;
+      clearTimeout(timeoutRef.current);
+    };
+  }, [state]);
 
   return { state, pairingCode };
 }
