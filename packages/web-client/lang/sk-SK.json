@@ -1,4 +1,10 @@
 {
   "deviceDetail.overlay.offline": "Zariadenie je offline",
-  "deviceDetail.overlay.appNotConnected": "Aplikácia neodpovedá"
+  "deviceDetail.overlay.appNotConnected": "Aplikácia neodpovedá",
+  "addDevice.button": "Pridať zariadenie",
+  "addDevice.title": "Pridať zariadenie",
+  "addDevice.description": "Zadajte 9-miestny párovací kód zobrazený na obrazovke vášho zariadenia.",
+  "addDevice.codeLabel": "Párovací kód",
+  "addDevice.submit": "Pripojiť zariadenie",
+  "addDevice.error": "Neplatný alebo už použitý párovací kód."
 }
