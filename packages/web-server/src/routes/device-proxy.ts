@@ -81,7 +81,10 @@ export function deviceProxyRoutes(db: Db) {
         const rewritten = html.replace("<head>", `<head><base href="${proxyBase}">`);
         return new Response(rewritten, {
           status: res.status,
-          headers: { "content-type": "text/html; charset=utf-8" },
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-cache, no-store, must-revalidate",
+          },
         });
       }
 
