@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AdminBuyerCreateSchema, AdminBuyerUpdateSchema } from "@kioskkit/shared";
+import { AdminBuyerCreateSchema, AdminBuyerUpdateSchema, type Buyer } from "@kioskkit/shared";
 import {
   Button,
   Input,
@@ -22,31 +22,20 @@ import { trpc } from "../trpc.js";
 type CreateInput = { id: number; label: string };
 type UpdateInput = { id: number; label: string };
 
-export function BuyersTab() {
+function useInvalidateBuyers() {
   const queryClient = useQueryClient();
-  const [editId, setEditId] = useState<number | null>(null);
+  return () => queryClient.invalidateQueries({ queryKey: queryKeys.buyers.list() });
+}
+
+function BuyerRow({ buyer }: { buyer: Buyer }) {
+  const invalidateBuyers = useInvalidateBuyers();
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const editFormId = useId();
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: number;
-    label: string;
-  } | null>(null);
 
-  const { data: buyers, isLoading } = useQuery({
-    queryKey: queryKeys.buyers.list(),
-    queryFn: () => trpc["buyers.list"].query().then((r) => r.buyers),
-  });
-
-  const invalidateBuyers = () =>
-    queryClient.invalidateQueries({ queryKey: queryKeys.buyers.list() });
-
-  const createMutation = useMutation({
-    mutationFn: (input: CreateInput) => trpc["admin.buyers.create"].mutate(input),
-    onSuccess: () => {
-      toast.success("Buyer created");
-      invalidateBuyers();
-      createForm.reset();
-    },
-    onError: (err: Error) => toast.error(err.message),
+  const editForm = useForm<UpdateInput>({
+    resolver: zodResolver(AdminBuyerUpdateSchema),
+    defaultValues: { id: buyer.id, label: buyer.label },
   });
 
   const updateMutation = useMutation({
@@ -54,8 +43,7 @@ export function BuyersTab() {
     onSuccess: () => {
       toast.success("Buyer updated");
       invalidateBuyers();
-      setEditId(null);
-      editForm.reset();
+      setEditing(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -69,19 +57,131 @@ export function BuyersTab() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const createForm = useForm<CreateInput>({
+  const startEdit = () => {
+    editForm.reset({ id: buyer.id, label: buyer.label });
+    setEditing(true);
+  };
+
+  if (editing) {
+    return (
+      <TableRow>
+        <TableCell>#{buyer.id}</TableCell>
+        <TableCell>
+          <form
+            id={editFormId}
+            onSubmit={editForm.handleSubmit((data) => updateMutation.mutate(data))}
+          >
+            <Input {...editForm.register("label")} className="w-auto" />
+            {editForm.formState.errors.label && (
+              <p className="mt-1 text-xs text-destructive">
+                {editForm.formState.errors.label.message}
+              </p>
+            )}
+          </form>
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex justify-end gap-1">
+            <Button type="submit" form={editFormId} size="sm" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? <Spinner className="mr-1" /> : null}
+              Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return (
+    <TableRow>
+      <TableCell>#{buyer.id}</TableCell>
+      <TableCell>{buyer.label}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          <Button variant="outline" size="sm" onClick={startEdit}>
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmDelete(true)}
+            disabled={deleteMutation.isPending}
+          >
+            Delete
+          </Button>
+        </div>
+      </TableCell>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete buyer"
+        description={`Delete buyer "${buyer.label}" (#${buyer.id})?`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={() => deleteMutation.mutate(buyer.id)}
+      />
+    </TableRow>
+  );
+}
+
+function AddBuyerForm() {
+  const invalidateBuyers = useInvalidateBuyers();
+
+  const form = useForm<CreateInput>({
     resolver: zodResolver(AdminBuyerCreateSchema),
     defaultValues: { id: undefined as unknown as number, label: "" },
   });
 
-  const editForm = useForm<UpdateInput>({
-    resolver: zodResolver(AdminBuyerUpdateSchema),
+  const createMutation = useMutation({
+    mutationFn: (input: CreateInput) => trpc["admin.buyers.create"].mutate(input),
+    onSuccess: () => {
+      toast.success("Buyer created");
+      invalidateBuyers();
+      form.reset();
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  const startEdit = (id: number, label: string) => {
-    setEditId(id);
-    editForm.reset({ id, label });
-  };
+  return (
+    <>
+      <h4 className="mt-6 mb-4 text-sm font-semibold">Add Buyer</h4>
+      <form
+        onSubmit={form.handleSubmit((data) => createMutation.mutate(data))}
+        className="mb-2 flex flex-wrap items-center gap-2"
+      >
+        <div>
+          <Input
+            type="number"
+            placeholder="ID"
+            {...form.register("id", { valueAsNumber: true })}
+            className="w-20"
+          />
+          {form.formState.errors.id && (
+            <p className="mt-1 text-xs text-destructive">{form.formState.errors.id.message}</p>
+          )}
+        </div>
+        <div>
+          <Input type="text" placeholder="Label" {...form.register("label")} className="w-auto" />
+          {form.formState.errors.label && (
+            <p className="mt-1 text-xs text-destructive">{form.formState.errors.label.message}</p>
+          )}
+        </div>
+        <Button type="submit" disabled={createMutation.isPending}>
+          {createMutation.isPending ? <Spinner className="mr-1" /> : null}
+          Add Buyer
+        </Button>
+      </form>
+    </>
+  );
+}
+
+export function BuyersTab() {
+  const { data: buyers, isLoading } = useQuery({
+    queryKey: queryKeys.buyers.list(),
+    queryFn: () => trpc["buyers.list"].query().then((r) => r.buyers),
+  });
 
   if (isLoading) {
     return (
@@ -108,123 +208,13 @@ export function BuyersTab() {
           </TableHeader>
           <TableBody>
             {buyers.map((b) => (
-              <TableRow key={b.id}>
-                {editId === b.id ? (
-                  <>
-                    <TableCell>#{b.id}</TableCell>
-                    <TableCell>
-                      <form
-                        id={editFormId}
-                        onSubmit={editForm.handleSubmit((data) => updateMutation.mutate(data))}
-                      >
-                        <Input {...editForm.register("label")} className="w-auto" />
-                        {editForm.formState.errors.label && (
-                          <p className="mt-1 text-xs text-destructive">
-                            {editForm.formState.errors.label.message}
-                          </p>
-                        )}
-                      </form>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          type="submit"
-                          form={editFormId}
-                          size="sm"
-                          disabled={updateMutation.isPending}
-                        >
-                          {updateMutation.isPending ? <Spinner className="mr-1" /> : null}
-                          Save
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setEditId(null)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell>#{b.id}</TableCell>
-                    <TableCell>{b.label}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEdit(b.id, b.label)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeleteTarget({ id: b.id, label: b.label })}
-                          disabled={deleteMutation.isPending}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </>
-                )}
-              </TableRow>
+              <BuyerRow key={b.id} buyer={b} />
             ))}
           </TableBody>
         </Table>
       )}
 
-      <h4 className="mt-6 mb-4 text-sm font-semibold">Add Buyer</h4>
-      <form
-        onSubmit={createForm.handleSubmit((data) => createMutation.mutate(data))}
-        className="mb-2 flex flex-wrap items-center gap-2"
-      >
-        <div>
-          <Input
-            type="number"
-            placeholder="ID"
-            {...createForm.register("id", { valueAsNumber: true })}
-            className="w-20"
-          />
-          {createForm.formState.errors.id && (
-            <p className="mt-1 text-xs text-destructive">
-              {createForm.formState.errors.id.message}
-            </p>
-          )}
-        </div>
-        <div>
-          <Input
-            type="text"
-            placeholder="Label"
-            {...createForm.register("label")}
-            className="w-auto"
-          />
-          {createForm.formState.errors.label && (
-            <p className="mt-1 text-xs text-destructive">
-              {createForm.formState.errors.label.message}
-            </p>
-          )}
-        </div>
-        <Button type="submit" disabled={createMutation.isPending}>
-          {createMutation.isPending ? <Spinner className="mr-1" /> : null}
-          Add Buyer
-        </Button>
-      </form>
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-        title="Delete buyer"
-        description={
-          deleteTarget ? `Delete buyer "${deleteTarget.label}" (#${deleteTarget.id})?` : ""
-        }
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={() => {
-          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
-        }}
-      />
+      <AddBuyerForm />
     </div>
   );
 }
