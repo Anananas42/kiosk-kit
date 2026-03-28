@@ -8,10 +8,10 @@ export default function ConnectingCloudScreen() {
     <div className="boot-screen__content">
       <div className="boot-screen__spinner" />
       <div className="boot-screen__title">
-        {t("boot.connectingCloud")}
+        {t("boot.connectingTailscale")}
         <LoadingDots />
       </div>
-      <div className="boot-screen__subtitle">{t("boot.connectingCloudHint")}</div>
+      <div className="boot-screen__subtitle">{t("boot.connectingTailscaleHint")}</div>
     </div>
   );
 }

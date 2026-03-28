@@ -81,8 +81,8 @@
   "boot.plugEthernetHint": "Connect an ethernet cable to get started",
   "boot.noInternet": "No internet connection",
   "boot.noInternetHint": "Waiting for connection to be restored",
-  "boot.connectingCloud": "Connecting to cloud",
-  "boot.connectingCloudHint": "Establishing secure connection",
+  "boot.connectingTailscale": "Connecting to backup server",
+  "boot.connectingTailscaleHint": "Establishing secure backup server connection",
   "boot.pairingTitle": "Enter this code in your dashboard",
   "boot.pairingHint": "Waiting for device to be paired"
 }

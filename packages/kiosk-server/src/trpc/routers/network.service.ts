@@ -52,10 +52,19 @@ async function isWifiEnabled(): Promise<boolean> {
   }
 }
 
+async function checkEthernet(): Promise<boolean> {
+  try {
+    const { stdout } = await execFile("cat", ["/sys/class/net/eth0/carrier"]);
+    return stdout.trim() === "1";
+  } catch {
+    return false;
+  }
+}
+
 export async function getWifiStatus(): Promise<WifiStatus> {
-  const enabled = await isWifiEnabled();
+  const [enabled, ethernet] = await Promise.all([isWifiEnabled(), checkEthernet()]);
   if (!enabled) {
-    return { enabled: false, current: null, ethernet: false, saved: [], available: [] };
+    return { enabled: false, current: null, ethernet, saved: [], available: [] };
   }
 
   const [scanOutput, statusOutput] = await Promise.all([

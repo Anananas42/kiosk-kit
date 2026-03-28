@@ -22,7 +22,8 @@
     - wifi-enable.sh
     - wifi-disable.sh
 
-- name: Enable wpa_supplicant for wlan0
+- name: Disable wpa_supplicant for wlan0 (enabled on demand via wifi-enable.sh)
   ansible.builtin.systemd:
     name: "wpa_supplicant@wlan0.service"
-    enabled: true
+    enabled: false
+    masked: false
