@@ -8,41 +8,33 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Input,
-  Label,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
 } from "@kioskkit/ui";
-import { type ChangeEvent, type FormEvent, useId, useState } from "react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { type FormEvent, useState } from "react";
 import { useClaimDevice } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
 
-function stripNonDigits(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 9);
-}
-
-function formatPairingCode(digits: string): string {
-  const parts = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9)];
-  return parts.filter(Boolean).join("-");
-}
-
 export function AddDeviceDialog() {
   const t = useTranslate();
-  const inputId = useId();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const claim = useClaimDevice();
 
-  const digits = stripNonDigits(code);
-  const isValid = /^\d{9}$/.test(digits);
+  const isValid = /^\d{9}$/.test(code);
 
-  function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    setCode(e.target.value);
+  function handleChange(value: string) {
+    setCode(value);
     if (claim.isError) claim.reset();
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!isValid) return;
-    claim.mutate(digits, {
+    claim.mutate(code, {
       onSuccess: () => {
         setOpen(false);
         setCode("");
@@ -70,21 +62,33 @@ export function AddDeviceDialog() {
             <DialogTitle>{t("addDevice.title")}</DialogTitle>
             <DialogDescription>{t("addDevice.description")}</DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor={inputId}>{t("addDevice.codeLabel")}</Label>
-            <Input
-              id={inputId}
-              className="mt-2 text-center text-lg tracking-widest"
-              placeholder="123-456-789"
-              value={formatPairingCode(digits)}
+          <div className="flex flex-col items-center gap-2 py-4">
+            <InputOTP
+              maxLength={9}
+              pattern={REGEXP_ONLY_DIGITS}
+              value={code}
               onChange={handleChange}
               autoFocus
-              autoComplete="off"
-              inputMode="numeric"
-            />
-            {claim.isError && (
-              <p className="mt-2 text-sm text-destructive">{t("addDevice.error")}</p>
-            )}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+              </InputOTPGroup>
+              <InputOTPSeparator />
+              <InputOTPGroup>
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+              <InputOTPSeparator />
+              <InputOTPGroup>
+                <InputOTPSlot index={6} />
+                <InputOTPSlot index={7} />
+                <InputOTPSlot index={8} />
+              </InputOTPGroup>
+            </InputOTP>
+            {claim.isError && <p className="text-sm text-destructive">{t("addDevice.error")}</p>}
           </div>
           <DialogFooter>
             <DialogClose asChild>
