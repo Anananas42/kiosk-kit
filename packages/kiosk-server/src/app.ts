@@ -3,6 +3,7 @@ import { trpcServer } from "@hono/trpc-server";
 import type { Database as SQLiteDatabase } from "better-sqlite3";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { appUploadRoute } from "./app-upload.js";
 import { backupRoute } from "./backup.js";
 import type { Store } from "./db/store.js";
 import { otaUploadRoute } from "./ota-upload.js";
@@ -30,6 +31,7 @@ export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string)
 
   app.route("/api/health", healthRoute());
   app.route("/api/backup", backupRoute(ctx));
+  app.route("/api/app/upload", appUploadRoute());
   app.route("/api/ota/upload", otaUploadRoute());
   app.route("/api/restore", restoreRoute(ctx, dataDir));
 

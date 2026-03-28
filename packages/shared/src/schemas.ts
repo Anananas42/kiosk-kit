@@ -369,6 +369,40 @@ export const OtaStatusSchema = z.object({
 
 export type OtaStatus = z.infer<typeof OtaStatusSchema>;
 
+// ── App update schemas ──────────────────────────────────────────────
+
+export enum AppUpdateStep {
+  Idle = "idle",
+  Uploading = "uploading",
+  Downloaded = "downloaded",
+  Installing = "installing",
+}
+
+export enum AppUpdateResult {
+  Success = "success",
+  FailedHealthCheck = "failed_health_check",
+  FailedInstall = "failed_install",
+  FailedUpload = "failed_upload",
+}
+
+export const AppUpdateStatusSchema = z.object({
+  status: z.nativeEnum(AppUpdateStep),
+  currentVersion: z.string().nullable(),
+  upload: z
+    .object({
+      version: z.string(),
+      progress: z.number(),
+      bytesReceived: z.number(),
+      bytesTotal: z.number(),
+    })
+    .nullable(),
+  lastUpdate: z.string().nullable(),
+  lastResult: z.nativeEnum(AppUpdateResult).nullable(),
+  rollbackAvailable: z.boolean(),
+});
+
+export type AppUpdateStatus = z.infer<typeof AppUpdateStatusSchema>;
+
 // ── Release schemas ─────────────────────────────────────────────────
 
 export const ReleaseInfoSchema = z.object({

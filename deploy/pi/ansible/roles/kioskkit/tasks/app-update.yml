@@ -1,0 +1,45 @@
+---
+- name: Create app-update scripts directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}/system/scripts"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy app-update scripts
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../../system/scripts/{{ item }}"
+    dest: "{{ kioskkit_install_dir }}/system/scripts/{{ item }}"
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - app-update.sh
+    - app-rollback.sh
+
+- name: Deploy app-update sudoers rules
+  ansible.builtin.template:
+    src: sudoers-app-update.j2
+    dest: /etc/sudoers.d/kioskkit-app-update
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Create app-update state directory
+  ansible.builtin.file:
+    path: /data/app-update
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Initialize app-update state file
+  ansible.builtin.copy:
+    content: '{"status":"idle"}'
+    dest: /data/app-update/state.json
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0644"
+    force: false
