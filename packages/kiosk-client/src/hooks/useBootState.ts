@@ -4,6 +4,7 @@ import {
   BOOT_TAILSCALE_POLL_MS,
 } from "@kioskkit/shared";
 import { useEffect, useRef, useState } from "react";
+
 import { trpc } from "../trpc.js";
 
 export enum BootState {
@@ -57,19 +58,15 @@ async function fetchPairingStatus(): Promise<{ code: string; consumed: boolean }
 export function useBootState() {
   const [state, setState] = useState<BootState>(BootState.Connecting);
   const [pairingCode, setPairingCode] = useState<string>("");
-  const cancelledRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (state === BootState.Ready) return;
 
-    cancelledRef.current = false;
-
     async function pollOnce() {
       try {
         if (isNetworkCheckState(state)) {
           const net = await fetchNetworkStatus();
-          if (cancelledRef.current) return;
           if (!net.hasNetwork) {
             setState(net.hasSavedWifi ? BootState.NoNetworkHasWifi : BootState.NoNetworkNoWifi);
           } else {
@@ -80,7 +77,6 @@ export function useBootState() {
 
         if (state === BootState.ConnectingCloud) {
           const connected = await fetchTailscaleConnected();
-          if (cancelledRef.current) return;
           if (connected) {
             setState(BootState.Pairing);
           }
@@ -89,7 +85,6 @@ export function useBootState() {
 
         if (state === BootState.Pairing) {
           const pairing = await fetchPairingStatus();
-          if (cancelledRef.current) return;
           setPairingCode(pairing.code);
           if (pairing.consumed) {
             setState(BootState.Ready);
@@ -102,17 +97,12 @@ export function useBootState() {
 
     async function loop() {
       await pollOnce();
-      if (!cancelledRef.current) {
-        timeoutRef.current = setTimeout(loop, getPollInterval(state));
-      }
+      timeoutRef.current = setTimeout(loop, getPollInterval(state));
     }
 
     loop();
 
-    return () => {
-      cancelledRef.current = true;
-      clearTimeout(timeoutRef.current);
-    };
+    return () => clearTimeout(timeoutRef.current);
   }, [state]);
 
   return { state, pairingCode };
