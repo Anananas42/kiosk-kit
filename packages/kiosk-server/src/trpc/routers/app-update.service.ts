@@ -17,9 +17,9 @@ import {
   type ProgressJson,
   readJsonFile,
   readTextFile,
-  spawnDetachedSudoScript,
   writeStateFile,
 } from "../../lib/app-update-helpers.js";
+import { runPrivileged } from "../../privileged.js";
 
 interface StateJson {
   status: AppUpdateStatus["status"];
@@ -83,8 +83,9 @@ export async function installApp(): Promise<void> {
   });
 
   // Fire-and-forget: the script restarts the service (killing this process),
-  // so we spawn detached and return immediately. The script writes final state.
-  spawnDetachedSudoScript("app-update.sh", [APP_UPDATE_BUNDLE_FILE]);
+  // so we don't await. The privileged helper runs as root in a separate process
+  // and will complete even after this node process is killed by the restart.
+  void runPrivileged("app-update", [APP_UPDATE_BUNDLE_FILE]);
 }
 
 export async function cancelUpload(): Promise<void> {
@@ -131,6 +132,7 @@ export async function rollbackApp(): Promise<void> {
   });
 
   // Fire-and-forget: the script restarts the service (killing this process),
-  // so we spawn detached and return immediately. The script writes final state.
-  spawnDetachedSudoScript("app-rollback.sh");
+  // so we don't await. The privileged helper runs as root in a separate process
+  // and will complete even after this node process is killed by the restart.
+  void runPrivileged("app-rollback");
 }

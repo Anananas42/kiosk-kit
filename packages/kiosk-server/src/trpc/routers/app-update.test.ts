@@ -4,7 +4,7 @@ import type { Store } from "../../db/store.js";
 import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
-const mockSpawn = vi.hoisted(() => vi.fn());
+const mockRunPrivileged = vi.hoisted(() => vi.fn());
 const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
@@ -13,9 +13,8 @@ const mockReaddir = vi.hoisted(() => vi.fn());
 const mockAccess = vi.hoisted(() => vi.fn());
 const mockRename = vi.hoisted(() => vi.fn());
 
-vi.mock("node:child_process", () => ({
-  execFile: vi.fn(),
-  spawn: mockSpawn,
+vi.mock("../../privileged.js", () => ({
+  runPrivileged: mockRunPrivileged,
 }));
 
 // Prevent real socket connections when appRouter transitively loads the network service
@@ -60,7 +59,7 @@ beforeEach(() => {
   mockRm.mockResolvedValue(undefined);
   mockRename.mockResolvedValue(undefined);
   mockAccess.mockRejectedValue(new Error("ENOENT"));
-  mockSpawn.mockReturnValue({ unref: vi.fn() });
+  mockRunPrivileged.mockResolvedValue("");
   mockReleaseCount(0);
 });
 
@@ -205,7 +204,7 @@ describe("admin.appUpdate.install", () => {
     );
   });
 
-  it("spawns install script detached when bundle is downloaded", async () => {
+  it("calls privileged helper when bundle is downloaded", async () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Downloaded }),
     });
@@ -214,11 +213,9 @@ describe("admin.appUpdate.install", () => {
     const result = await caller["admin.appUpdate.install"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockSpawn).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/app-update.sh", "/data/app-update/pending/app-bundle.tar.gz"],
-      { detached: true, stdio: "ignore" },
-    );
+    expect(mockRunPrivileged).toHaveBeenCalledWith("app-update", [
+      "/data/app-update/pending/app-bundle.tar.gz",
+    ]);
   });
 });
 
@@ -256,7 +253,7 @@ describe("admin.appUpdate.cancelUpload", () => {
 });
 
 describe("admin.appUpdate.rollback", () => {
-  it("spawns rollback script detached when previous release exists", async () => {
+  it("calls privileged helper when previous release exists", async () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Idle }),
     });
@@ -266,10 +263,7 @@ describe("admin.appUpdate.rollback", () => {
     const result = await caller["admin.appUpdate.rollback"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockSpawn).toHaveBeenCalledWith("sudo", ["/opt/kioskkit/system/app-rollback.sh"], {
-      detached: true,
-      stdio: "ignore",
-    });
+    expect(mockRunPrivileged).toHaveBeenCalledWith("app-rollback");
   });
 
   it("rejects when no previous release available", async () => {

@@ -1,9 +1,6 @@
-import { spawn } from "node:child_process";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { AppUpdateStep } from "@kioskkit/shared";
-
-const SCRIPTS_DIR = "/opt/kioskkit/system";
 
 export interface ProgressJson {
   version: string;
@@ -59,23 +56,4 @@ export async function writeStateFile(
   const tmp = join(stateDir, `.state.${Date.now()}.tmp`);
   await writeFile(tmp, JSON.stringify(state, null, 2));
   await rename(tmp, stateFile);
-}
-
-/**
- * Spawn a sudo script detached so it survives the Node process being killed
- * (e.g. by systemctl restart). Returns immediately — caller should set state
- * before calling and let the script write final state.
- *
- * This is used instead of the OTA service's runSudoScript/execFile pattern
- * because app-update restarts the Node process (systemctl restart) rather than
- * rebooting the whole system. The detached spawn ensures the script outlives
- * the process it kills.
- */
-export function spawnDetachedSudoScript(script: string, args: string[] = []): void {
-  const path = `${SCRIPTS_DIR}/${script}`;
-  const child = spawn("sudo", [path, ...args], {
-    detached: true,
-    stdio: "ignore",
-  });
-  child.unref();
 }

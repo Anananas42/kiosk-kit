@@ -29,23 +29,28 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
-    // isWifiEnabled() uses execFile to check systemctl; resolve to simulate wifi enabled
-    // checkEthernet() uses execFile to read carrier file; return "1" for ethernet connected
+    // execFile is used for isWifiEnabled (systemctl) and checkEthernet (cat)
     mockExecFile.mockImplementation(
       (
         _cmd: string,
         _args: string[],
         cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
       ) => {
-        cb(null, { stdout: "1", stderr: "" });
+        if (cmd === "systemctl") {
+          cb(null, { stdout: "", stderr: "" });
+        } else if (cmd === "cat") {
+          cb(null, { stdout: "1", stderr: "" });
+        } else {
+          cb(new Error(`unexpected cmd: ${cmd}`), { stdout: "", stderr: "" });
+        }
       },
     );
 
-    // getWifiStatus() uses runPrivileged for wifi-scan and wifi-status
-    mockRunPrivileged.mockImplementation((cmd: string) => {
-      if (cmd === "wifi-scan") return Promise.resolve(scanResult);
-      if (cmd === "wifi-status") return Promise.resolve(statusResult);
-      return Promise.reject(new Error(`Unexpected command: ${cmd}`));
+    // runPrivileged is used for wifi-scan and wifi-status
+    mockRunPrivileged.mockImplementation((action: string) => {
+      if (action === "wifi-scan") return Promise.resolve(scanResult);
+      if (action === "wifi-status") return Promise.resolve(statusResult);
+      return Promise.reject(new Error(`unexpected action: ${action}`));
     });
 
     const caller = createCaller({ store });
