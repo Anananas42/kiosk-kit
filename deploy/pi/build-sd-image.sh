@@ -431,7 +431,7 @@ deploy_app() {
     -e "ssh ${ssh_key_opt:+$ssh_key_opt }-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p $SSH_PORT" \
     "$stage_dir/" "pi@localhost:/var/tmp/app-stage/" \
     || err "rsync into VM failed"
-  ssh_pi "sudo rsync -a --exclude=data --exclude=system /var/tmp/app-stage/ $install_dir/ && sudo rm -rf /var/tmp/app-stage && sudo chown -R kiosk:kiosk $install_dir"
+  ssh_pi "sudo mkdir -p $install_dir/releases/initial && sudo rsync -a --exclude=data --exclude=system /var/tmp/app-stage/ $install_dir/releases/initial/ && sudo rm -rf /var/tmp/app-stage && sudo ln -sfn releases/initial $install_dir/current && sudo mkdir -p $install_dir/data && sudo ln -sfn $install_dir/data $install_dir/releases/initial/data && sudo chown -R kiosk:kiosk $install_dir"
 
   # Deploy ancillary files (systemd service, labwc config)
   log "Deploying system configuration..."
