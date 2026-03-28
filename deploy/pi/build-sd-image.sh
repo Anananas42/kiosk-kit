@@ -62,22 +62,21 @@ if [ ! -f /.dockerenv ] && [ -z "${KIOSKKIT_IN_CONTAINER:-}" ]; then
   rm -rf "$APP_STAGE"
   mkdir -p "$APP_STAGE"
 
+  # Include-list: only files needed on the Pi. Everything else is excluded.
   rsync -a --delete \
-    --exclude=node_modules \
-    --exclude=.git \
-    --exclude=.venv \
-    --exclude=data/ \
-    --exclude=deploy/ \
-    --exclude=dev/ \
-    --exclude=plans/ \
-    --exclude=docs/ \
-    --exclude=credentials/ \
-    --exclude=.env \
-    --exclude=.screenshots/ \
-    --exclude=packages/web-client/ \
-    --exclude=packages/web-server/ \
-    --exclude=packages/web-admin/ \
-    --exclude=packages/landing/ \
+    --include='package.json' \
+    --include='pnpm-lock.yaml' \
+    --include='pnpm-workspace.yaml' \
+    --include='turbo.json' \
+    --include='tsconfig.base.json' \
+    --include='packages/' \
+    --include='packages/kiosk-server/***' \
+    --include='packages/kiosk-client/***' \
+    --include='packages/kiosk-admin/***' \
+    --include='packages/shared/***' \
+    --include='packages/ui/***' \
+    --exclude='**/node_modules' \
+    --exclude='*' \
     "$REPO_ROOT/" "$APP_STAGE/"
 
   node -e "

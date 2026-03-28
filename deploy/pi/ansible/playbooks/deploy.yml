@@ -19,18 +19,19 @@
         dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/"
         delete: true
         rsync_opts:
-          - "--exclude=node_modules"
-          - "--exclude=.git"
-          - "--exclude=data/"
-          - "--exclude=deploy/"
-          - "--exclude=dev/"
-          - "--exclude=plans/"
-          - "--exclude=.env"
-          - "--exclude=system/"
-          - "--exclude=packages/web-client/"
-          - "--exclude=packages/web-server/"
-          - "--exclude=packages/web-admin/"
-          - "--exclude=packages/landing/"
+          - "--include=package.json"
+          - "--include=pnpm-lock.yaml"
+          - "--include=pnpm-workspace.yaml"
+          - "--include=turbo.json"
+          - "--include=tsconfig.base.json"
+          - "--include=packages/"
+          - "--include=packages/kiosk-server/***"
+          - "--include=packages/kiosk-client/***"
+          - "--include=packages/kiosk-admin/***"
+          - "--include=packages/shared/***"
+          - "--include=packages/ui/***"
+          - "--exclude=**/node_modules"
+          - "--exclude=*"
 
     - name: Set application ownership
       ansible.builtin.file:
