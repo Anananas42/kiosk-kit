@@ -1,4 +1,4 @@
-import type { Device } from "@kioskkit/shared";
+import type { Device, DeviceStatus } from "@kioskkit/shared";
 import { trpc } from "../trpc.js";
 
 export async function fetchDevices(): Promise<Device[]> {
@@ -13,13 +13,7 @@ export async function claimDevice(code: string): Promise<Device> {
   return trpc["devices.claim"].mutate({ code });
 }
 
-export async function fetchDeviceStatus(id: string): Promise<boolean> {
-  try {
-    const res = await fetch(`/api/devices/${id}/status`);
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data.online ?? false;
-  } catch {
-    return false;
-  }
+export async function fetchDeviceStatus(id: string): Promise<DeviceStatus> {
+  const data = await trpc["devices.status"].query({ id });
+  return data.status;
 }

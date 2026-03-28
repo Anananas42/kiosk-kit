@@ -52,8 +52,16 @@ export const CatalogListOutputSchema = z.array(CatalogCategorySchema);
 
 // ── Device schemas ──────────────────────────────────────────────────
 
+export enum DeviceStatus {
+  Online = "online",
+  AppNotConnected = "app-not-connected",
+  Offline = "offline",
+}
+
+export const DeviceStatusSchema = z.enum(DeviceStatus);
+
 export const DeviceSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   tailscaleNodeId: z.string(),
   userId: z.string().nullable(),
   name: z.string(),
@@ -68,14 +76,14 @@ export const DeviceSchema = z.object({
 export type Device = z.infer<typeof DeviceSchema>;
 
 export const DeviceAssignInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   userId: z.string().nullable(),
 });
 
 export type DeviceAssignInput = z.infer<typeof DeviceAssignInputSchema>;
 
 export const DeviceUpdateInputSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().trim().min(1, "name is required"),
 });
 

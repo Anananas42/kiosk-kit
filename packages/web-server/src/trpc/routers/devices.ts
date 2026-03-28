@@ -3,6 +3,8 @@ import {
   DeviceAssignInputSchema,
   DeviceClaimInputSchema,
   DeviceSchema,
+  DeviceStatus,
+  DeviceStatusSchema,
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
@@ -78,6 +80,50 @@ export const devicesRouter = router({
         hostname: device.name,
         createdAt: device.createdAt.toISOString(),
       };
+    }),
+
+  "devices.status": authedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .output(z.object({ status: DeviceStatusSchema }))
+    .query(async ({ ctx, input }) => {
+      const conditions =
+        ctx.user.role === "admin"
+          ? eq(devices.id, input.id)
+          : and(eq(devices.id, input.id), eq(devices.userId, ctx.user.id));
+
+      const [device] = await ctx.db.select().from(devices).where(conditions);
+      if (!device) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
+      }
+
+      // Check Tailscale connectivity
+      let tailscaleOnline = false;
+      if (isDev && device.id === LOCAL_DEVICE_ID) {
+        tailscaleOnline = true;
+      } else {
+        try {
+          const td = await getCachedDevice(device.tailscaleNodeId);
+          tailscaleOnline = td.online;
+        } catch {
+          return { status: DeviceStatus.Offline };
+        }
+      }
+
+      if (!tailscaleOnline) {
+        return { status: DeviceStatus.Offline };
+      }
+
+      // Tailscale says online — check app health
+      try {
+        const res = await fetchDeviceProxy(
+          { id: device.id, tailscaleIp: device.tailscaleIp },
+          "/api/health",
+          { signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS) },
+        );
+        return { status: res.ok ? DeviceStatus.Online : DeviceStatus.AppNotConnected };
+      } catch {
+        return { status: DeviceStatus.AppNotConnected };
+      }
     }),
 
   "devices.list": authedProcedure.output(z.array(DeviceSchema)).query(async ({ ctx }) => {

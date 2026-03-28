@@ -1,3 +1,4 @@
+import { DeviceStatus } from "@kioskkit/shared";
 import { Card, CardContent, Skeleton, Spinner } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
@@ -9,23 +10,17 @@ import { StatusCard } from "../components/StatusCard.js";
 import { useBackups } from "../hooks/backups.js";
 import { useDevice, useDeviceStatus } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
-import { DeviceStatus, deriveDeviceStatus } from "../lib/device-status.js";
 import { formatRelativeTime } from "../lib/format.js";
 
 export function DeviceDetail() {
   const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { data: device, isLoading, error } = useDevice(id);
-  const tailscaleOnline = device?.online ?? false;
-  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(
-    tailscaleOnline ? id : undefined,
-  );
+  const { data: status, isLoading: statusLoading, error: statusError } = useDeviceStatus(id);
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [hasBeenOnline, setHasBeenOnline] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-
-  const status = deriveDeviceStatus(tailscaleOnline, appResponding);
 
   // When status transitions to Online: mark as been-online and remount iframe
   useEffect(() => {
@@ -65,7 +60,7 @@ export function DeviceDetail() {
                 {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </span>
             )}
-            <DeviceStatusBadge status={status} loading={statusLoading && tailscaleOnline} />
+            <DeviceStatusBadge status={status} loading={statusLoading} error={statusError} />
           </div>
         )}
       </div>
@@ -172,7 +167,7 @@ export function DeviceDetail() {
           <BackupSection
             backups={backups ?? []}
             deviceName={device?.name}
-            deviceOnline={appResponding ?? undefined}
+            deviceOnline={status === DeviceStatus.Online ? true : undefined}
           />
         ))}
     </div>

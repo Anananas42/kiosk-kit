@@ -56,47 +56,6 @@ function makeApp(db: Db, user: User = customerUser) {
   return app;
 }
 
-describe("device health check", () => {
-  it("returns online: true when device responds OK", async () => {
-    const app = makeApp(createMockDb([DEVICE]));
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
-
-    const res = await app.request("/devices/device-1/status");
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ online: true });
-
-    vi.unstubAllGlobals();
-  });
-
-  it("returns online: false on timeout/error", async () => {
-    const app = makeApp(createMockDb([DEVICE]));
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
-
-    const res = await app.request("/devices/device-1/status");
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ online: false });
-
-    vi.unstubAllGlobals();
-  });
-
-  it("returns 404 for non-owned device (customer)", async () => {
-    const app = makeApp(createMockDb([]));
-    const res = await app.request("/devices/unknown/status");
-    expect(res.status).toBe(404);
-  });
-
-  it("admin can health-check any device", async () => {
-    const app = makeApp(createMockDb([DEVICE]), adminUser);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
-
-    const res = await app.request("/devices/device-1/status");
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ online: true });
-
-    vi.unstubAllGlobals();
-  });
-});
-
 describe("device proxy", () => {
   it("proxies GET request to kiosk-server", async () => {
     const app = makeApp(createMockDb([DEVICE]));

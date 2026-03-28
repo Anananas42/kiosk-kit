@@ -1,3 +1,4 @@
+import { DeviceStatus } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../../db/index.js";
@@ -5,6 +6,15 @@ import type { users } from "../../db/schema.js";
 import type { TrpcContext } from "../context.js";
 import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
+
+vi.mock("../../services/tailscale.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../services/tailscale.js")>();
+  return { ...original, getCachedDevice: vi.fn() };
+});
+
+import { getCachedDevice } from "../../services/tailscale.js";
+
+const mockGetCachedDevice = vi.mocked(getCachedDevice);
 
 type User = typeof users.$inferSelect;
 
@@ -174,6 +184,62 @@ describe("devices procedures", () => {
       const caller = callerFor(customerUser, createMockDb());
       await expect(
         caller["devices.delete"]({ id: "d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a" }),
+      ).rejects.toThrow(TRPCError);
+    });
+  });
+
+  describe("devices.status", () => {
+    const tailscaleDevice = {
+      nodeId: "node-123",
+      name: "test",
+      addresses: ["100.64.1.5"],
+      online: true,
+      lastSeen: new Date().toISOString(),
+      hostname: "test",
+    };
+
+    it("returns online when tailscale online and health responds OK", async () => {
+      mockGetCachedDevice.mockResolvedValue(tailscaleDevice);
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+
+      const caller = callerFor(adminUser, createMockDb([deviceRow]));
+      const result = await caller["devices.status"]({ id: deviceRow.id });
+      expect(result.status).toBe(DeviceStatus.Online);
+
+      vi.unstubAllGlobals();
+    });
+
+    it("returns app-not-connected when tailscale online but health fails", async () => {
+      mockGetCachedDevice.mockResolvedValue(tailscaleDevice);
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
+
+      const caller = callerFor(adminUser, createMockDb([deviceRow]));
+      const result = await caller["devices.status"]({ id: deviceRow.id });
+      expect(result.status).toBe(DeviceStatus.AppNotConnected);
+
+      vi.unstubAllGlobals();
+    });
+
+    it("returns offline when tailscale says offline", async () => {
+      mockGetCachedDevice.mockResolvedValue({ ...tailscaleDevice, online: false });
+
+      const caller = callerFor(adminUser, createMockDb([deviceRow]));
+      const result = await caller["devices.status"]({ id: deviceRow.id });
+      expect(result.status).toBe(DeviceStatus.Offline);
+    });
+
+    it("returns offline when tailscale API fails", async () => {
+      mockGetCachedDevice.mockRejectedValue(new Error("Tailscale unreachable"));
+
+      const caller = callerFor(adminUser, createMockDb([deviceRow]));
+      const result = await caller["devices.status"]({ id: deviceRow.id });
+      expect(result.status).toBe(DeviceStatus.Offline);
+    });
+
+    it("throws NOT_FOUND for non-owned device (customer)", async () => {
+      const caller = callerFor(customerUser, createMockDb([]));
+      await expect(
+        caller["devices.status"]({ id: "d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a" }),
       ).rejects.toThrow(TRPCError);
     });
   });

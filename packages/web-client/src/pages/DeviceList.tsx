@@ -18,18 +18,14 @@ import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { FreshnessIndicator } from "../components/FreshnessIndicator.js";
 import { useDeviceStatus, useDevices } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
-import { deriveDeviceStatus } from "../lib/device-status.js";
 
 function DeviceRow({ device }: { device: Device }) {
-  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(
-    device.online ? device.id : undefined,
-  );
-  const status = deriveDeviceStatus(device.online, appResponding);
+  const { data: status, isLoading: statusLoading, error: statusError } = useDeviceStatus(device.id);
 
   return (
     <TableRow>
       <TableCell>
-        <DeviceStatusBadge status={status} loading={statusLoading && device.online} />
+        <DeviceStatusBadge status={status} loading={statusLoading} error={statusError} />
       </TableCell>
       <TableCell>
         <Link to={`/devices/${device.id}`} className="font-medium text-foreground hover:underline">

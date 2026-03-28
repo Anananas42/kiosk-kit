@@ -1,5 +1,5 @@
+import { DeviceStatus } from "@kioskkit/shared";
 import { useTranslate } from "../hooks/useTranslate.js";
-import { DeviceStatus } from "../lib/device-status.js";
 import { DeviceStatusBadge } from "./DeviceStatusBadge.js";
 
 type DisconnectedStatus = DeviceStatus.Offline | DeviceStatus.AppNotConnected;

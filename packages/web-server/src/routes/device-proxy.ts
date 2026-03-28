@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { DEVICE_TIMEOUT_MS, PROXY_TIMEOUT_MS } from "../config.js";
+import { PROXY_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
 import { LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
@@ -43,22 +43,6 @@ async function getAccessibleDevice(db: Db, deviceId: string, userId: string, rol
 
 export function deviceProxyRoutes(db: Db) {
   const app = new Hono<AuthEnv>();
-
-  // Health check: GET /api/devices/:id/status
-  app.get("/:id/status", async (c) => {
-    const user = c.get("user");
-    const device = await getAccessibleDevice(db, c.req.param("id"), user.id, user.role);
-    if (!device) return c.json({ error: "Not found" }, 404);
-
-    try {
-      const res = await fetchDeviceProxy(device, "/api/health", {
-        signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
-      });
-      return c.json({ online: res.ok });
-    } catch {
-      return c.json({ online: false });
-    }
-  });
 
   // Proxy: /api/devices/:id/kiosk/* → http://{tailscale_ip}:3001/api/*
   app.all("/:id/kiosk/*", async (c) => {
