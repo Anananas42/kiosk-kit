@@ -169,12 +169,23 @@ export function appUploadRoute() {
       return c.json({ ok: true, bytesReceived });
     } catch (err) {
       await rm(PENDING_DIR, { recursive: true, force: true }).catch(() => {});
-      await writeState({
-        status: AppUpdateStep.Idle,
-        ...stateBase,
-        lastUpdate: new Date().toISOString(),
-        lastResult: AppUpdateResult.FailedUpload,
-      });
+      // Re-read state before writing — cancelUpload may have already reset it to idle.
+      // If so, don't overwrite with a stale FailedUpload result.
+      let latestState: UploadStateJson | null = null;
+      try {
+        const raw = await readFile(STATE_FILE, "utf-8");
+        latestState = JSON.parse(raw) as UploadStateJson;
+      } catch {
+        // State file missing or corrupt — safe to write
+      }
+      if (latestState?.status === AppUpdateStep.Uploading) {
+        await writeState({
+          status: AppUpdateStep.Idle,
+          ...stateBase,
+          lastUpdate: new Date().toISOString(),
+          lastResult: AppUpdateResult.FailedUpload,
+        });
+      }
       const message = err instanceof Error ? err.message : "Upload failed";
       return c.json({ error: message }, 500);
     }
