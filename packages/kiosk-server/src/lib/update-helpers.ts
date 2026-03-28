@@ -1,5 +1,6 @@
-import { execFile as execFileCb } from "node:child_process";
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { execFile as execFileCb, spawn } from "node:child_process";
+import { access, mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { TRPCError } from "@trpc/server";
 
@@ -55,7 +56,23 @@ export async function writeStateFile(
   state: object,
 ): Promise<void> {
   await mkdir(stateDir, { recursive: true });
-  await writeFile(stateFile, JSON.stringify(state, null, 2));
+  const tmp = join(stateDir, `.state.${Date.now()}.tmp`);
+  await writeFile(tmp, JSON.stringify(state, null, 2));
+  await rename(tmp, stateFile);
+}
+
+/**
+ * Spawn a sudo script detached so it survives the Node process being killed
+ * (e.g. by systemctl restart). Returns immediately — caller should set state
+ * before calling and let the script write final state.
+ */
+export function spawnDetachedSudoScript(script: string, args: string[] = []): void {
+  const path = `${SCRIPTS_DIR}/${script}`;
+  const child = spawn("sudo", [path, ...args], {
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
 }
 
 export async function runSudoScript(script: string, args: string[] = []): Promise<string> {

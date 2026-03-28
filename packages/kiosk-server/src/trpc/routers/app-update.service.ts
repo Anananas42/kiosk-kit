@@ -6,7 +6,7 @@ import {
   type ProgressJson,
   readJsonFile,
   readTextFile,
-  runSudoScript,
+  spawnDetachedSudoScript,
   writeStateFile,
 } from "../../lib/update-helpers.js";
 
@@ -83,7 +83,9 @@ export async function installApp(): Promise<void> {
     status: AppUpdateStep.Installing,
   });
 
-  await runSudoScript("app-update.sh", [BUNDLE_FILE]);
+  // Fire-and-forget: the script restarts the service (killing this process),
+  // so we spawn detached and return immediately. The script writes final state.
+  spawnDetachedSudoScript("app-update.sh", [BUNDLE_FILE]);
 }
 
 export async function cancelUpload(): Promise<void> {
@@ -132,5 +134,7 @@ export async function rollbackApp(): Promise<void> {
     lastResult: currentState?.lastResult ?? null,
   } as StateJson);
 
-  await runSudoScript("app-rollback.sh");
+  // Fire-and-forget: the script restarts the service (killing this process),
+  // so we spawn detached and return immediately. The script writes final state.
+  spawnDetachedSudoScript("app-rollback.sh");
 }

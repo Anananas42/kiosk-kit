@@ -4,16 +4,18 @@ import type { Store } from "../../db/store.js";
 import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
-const mockExecFile = vi.hoisted(() => vi.fn());
+const mockSpawn = vi.hoisted(() => vi.fn());
 const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
 const mockRm = vi.hoisted(() => vi.fn());
 const mockReaddir = vi.hoisted(() => vi.fn());
 const mockAccess = vi.hoisted(() => vi.fn());
+const mockRename = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({
-  execFile: mockExecFile,
+  execFile: vi.fn(),
+  spawn: mockSpawn,
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -23,6 +25,7 @@ vi.mock("node:fs/promises", () => ({
   rm: mockRm,
   readdir: mockReaddir,
   access: mockAccess,
+  rename: mockRename,
 }));
 
 const createCaller = createCallerFactory(appRouter);
@@ -45,42 +48,14 @@ function mockReleaseCount(count: number) {
   });
 }
 
-function mockSudoSuccess(stdout = "") {
-  mockExecFile.mockImplementation(
-    (
-      _cmd: string,
-      _args: string[],
-      cb: (err: unknown, result: { stdout: string; stderr: string }) => void,
-    ) => {
-      cb(null, { stdout, stderr: "" });
-    },
-  );
-}
-
-function mockSudoFailure(errorOutput: string) {
-  mockExecFile.mockImplementation(
-    (
-      _cmd: string,
-      _args: string[],
-      cb: (err: unknown, result?: { stdout: string; stderr: string }) => void,
-    ) => {
-      const err = new Error("Script failed") as Error & {
-        stdout: string;
-        stderr: string;
-      };
-      err.stdout = errorOutput;
-      err.stderr = "";
-      cb(err);
-    },
-  );
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   mockMkdir.mockResolvedValue(undefined);
   mockWriteFile.mockResolvedValue(undefined);
   mockRm.mockResolvedValue(undefined);
+  mockRename.mockResolvedValue(undefined);
   mockAccess.mockRejectedValue(new Error("ENOENT"));
+  mockSpawn.mockReturnValue({ unref: vi.fn() });
   mockReleaseCount(0);
 });
 
@@ -225,32 +200,20 @@ describe("admin.appUpdate.install", () => {
     );
   });
 
-  it("calls install script when bundle is downloaded", async () => {
+  it("spawns install script detached when bundle is downloaded", async () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Downloaded }),
     });
-    mockSudoSuccess();
 
     const caller = createCaller({ store });
     const result = await caller["admin.appUpdate.install"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockExecFile).toHaveBeenCalledWith(
+    expect(mockSpawn).toHaveBeenCalledWith(
       "sudo",
       ["/opt/kioskkit/system/app-update.sh", "/data/app-update/pending/app-bundle.tar.gz"],
-      expect.any(Function),
+      { detached: true, stdio: "ignore" },
     );
-  });
-
-  it("throws on install script failure", async () => {
-    mockFiles({
-      "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Downloaded }),
-    });
-    mockSudoFailure(JSON.stringify({ error: "Health check failed" }));
-
-    const caller = createCaller({ store });
-
-    await expect(caller["admin.appUpdate.install"]()).rejects.toThrow("Health check failed");
   });
 });
 
@@ -288,22 +251,20 @@ describe("admin.appUpdate.cancelUpload", () => {
 });
 
 describe("admin.appUpdate.rollback", () => {
-  it("calls rollback script when previous release exists", async () => {
+  it("spawns rollback script detached when previous release exists", async () => {
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Idle }),
     });
     mockReleaseCount(2);
-    mockSudoSuccess();
 
     const caller = createCaller({ store });
     const result = await caller["admin.appUpdate.rollback"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockExecFile).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/app-rollback.sh"],
-      expect.any(Function),
-    );
+    expect(mockSpawn).toHaveBeenCalledWith("sudo", ["/opt/kioskkit/system/app-rollback.sh"], {
+      detached: true,
+      stdio: "ignore",
+    });
   });
 
   it("rejects when no previous release available", async () => {
@@ -341,13 +302,13 @@ describe("admin.appUpdate.rollback", () => {
     );
   });
 
-  it("throws on script failure", async () => {
+  it("spawns detached and returns ok", async () => {
     mockFiles({});
     mockReleaseCount(2);
-    mockSudoFailure(JSON.stringify({ error: "Rollback failed" }));
 
     const caller = createCaller({ store });
+    const result = await caller["admin.appUpdate.rollback"]();
 
-    await expect(caller["admin.appUpdate.rollback"]()).rejects.toThrow("Rollback failed");
+    expect(result).toEqual({ ok: true });
   });
 });

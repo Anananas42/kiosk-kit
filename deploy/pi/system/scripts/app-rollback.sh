@@ -29,15 +29,14 @@ fi
 
 CURRENT_RELEASE=$(readlink -f "$INSTALL_DIR/current")
 
-# Find the other release (there should be exactly 2: current + previous)
+# Find the most recent release that isn't current (sorted descending by name/timestamp)
 PREVIOUS_RELEASE=""
-for dir in "$RELEASES_DIR"/*/; do
-  dir="${dir%/}"
+while IFS= read -r dir; do
   if [[ -d "$dir" && "$dir" != "$CURRENT_RELEASE" ]]; then
     PREVIOUS_RELEASE="$dir"
     break
   fi
-done
+done < <(printf '%s\n' "$RELEASES_DIR"/*/ | sed 's|/$||' | sort -r)
 
 if [[ -z "$PREVIOUS_RELEASE" ]]; then
   log "ERROR: No previous release found to roll back to"
