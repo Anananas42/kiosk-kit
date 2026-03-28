@@ -303,6 +303,7 @@ export const WifiForgetRequestSchema = z.object({
 export type WifiForgetRequest = z.infer<typeof WifiForgetRequestSchema>;
 
 export const WifiStatusSchema = z.object({
+  enabled: z.boolean(),
   current: z
     .object({
       ssid: z.string(),

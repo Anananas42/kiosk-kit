@@ -77,9 +77,18 @@ export function deviceProxyRoutes(db: Db) {
 
     try {
       const headers = new Headers(c.req.raw.headers);
-      // Remove hop-by-hop headers
-      headers.delete("host");
-      headers.delete("connection");
+      for (const h of [
+        "host",
+        "connection",
+        "keep-alive",
+        "transfer-encoding",
+        "te",
+        "trailer",
+        "upgrade",
+        "proxy-authorization",
+      ]) {
+        headers.delete(h);
+      }
 
       const fetchInit = {
         method: c.req.method,
@@ -93,13 +102,17 @@ export function deviceProxyRoutes(db: Db) {
         ? await fetch(`http://${LOCAL_KIOSK_ADMIN_HOST}${path}`, fetchInit)
         : await fetchDeviceProxy(device, path, fetchInit);
 
-      // Inject <base> into HTML so asset paths resolve through the proxy
+      // Inject <base> into admin HTML so relative asset paths and API calls
+      // resolve through the proxy prefix.
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("text/html")) {
         const html = await res.text();
-        const proxyBase = `/api/devices/${c.req.param("id")}/kiosk/`;
+        const proxyBase = `/api/devices/${c.req.param("id")}/kiosk/admin/`;
         const rewritten = html.replace("<head>", `<head><base href="${proxyBase}">`);
-        return c.html(rewritten, res.status as 200);
+        return new Response(rewritten, {
+          status: res.status,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
       }
 
       return new Response(res.body, {

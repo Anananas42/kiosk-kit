@@ -53,7 +53,21 @@ function parseJson<T>(stdout: string, label: string): T {
   }
 }
 
+async function isWifiEnabled(): Promise<boolean> {
+  try {
+    await execFile("systemctl", ["is-active", "--quiet", "wpa_supplicant@wlan0.service"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getWifiStatus(): Promise<WifiStatus> {
+  const enabled = await isWifiEnabled();
+  if (!enabled) {
+    return { enabled: false, current: null, ethernet: false, saved: [], available: [] };
+  }
+
   const [scanOutput, statusOutput] = await Promise.all([
     runScript("wifi-scan.sh"),
     runScript("wifi-status.sh"),
@@ -81,6 +95,7 @@ export async function getWifiStatus(): Promise<WifiStatus> {
   const available = scanned.filter((n) => !savedSsids.has(n.ssid));
 
   return {
+    enabled: true,
     current: status.current,
     ethernet: status.ethernet,
     saved,
@@ -96,4 +111,12 @@ export async function connectToWifi(ssid: string, password?: string): Promise<vo
 
 export async function forgetWifi(ssid: string): Promise<void> {
   await runSudoScript("wifi-forget.sh", [ssid]);
+}
+
+export async function enableWifi(): Promise<void> {
+  await runSudoScript("wifi-enable.sh");
+}
+
+export async function disableWifi(): Promise<void> {
+  await runSudoScript("wifi-disable.sh");
 }

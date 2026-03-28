@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
-  base: "/admin/",
+  base: "./",
   resolve: {
     alias: {
       "@kioskkit/shared": path.resolve(__dirname, "../shared/src/index.ts"),

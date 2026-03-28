@@ -13,7 +13,10 @@
       "Read(//media/adam/rootfs1/etc/modules-load.d/**)",
       "Bash(./deploy/pi/build-sd-image.sh --dev --device-only)",
       "Bash(journalctl:*)",
-      "Bash(tailscale status:*)"
+      "Bash(tailscale status:*)",
+      "Bash(pnpm --filter @kioskkit/web-server typecheck)",
+      "Bash(pnpm --filter @kioskkit/kiosk-server typecheck)",
+      "Bash(pnpm --filter @kioskkit/web-server test)"
     ]
   }
 }

@@ -6,7 +6,7 @@ export async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
 }
 
 export async function fetchOtaStatus(deviceId: string): Promise<OtaStatus> {
-  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.status`);
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/api/trpc/admin.ota.status`);
   if (!res.ok) throw new Error("Failed to fetch OTA status");
   const json = (await res.json()) as { result: { data: OtaStatus } };
   return json.result.data;
@@ -27,7 +27,7 @@ export async function triggerOtaDownload(deviceId: string, version: string): Pro
 }
 
 export async function triggerOtaInstall(deviceId: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.install`, {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/api/trpc/admin.ota.install`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -36,7 +36,7 @@ export async function triggerOtaInstall(deviceId: string): Promise<void> {
 }
 
 export async function triggerOtaRollback(deviceId: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.rollback`, {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/api/trpc/admin.ota.rollback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -45,7 +45,7 @@ export async function triggerOtaRollback(deviceId: string): Promise<void> {
 }
 
 export async function cancelOtaDownload(deviceId: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/kiosk/trpc/admin.ota.cancelUpload`, {
+  const res = await fetch(`/api/devices/${deviceId}/kiosk/api/trpc/admin.ota.cancelUpload`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),

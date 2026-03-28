@@ -32,7 +32,7 @@ fi
 # Saved networks
 SAVED="[]"
 if [ -f "$CONF" ]; then
-    SAVED=$(grep -oP 'ssid="\K[^"]+' "$CONF" 2>/dev/null | awk '
+    SAVED=$( (grep -oP 'ssid="\K[^"]+' "$CONF" 2>/dev/null || true) | awk '
         BEGIN { printf "[" }
         NR > 1 { printf "," }
         {
@@ -43,8 +43,6 @@ if [ -f "$CONF" ]; then
         }
         END { printf "]" }
     ')
-    # Default to empty array if grep found nothing
-    [ -z "$SAVED" ] && SAVED="[]"
 fi
 
 echo "{\"current\":$CURRENT,\"ethernet\":$ETHERNET,\"saved\":$SAVED}"

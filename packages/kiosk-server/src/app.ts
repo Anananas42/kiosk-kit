@@ -44,11 +44,20 @@ export function createApp(store: Store, sqlite: SQLiteDatabase, dataDir: string)
 
   // Prevent caching of HTML (index.html) so deploys take effect immediately.
   // Hashed JS/CSS assets are fine to cache — they have unique filenames.
+  // For admin HTML, inject <base href="/admin/"> so relative asset paths
+  // resolve correctly regardless of the SPA route depth.
   app.use("/*", async (c, next) => {
     await next();
     const ct = c.res.headers.get("Content-Type") ?? "";
     if (ct.includes("text/html")) {
       c.res.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      if (c.req.path.startsWith("/admin")) {
+        const html = await c.res.text();
+        c.res = new Response(html.replace("<head>", '<head><base href="/admin/">'), {
+          status: c.res.status,
+          headers: c.res.headers,
+        });
+      }
     }
   });
 
