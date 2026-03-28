@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Display sleep handler for kiosk touchscreen.
+"""Display sleep handler for kiosk.
 
 Called by swayidle when the idle timeout expires. Turns the display off via
-wlopm (wlr-output-power-management protocol) and grabs the touchscreen at
-the evdev level so that no touch events reach labwc/chromium while the
-screen is off.
+wlopm (wlr-output-power-management protocol).
 
-When a touch is detected on the grabbed device the script turns the display
-back on, keeps the grab for a short period (so the "wake" touch doesn't
-register as a tap in the app), then releases and exits.  A synthetic uinput
-event pokes the compositor so it registers activity — without this, labwc
-never sees input (we grabbed it all) and swayidle cannot re-arm.
+Two wake strategies depending on available hardware:
+
+Touchscreen present:
+  Grabs the touchscreen at the evdev level so that the wake touch doesn't
+  reach labwc/chromium (prevents accidental button taps). Waits for touch,
+  turns display on, holds the grab briefly, then releases and pokes the
+  compositor via uinput so swayidle re-arms.
+
+No touchscreen (keyboard/mouse only):
+  Exits immediately after turning the display off. The swayidle 'resume'
+  command (configured in labwc autostart) handles turning the display back
+  on when the compositor sees any input.
 """
 
 import time
@@ -63,22 +68,23 @@ def poke_compositor():
 
 def main():
     dev = find_touchscreen()
-    if dev is None:
-        return
 
     dpms_off()
 
+    if dev is None:
+        # No touchscreen — swayidle 'resume' command handles wake.
+        return
+
+    # Touchscreen path: grab to swallow the wake touch.
     dev.grab()
     try:
-        # Block until a touch event arrives
         for event in dev.read_loop():
             if event.type in (e.EV_KEY, e.EV_ABS):
                 break
 
         dpms_on()
 
-        # Keep the grab so the wake gesture doesn't register as a tap,
-        # and give the display time to power on.
+        # Hold grab so the wake gesture doesn't register as a tap.
         deadline = time.monotonic() + WAKE_GRAB_HOLD_SECS
         while time.monotonic() < deadline:
             try:

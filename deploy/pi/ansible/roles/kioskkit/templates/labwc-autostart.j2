@@ -3,9 +3,14 @@
 # labwc autostart — launched by labwc after the compositor is ready.
 # App-level timing constants live in packages/shared/src/config.ts.
 
-# Display sleep: turn off after idle, wake on touch.
-swayidle -w timeout {{ kioskkit_idle_timeout_secs }} \
-    '{{ kioskkit_install_dir }}/system/config/display-sleep.py' &
+# Display sleep: turn off after idle.
+# The timeout command runs display-sleep.py which handles DPMS off (and
+# touchscreen grab if present). The resume command turns the display back
+# on when the compositor sees any input — this covers keyboard/mouse wake.
+# For touchscreens, display-sleep.py handles wake internally via evdev.
+swayidle -w \
+    timeout {{ kioskkit_idle_timeout_secs }} '{{ kioskkit_install_dir }}/system/config/display-sleep.py' \
+    resume 'wlopm --on "*"' &
 
 # Wait for the app server before launching Chromium.
 until curl -sf http://localhost:{{ kioskkit_app_port }} >/dev/null 2>&1; do

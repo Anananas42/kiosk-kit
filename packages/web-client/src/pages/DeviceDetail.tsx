@@ -16,13 +16,16 @@ export function DeviceDetail() {
   const t = useTranslate();
   const { id } = useParams<{ id: string }>();
   const { data: device, isLoading, error } = useDevice(id);
-  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(id);
+  const tailscaleOnline = device?.online ?? false;
+  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(
+    tailscaleOnline ? id : undefined,
+  );
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [hasBeenOnline, setHasBeenOnline] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
-  const status = deriveDeviceStatus(device?.online ?? false, appResponding);
+  const status = deriveDeviceStatus(tailscaleOnline, appResponding);
 
   // When status transitions to Online: mark as been-online and remount iframe
   useEffect(() => {
@@ -62,10 +65,7 @@ export function DeviceDetail() {
                 {t("deviceDetail.lastSeen", { time: formatRelativeTime(device.lastSeen) })}
               </span>
             )}
-            <DeviceStatusBadge
-              status={status}
-              loading={statusLoading && (device?.online ?? false)}
-            />
+            <DeviceStatusBadge status={status} loading={statusLoading && tailscaleOnline} />
           </div>
         )}
       </div>
@@ -89,7 +89,7 @@ export function DeviceDetail() {
 
       {/* Loading state */}
       {isLoading && (
-        <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
+        <Card className="flex min-h-100 flex-1 flex-col overflow-hidden">
           <CardContent className="flex-1 p-0">
             <Skeleton className="h-full w-full rounded-none" />
           </CardContent>
@@ -126,7 +126,7 @@ export function DeviceDetail() {
 
       {/* Iframe with connection overlay */}
       {!isLoading && !error && hasBeenOnline && (
-        <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
+        <Card className="flex min-h-100 flex-1 flex-col overflow-hidden">
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
               <div className="flex items-center gap-2 p-4">

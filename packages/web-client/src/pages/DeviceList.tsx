@@ -20,7 +20,9 @@ import { useTranslate } from "../hooks/useTranslate.js";
 import { deriveDeviceStatus } from "../lib/device-status.js";
 
 function DeviceRow({ device }: { device: Device }) {
-  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(device.id);
+  const { data: appResponding, isLoading: statusLoading } = useDeviceStatus(
+    device.online ? device.id : undefined,
+  );
   const status = deriveDeviceStatus(device.online, appResponding);
 
   return (
