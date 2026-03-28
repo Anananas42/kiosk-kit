@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@kioskkit/ui";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
 import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
@@ -19,32 +19,17 @@ export function DeviceDetail() {
   const { data: backups, error: backupError } = useBackups(id);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [hasBeenOnline, setHasBeenOnline] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const prevStatusRef = useRef<DeviceStatus | null>(null);
+  const [iframeKey, setIframeKey] = useState(0);
 
   const status = deriveDeviceStatus(device?.online ?? false, appResponding);
 
+  // When status transitions to Online: mark as been-online and remount iframe
   useEffect(() => {
-    const prev = prevStatusRef.current;
-    prevStatusRef.current = status;
-
-    if (status === DeviceStatus.Online) {
-      setHasBeenOnline(true);
-    }
-
-    // Reload iframe when transitioning back to online
-    if (
-      prev !== null &&
-      prev !== DeviceStatus.Online &&
-      status === DeviceStatus.Online &&
-      iframeRef.current
-    ) {
-      setIframeLoading(true);
-      iframeRef.current.src = `/api/devices/${id}/kiosk/admin/`;
-    }
-  }, [status, id]);
-
-  const onIframeLoad = useCallback(() => setIframeLoading(false), []);
+    if (status !== DeviceStatus.Online) return;
+    setHasBeenOnline(true);
+    setIframeKey((k) => k + 1);
+    setIframeLoading(true);
+  }, [status]);
 
   if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
 
@@ -150,10 +135,10 @@ export function DeviceDetail() {
               </div>
             )}
             <iframe
-              ref={iframeRef}
+              key={iframeKey}
               src={`/api/devices/${id}/kiosk/admin/`}
               title="Device Admin"
-              onLoad={onIframeLoad}
+              onLoad={() => setIframeLoading(false)}
               className={`h-full w-full border-0 ${iframeLoading ? "hidden" : "block"}`}
             />
             {isDisconnected && (
