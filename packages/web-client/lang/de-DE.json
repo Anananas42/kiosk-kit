@@ -1,4 +1,10 @@
 {
   "deviceDetail.overlay.offline": "Gerät ist offline",
-  "deviceDetail.overlay.appNotConnected": "App antwortet nicht"
+  "deviceDetail.overlay.appNotConnected": "App antwortet nicht",
+  "addDevice.button": "Gerät hinzufügen",
+  "addDevice.title": "Gerät hinzufügen",
+  "addDevice.description": "Geben Sie den 9-stelligen Kopplungscode ein, der auf dem Bildschirm Ihres Geräts angezeigt wird.",
+  "addDevice.codeLabel": "Kopplungscode",
+  "addDevice.submit": "Gerät verbinden",
+  "addDevice.error": "Ungültiger oder bereits verwendeter Kopplungscode."
 }

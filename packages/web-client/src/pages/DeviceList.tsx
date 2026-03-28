@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@kioskkit/ui";
 import { Link } from "react-router";
+import { AddDeviceDialog } from "../components/AddDeviceDialog.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { FreshnessIndicator } from "../components/FreshnessIndicator.js";
 import { useDeviceStatus, useDevices } from "../hooks/devices.js";
@@ -49,8 +50,9 @@ export function DeviceList() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>{t("deviceList.title")}</CardTitle>
+          <AddDeviceDialog />
         </CardHeader>
         <CardContent>
           <Table>
@@ -88,8 +90,9 @@ export function DeviceList() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("deviceList.title")}</CardTitle>
+        <AddDeviceDialog />
       </CardHeader>
       <CardContent>
         {!devices || devices.length === 0 ? (

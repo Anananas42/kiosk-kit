@@ -61,5 +61,11 @@
   "ota.rollback": "Rollback",
   "freshness.none": "None",
   "freshness.noBackups": "No backups",
-  "freshness.lastTime": "Last: {time}"
+  "freshness.lastTime": "Last: {time}",
+  "addDevice.button": "Add Device",
+  "addDevice.title": "Add Device",
+  "addDevice.description": "Enter the 9-digit pairing code shown on your device's screen.",
+  "addDevice.codeLabel": "Pairing code",
+  "addDevice.submit": "Connect Device",
+  "addDevice.error": "Invalid or already claimed pairing code."
 }

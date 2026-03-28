@@ -9,6 +9,10 @@ export async function fetchDevice(id: string): Promise<Device> {
   return trpc["devices.get"].query({ id });
 }
 
+export async function claimDevice(code: string): Promise<Device> {
+  return trpc["devices.claim"].mutate({ code });
+}
+
 export async function fetchDeviceStatus(id: string): Promise<boolean> {
   try {
     const res = await fetch(`/api/devices/${id}/status`);
