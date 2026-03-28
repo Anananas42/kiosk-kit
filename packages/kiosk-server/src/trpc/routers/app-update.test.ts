@@ -18,6 +18,11 @@ vi.mock("node:child_process", () => ({
   spawn: mockSpawn,
 }));
 
+// Prevent real socket connections when appRouter transitively loads the network service
+vi.mock("../../privileged.js", () => ({
+  runPrivileged: vi.fn(),
+}));
+
 vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,
   writeFile: mockWriteFile,
