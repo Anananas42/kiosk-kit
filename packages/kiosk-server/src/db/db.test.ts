@@ -28,6 +28,7 @@ describe("migrations", () => {
       "buyers",
       "catalog_categories",
       "catalog_items",
+      "pairing_state",
       "preorder_config",
       "records",
       "settings",

@@ -48,3 +48,8 @@ export const preorderConfig = sqliteTable("preorder_config", {
   ordering: integer("ordering").notNull().default(1),
   delivery: integer("delivery").notNull().default(1),
 });
+
+export const pairingState = sqliteTable("pairing_state", {
+  id: integer("id").primaryKey().default(1),
+  consumed: integer("consumed", { mode: "boolean" }).notNull().default(false),
+});

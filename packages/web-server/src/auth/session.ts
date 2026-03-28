@@ -1,10 +1,8 @@
 import crypto from "node:crypto";
 import { eq, lt } from "drizzle-orm";
+import { SESSION_DURATION_MS, SESSION_EXTEND_THRESHOLD_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { sessions, users } from "../db/schema.js";
-
-const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const EXTEND_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000; // 15 days
 
 export async function createSession(db: Db, userId: string) {
   const id = crypto.randomUUID();
@@ -32,7 +30,7 @@ export async function validateSession(db: Db, sessionId: string) {
 
   // Extend session if more than 15 days remain
   const timeLeft = session.expiresAt.getTime() - Date.now();
-  if (timeLeft > EXTEND_THRESHOLD_MS) {
+  if (timeLeft > SESSION_EXTEND_THRESHOLD_MS) {
     // no-op: session still fresh
   } else {
     const newExpiry = new Date(Date.now() + SESSION_DURATION_MS);

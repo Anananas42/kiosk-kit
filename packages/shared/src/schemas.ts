@@ -81,6 +81,15 @@ export const DeviceUpdateInputSchema = z.object({
 
 export type DeviceUpdateInput = z.infer<typeof DeviceUpdateInputSchema>;
 
+export const DeviceClaimInputSchema = z.object({
+  code: z
+    .string()
+    .length(9)
+    .regex(/^\d{9}$/),
+});
+
+export type DeviceClaimInput = z.infer<typeof DeviceClaimInputSchema>;
+
 // ── Buyer schemas ───────────────────────────────────────────────────
 
 export const BuyerSchema = z.object({

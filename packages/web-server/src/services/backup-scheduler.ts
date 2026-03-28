@@ -1,7 +1,6 @@
+import { BACKUP_INTERVAL_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { pullBackupsFromAllDevices } from "../routes/backup-upload.js";
-
-const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Start a daily backup scheduler that pulls backups from all known devices.

@@ -1,14 +1,17 @@
 import {
   type Device,
   DeviceAssignInputSchema,
+  DeviceClaimInputSchema,
   DeviceSchema,
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray, max } from "drizzle-orm";
+import { and, eq, inArray, isNull, max } from "drizzle-orm";
 import { z } from "zod";
+import { DEVICE_TIMEOUT_MS } from "../../config.js";
 import { backups, devices } from "../../db/schema.js";
 import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
+import { fetchDeviceProxy } from "../../services/device-network.js";
 import {
   getCachedDevice,
   getTailscaleClient,
@@ -161,7 +164,73 @@ export const devicesRouter = router({
 
       return { ok: true };
     }),
+
+  "devices.claim": authedProcedure
+    .input(DeviceClaimInputSchema)
+    .output(DeviceSchema)
+    .mutation(async ({ ctx, input }) => {
+      const [device] = await ctx.db
+        .select()
+        .from(devices)
+        .where(and(eq(devices.pairingCode, input.code), isNull(devices.userId)));
+
+      if (!device) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invalid or already claimed pairing code",
+        });
+      }
+
+      const [updated] = await ctx.db
+        .update(devices)
+        .set({ userId: ctx.user.id, pairingCode: null })
+        .where(eq(devices.id, device.id))
+        .returning();
+
+      // Best-effort: notify device that pairing was consumed
+      if (updated.tailscaleIp) {
+        try {
+          await fetchDeviceProxy(
+            { id: updated.id, tailscaleIp: updated.tailscaleIp },
+            "/api/pairing/consume",
+            { method: "POST", signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS) },
+          );
+        } catch {
+          // Device may be unreachable — not critical
+        }
+      }
+
+      return {
+        id: updated.id,
+        tailscaleNodeId: updated.tailscaleNodeId,
+        userId: updated.userId,
+        name: updated.name,
+        online: false,
+        lastSeen: null,
+        hostname: updated.name,
+        createdAt: updated.createdAt.toISOString(),
+      };
+    }),
 });
+
+// ── Pairing code fetch helper ────────────────────────────────────────
+
+async function fetchPairingCode(device: {
+  id: string;
+  tailscaleIp: string | null;
+}): Promise<string | null> {
+  if (!device.tailscaleIp) return null;
+  try {
+    const res = await fetchDeviceProxy(device, "/api/pairing", {
+      signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { code?: string };
+    return body.code && /^\d{9}$/.test(body.code) ? body.code : null;
+  } catch {
+    return null;
+  }
+}
 
 // ── Admin list: merge Tailscale API with DB ─────────────────────────
 
@@ -210,12 +279,29 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
         })
         .returning();
       dbDevice = inserted;
+
+      // Fetch pairing code from the device
+      const code = await fetchPairingCode({ id: dbDevice.id, tailscaleIp: tsIp });
+      if (code) {
+        await db.update(devices).set({ pairingCode: code }).where(eq(devices.id, dbDevice.id));
+        dbDevice = { ...dbDevice, pairingCode: code };
+      }
     } else {
       // Update cached IP and lastSeen
       const updates: Record<string, unknown> = { lastSeen: new Date(td.lastSeen) };
       if (tsIp && dbDevice.tailscaleIp !== tsIp) {
         updates.tailscaleIp = tsIp;
       }
+
+      // Retry fetching pairing code for devices that don't have one yet
+      if (!dbDevice.pairingCode && !dbDevice.userId) {
+        const code = await fetchPairingCode({ id: dbDevice.id, tailscaleIp: tsIp });
+        if (code) {
+          updates.pairingCode = code;
+          dbDevice = { ...dbDevice, pairingCode: code };
+        }
+      }
+
       await db.update(devices).set(updates).where(eq(devices.id, dbDevice.id));
       dbDevice = { ...dbDevice, tailscaleIp: tsIp ?? dbDevice.tailscaleIp };
     }
