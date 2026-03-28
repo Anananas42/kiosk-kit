@@ -10,6 +10,7 @@ import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";
 import { otaPushRoutes } from "./routes/ota-push.js";
+import { tailscaleWebhookRoute } from "./routes/tailscale-webhook.js";
 import { createContextFactory } from "./trpc/context.js";
 import { adminRouter, appRouter } from "./trpc/router.js";
 
@@ -24,6 +25,7 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
   app.use("/api/*", cors());
 
   app.route("/api/health", healthRoute());
+  app.route("/api/webhooks/tailscale", tailscaleWebhookRoute(db));
 
   if (google) {
     app.route("/api/auth", authRoutes(db, google, cookieDomain));
