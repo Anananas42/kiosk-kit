@@ -122,7 +122,7 @@ export function DeviceDetail() {
 
       {/* Loading state */}
       {isLoading && (
-        <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
+        <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
           <CardContent className="flex-1 p-0">
             <Skeleton className="h-full w-full rounded-none" />
           </CardContent>
@@ -131,7 +131,7 @@ export function DeviceDetail() {
 
       {/* Iframe for online device */}
       {!isLoading && !error && status === DeviceStatus.Online && (
-        <Card className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: 0 }}>
+        <Card className="flex min-h-[400px] flex-1 flex-col overflow-hidden">
           <CardContent className="relative flex-1 p-0">
             {iframeLoading && (
               <div className="flex items-center gap-2 p-4">
