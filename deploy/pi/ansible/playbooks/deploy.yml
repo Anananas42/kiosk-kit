@@ -65,6 +65,22 @@
       become_user: "{{ kioskkit_user | default('kiosk') }}"
       changed_when: true
 
+    - name: Create system config directory
+      ansible.builtin.file:
+        path: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/config"
+        state: directory
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        mode: "0755"
+
+    - name: Deploy display-sleep.py
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../system/config/display-sleep.py"
+        dest: "{{ kioskkit_install_dir | default('/opt/kioskkit') }}/system/config/display-sleep.py"
+        owner: "{{ kioskkit_user | default('kiosk') }}"
+        group: "{{ kioskkit_user | default('kiosk') }}"
+        mode: "0755"
+
     - name: Create labwc config directory
       ansible.builtin.file:
         path: "/home/{{ kioskkit_user | default('kiosk') }}/.config/labwc"

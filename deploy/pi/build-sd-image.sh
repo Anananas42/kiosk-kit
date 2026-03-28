@@ -438,7 +438,7 @@ deploy_app() {
   ANSIBLE_CONFIG="$ANSIBLE_DIR/ansible.cfg" ansible-playbook \
     -i "$WORK_DIR/inventory.yml" \
     "$ANSIBLE_DIR/playbooks/deploy.yml" \
-    --start-at-task="Create labwc config directory" \
+    --start-at-task="Create system config directory" \
     || err "Ansible post-deploy tasks failed"
 
   rm -rf "$stage_dir"

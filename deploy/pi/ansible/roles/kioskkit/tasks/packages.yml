@@ -18,6 +18,8 @@
       - seatd
       - greetd
       - chromium
+      - swayidle
+      - wlopm
       - fonts-noto-color-emoji
       - nftables
       - nodejs
