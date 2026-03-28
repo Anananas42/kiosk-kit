@@ -1,7 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AdminBuyerCreateSchema, AdminBuyerUpdateSchema, type Buyer } from "@kioskkit/shared";
+import { AdminBuyerCreateSchema, type Buyer } from "@kioskkit/shared";
 import {
   Button,
+  InlineEdit,
   Input,
   Spinner,
   Table,
@@ -12,8 +13,8 @@ import {
   TableRow,
 } from "@kioskkit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { ConfirmDialog } from "../components/ConfirmDialog.js";
@@ -21,7 +22,6 @@ import { queryKeys } from "../lib/query.js";
 import { trpc } from "../trpc.js";
 
 type CreateInput = { id: number; label: string };
-type UpdateInput = { id: number; label: string };
 
 function useInvalidateBuyers() {
   const queryClient = useQueryClient();
@@ -30,21 +30,13 @@ function useInvalidateBuyers() {
 
 function BuyerRow({ buyer }: { buyer: Buyer }) {
   const invalidateBuyers = useInvalidateBuyers();
-  const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const editFormId = useId();
-
-  const editForm = useForm<UpdateInput>({
-    resolver: zodResolver(AdminBuyerUpdateSchema),
-    defaultValues: { id: buyer.id, label: buyer.label },
-  });
 
   const updateMutation = useMutation({
-    mutationFn: (input: UpdateInput) => trpc["admin.buyers.update"].mutate(input),
+    mutationFn: (input: { id: number; label: string }) => trpc["admin.buyers.update"].mutate(input),
     onSuccess: () => {
       toast.success("Buyer updated");
       invalidateBuyers();
-      setEditing(false);
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -58,71 +50,28 @@ function BuyerRow({ buyer }: { buyer: Buyer }) {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const startEdit = () => {
-    editForm.reset({ id: buyer.id, label: buyer.label });
-    setEditing(true);
-  };
-
-  if (editing) {
-    return (
-      <TableRow>
-        <TableCell>#{buyer.id}</TableCell>
-        <TableCell>
-          <form
-            id={editFormId}
-            onSubmit={editForm.handleSubmit((data) => updateMutation.mutate(data))}
-          >
-            <Input {...editForm.register("label")} className="w-auto" />
-            {editForm.formState.errors.label && (
-              <p className="mt-1 text-xs text-destructive">
-                {editForm.formState.errors.label.message}
-              </p>
-            )}
-          </form>
-        </TableCell>
-        <TableCell className="text-right">
-          <div className="flex justify-end gap-1">
-            <Button type="submit" form={editFormId} size="sm" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? <Spinner className="mr-1" /> : null}
-              Save
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    );
-  }
-
   return (
     <TableRow>
       <TableCell>#{buyer.id}</TableCell>
-      <TableCell>{buyer.label}</TableCell>
+      <TableCell>
+        <InlineEdit
+          value={buyer.label}
+          onSave={(label) => updateMutation.mutate({ id: buyer.id, label })}
+          disabled={updateMutation.isPending}
+        />
+      </TableCell>
       <TableCell className="text-right">
-        <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Edit"
-            onClick={startEdit}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            aria-label="Delete"
-            onClick={() => setConfirmDelete(true)}
-            disabled={deleteMutation.isPending}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          aria-label="Delete"
+          onClick={() => setConfirmDelete(true)}
+          disabled={deleteMutation.isPending}
+        >
+          <Trash2 className="size-4" />
+        </Button>
       </TableCell>
       <ConfirmDialog
         open={confirmDelete}

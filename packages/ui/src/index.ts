@@ -21,6 +21,8 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./components/ui/dialog";
+export type { InlineEditProps } from "./components/ui/inline-edit";
+export { InlineEdit } from "./components/ui/inline-edit";
 export { Input } from "./components/ui/input";
 export {
   InputOTP,
