@@ -8,8 +8,8 @@ import { PreorderTab } from "./tabs/PreorderTab.js";
 import { SettingsTab } from "./tabs/SettingsTab.js";
 
 const TABS = [
-  { key: "catalog", label: "Catalog" },
   { key: "buyers", label: "Buyers" },
+  { key: "catalog", label: "Catalog" },
   { key: "consumption", label: "Consumption" },
   { key: "settings", label: "Settings" },
   { key: "preorder", label: "Preorder Config" },
@@ -21,7 +21,7 @@ export default function App() {
     <div className="mx-auto max-w-[960px] px-6 py-4">
       <h1 className="mb-4 text-lg font-semibold">Kiosk Admin</h1>
 
-      <Tabs defaultValue="catalog">
+      <Tabs defaultValue="buyers">
         <TabsList>
           {TABS.map((t) => (
             <TabsTrigger key={t.key} value={t.key}>
