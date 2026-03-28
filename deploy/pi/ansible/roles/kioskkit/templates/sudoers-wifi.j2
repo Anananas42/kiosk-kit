@@ -1,3 +1,3 @@
 # Managed by Ansible — do not edit manually.
-# Allow kiosk user to run WiFi connect/forget scripts as root without password.
-{{ kioskkit_user }} ALL=(root) NOPASSWD: {{ kioskkit_install_dir }}/system/wifi-connect.sh, {{ kioskkit_install_dir }}/system/wifi-forget.sh
+# Allow kiosk user to run WiFi management scripts as root without password.
+{{ kioskkit_user }} ALL=(root) NOPASSWD: {{ kioskkit_install_dir }}/system/wifi-connect.sh, {{ kioskkit_install_dir }}/system/wifi-forget.sh, {{ kioskkit_install_dir }}/system/wifi-enable.sh, {{ kioskkit_install_dir }}/system/wifi-disable.sh
