@@ -1,10 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { derivePairingCode } from "@kioskkit/shared";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { DEVICE_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
-import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
 interface WebhookEvent {
@@ -37,23 +36,6 @@ function verifySignature(secret: string, header: string, body: string): boolean 
     return timingSafeEqual(Buffer.from(mac, "hex"), Buffer.from(signature, "hex"));
   } catch {
     return false;
-  }
-}
-
-async function fetchPairingCode(device: {
-  id: string;
-  tailscaleIp: string | null;
-}): Promise<string | null> {
-  if (!device.tailscaleIp) return null;
-  try {
-    const res = await fetchDeviceProxy(device, "/api/pairing", {
-      signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { code?: string };
-    return body.code && /^\d{9}$/.test(body.code) ? body.code : null;
-  } catch {
-    return null;
   }
 }
 
@@ -111,22 +93,19 @@ async function handleNodeCreated(db: Db, nodeId: string): Promise<void> {
   }
 
   const ip = td.addresses.find((a) => a.startsWith("100.")) ?? null;
+  const pairingCode = derivePairingCode(nodeId);
 
-  const [inserted] = await db
+  await db
     .insert(devices)
     .values({
       tailscaleNodeId: nodeId,
       tailscaleIp: ip,
       name: td.hostname,
+      pairingCode,
     })
     .returning();
 
-  console.log(`[tailscale-webhook] Device registered: ${td.hostname} (${nodeId})`);
-
-  // Try to fetch pairing code from the device
-  const code = await fetchPairingCode({ id: inserted.id, tailscaleIp: ip });
-  if (code) {
-    await db.update(devices).set({ pairingCode: code }).where(eq(devices.id, inserted.id));
-    console.log(`[tailscale-webhook] Pairing code set for ${td.hostname}`);
-  }
+  console.log(
+    `[tailscale-webhook] Device registered: ${td.hostname} (${nodeId}), code: ${pairingCode}`,
+  );
 }

@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { derivePairingCode } from "@kioskkit/shared";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../db/index.js";
@@ -26,6 +27,7 @@ function createMockDb(existingDevices: unknown[] = []) {
     tailscaleNodeId: "n-1",
     tailscaleIp: "100.64.1.5",
     name: "kiosk-1",
+    pairingCode: derivePairingCode("n-1"),
   };
   return {
     select: vi.fn().mockReturnThis(),
@@ -34,8 +36,6 @@ function createMockDb(existingDevices: unknown[] = []) {
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([inserted]),
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
   } as unknown as Db;
 }
 
@@ -76,15 +76,8 @@ describe("tailscale webhook", () => {
     vi.unstubAllEnvs();
   });
 
-  it("registers a new device on nodeCreated", async () => {
+  it("registers a new device with derived pairing code on nodeCreated", async () => {
     vi.stubEnv("TAILSCALE_WEBHOOK_SECRET", SECRET);
-    // fetch mock for pairing code request
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(new Response(JSON.stringify({ code: "123456789" }), { status: 200 })),
-    );
 
     const db = createMockDb([]);
     const app = makeApp(db);
@@ -115,8 +108,12 @@ describe("tailscale webhook", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
     expect(db.insert).toHaveBeenCalled();
+    // Verify pairing code was passed to the insert
+    const mockValues = (db as unknown as { values: ReturnType<typeof vi.fn> }).values;
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({ pairingCode: derivePairingCode("n-1") }),
+    );
 
-    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 

@@ -503,13 +503,9 @@ STAGE=${STAGE}
 TAILSCALE_AUTH_KEY=${TAILSCALE_KEY}
 EOF
 
-  # Derive a 9-digit numeric pairing code from the Tailscale auth key hash
-  PAIRING_CODE=$(echo -n "$TAILSCALE_KEY" | sha256sum | tr -dc '0-9' | head -c 9)
-
   cat > "$stamp_dir/device.conf" <<EOF
 DEVICE_ID=${DEVICE_ID}
 STAGE=${STAGE}
-PAIRING_CODE=${PAIRING_CODE}
 EOF
 
   # Download Tailscale arm64 .deb (cached across device stamps)
