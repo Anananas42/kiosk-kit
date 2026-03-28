@@ -11,7 +11,7 @@ import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";
 import { otaPushRoutes } from "./routes/ota-push.js";
 import { createContextFactory } from "./trpc/context.js";
-import { appRouter } from "./trpc/router.js";
+import { adminRouter, appRouter } from "./trpc/router.js";
 
 export function createApp(db: Db, google?: Google, cookieDomain?: string) {
   const app = new Hono();
@@ -34,6 +34,15 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
     trpcServer({
       router: appRouter,
       endpoint: "/api/trpc",
+      createContext: createContextFactory(db),
+    }),
+  );
+
+  app.use(
+    "/api/admin/trpc/*",
+    trpcServer({
+      router: adminRouter,
+      endpoint: "/api/admin/trpc",
       createContext: createContextFactory(db),
     }),
   );

@@ -7,7 +7,7 @@ function toStringId(id: Identifier): string {
 
 export const devicesDataProvider: DataProvider = {
   getList: async () => {
-    const data = await trpc["devices.list"].query();
+    const data = await trpc["devices.listAll"].query();
     return { data, total: data.length };
   },
 
@@ -20,12 +20,12 @@ export const devicesDataProvider: DataProvider = {
 
   getMany: async (_resource, params) => {
     const ids = params.ids.map(toStringId);
-    const all = await trpc["devices.list"].query();
+    const all = await trpc["devices.listAll"].query();
     return { data: all.filter((d) => ids.includes(d.id)) };
   },
 
   getManyReference: async (_resource, params) => {
-    const all = await trpc["devices.list"].query();
+    const all = await trpc["devices.listAll"].query();
     const id = toStringId(params.id);
     const data = all.filter((d) => String(d[params.target as keyof typeof d]) === id);
     return { data, total: data.length };

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { users } from "../../db/schema.js";
 import { adminProcedure, router } from "../trpc.js";
 
-export const usersRouter = router({
+export const adminUsersRouter = router({
   "users.list": adminProcedure.output(z.array(UserListItemSchema)).query(async ({ ctx }) => {
     const result = await ctx.db.select().from(users);
     return result.map((u) => ({

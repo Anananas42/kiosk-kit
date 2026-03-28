@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../../db/index.js";
 import type { users } from "../../db/schema.js";
 import type { TrpcContext } from "../context.js";
-import { appRouter } from "../router.js";
+import { adminRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
 vi.mock("../../services/tailscale.js", async (importOriginal) => {
@@ -18,7 +18,7 @@ const mockGetCachedDevice = vi.mocked(getCachedDevice);
 
 type User = typeof users.$inferSelect;
 
-const createCaller = createCallerFactory(appRouter);
+const createCaller = createCallerFactory(adminRouter);
 
 const adminUser: User = {
   id: "admin-1",
@@ -99,22 +99,15 @@ describe("devices procedures", () => {
   });
 
   describe("devices.get", () => {
-    it("returns device for admin with tailscaleIp", async () => {
-      const caller = callerFor(adminUser, createMockDb([deviceRow]));
-      const result = await caller["devices.get"]({ id: deviceRow.id });
-      expect(result.name).toBe("Kiosk");
-      expect(result.tailscaleIp).toBe("100.64.1.5");
-      expect(result.tailscaleNodeId).toBe("node-123");
-    });
-
-    it("omits tailscaleIp for customers", async () => {
+    it("returns device for owner", async () => {
       const caller = callerFor(customerUser, createMockDb([deviceRow]));
       const result = await caller["devices.get"]({ id: deviceRow.id });
+      expect(result.name).toBe("Kiosk");
       expect(result.tailscaleIp).toBeUndefined();
     });
 
     it("throws NOT_FOUND when device missing", async () => {
-      const caller = callerFor(adminUser, createMockDb([]));
+      const caller = callerFor(customerUser, createMockDb([]));
       await expect(
         caller["devices.get"]({ id: "d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a" }),
       ).rejects.toThrow(TRPCError);

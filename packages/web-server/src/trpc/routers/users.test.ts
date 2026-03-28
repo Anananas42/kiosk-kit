@@ -3,12 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../../db/index.js";
 import type { users } from "../../db/schema.js";
 import type { TrpcContext } from "../context.js";
-import { appRouter } from "../router.js";
+import { adminRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
 type User = typeof users.$inferSelect;
 
-const createCaller = createCallerFactory(appRouter);
+const createCaller = createCallerFactory(adminRouter);
 
 const adminUser: User = {
   id: "admin-1",
@@ -44,6 +44,7 @@ function createMockDb(returnValue: unknown[] = []) {
     delete: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
+    // biome-ignore lint/suspicious/noThenProperty: mock db needs thenable for drizzle query chain
     then: (resolve: (v: unknown) => void) => Promise.resolve(returnValue).then(resolve),
   };
   return chainable as unknown as Db;
