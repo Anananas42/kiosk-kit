@@ -8,6 +8,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, isNull, max } from "drizzle-orm";
 import { z } from "zod";
+import { DEVICE_TIMEOUT_MS } from "../../config.js";
 import { backups, devices } from "../../db/schema.js";
 import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
 import { fetchDeviceProxy } from "../../services/device-network.js";
@@ -19,7 +20,6 @@ import {
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
 
 const isDev = process.env.NODE_ENV === "development";
-const DEVICE_TIMEOUT_MS = 5_000;
 
 function tailscaleIpFromDevice(td: TailscaleDevice): string | null {
   return td.addresses.find((a) => a.startsWith("100.")) ?? null;

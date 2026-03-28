@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { OTA_FETCH_TIMEOUT_MS, OTA_PUSH_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices, releases } from "../db/schema.js";
 import { LOCAL_DEVICE_ID } from "../local-dev.js";
@@ -8,8 +9,6 @@ import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
 const isDev = process.env.NODE_ENV === "development";
-const FETCH_TIMEOUT_MS = 120_000;
-const PUSH_TIMEOUT_MS = 300_000; // 5 min for large images
 
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
   if (isDev && deviceId === LOCAL_DEVICE_ID) {
@@ -76,7 +75,7 @@ export function otaPushRoutes(db: Db) {
     let upstream: Response;
     try {
       upstream = await fetch(release.githubAssetUrl, {
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(OTA_FETCH_TIMEOUT_MS),
         headers: { Accept: "application/octet-stream" },
       });
     } catch {
@@ -103,7 +102,7 @@ export function otaPushRoutes(db: Db) {
           "Content-Length": contentLength,
         },
         body: upstream.body,
-        signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(OTA_PUSH_TIMEOUT_MS),
         // @ts-expect-error -- Node fetch supports duplex for streaming request bodies
         duplex: "half",
       });

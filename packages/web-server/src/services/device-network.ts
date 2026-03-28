@@ -1,9 +1,9 @@
 import { SocksClient } from "socks";
 import { Agent, buildConnector } from "undici";
+import { DEVICE_PORT } from "../config.js";
 import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID } from "../local-dev.js";
 
 const isDev = process.env.NODE_ENV === "development";
-const DEVICE_PORT = 3001;
 
 interface DeviceLike {
   id: string;

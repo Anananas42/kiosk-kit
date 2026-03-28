@@ -1,14 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { DEVICE_TIMEOUT_MS, RESTORE_TIMEOUT_MS } from "../../config.js";
 import { backups, devices } from "../../db/schema.js";
 import { pullBackupFromDevice } from "../../routes/backup-upload.js";
 import { fetchDeviceProxy } from "../../services/device-network.js";
 import { downloadFile, getSignedDownloadUrl } from "../../services/s3.js";
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
-
-const HEALTH_TIMEOUT_MS = 5_000;
-const RESTORE_TIMEOUT_MS = 60_000;
 
 export const backupsRouter = router({
   /** Admin-only: trigger an on-demand backup pull from a device. */
@@ -127,7 +125,7 @@ export const backupsRouter = router({
       // Check device is online
       try {
         const healthRes = await fetchDeviceProxy(device, "/api/health", {
-          signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+          signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
         });
         if (!healthRes.ok) throw new Error("Health check failed");
       } catch {

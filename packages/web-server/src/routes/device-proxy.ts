@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { DEVICE_TIMEOUT_MS, PROXY_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
 import { LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
@@ -7,8 +8,6 @@ import type { AuthEnv } from "../middleware/auth.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
-const PROXY_TIMEOUT_MS = 10_000;
-const HEALTH_TIMEOUT_MS = 5_000;
 const isDev = process.env.NODE_ENV === "development";
 
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
@@ -53,7 +52,7 @@ export function deviceProxyRoutes(db: Db) {
 
     try {
       const res = await fetchDeviceProxy(device, "/api/health", {
-        signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
       });
       return c.json({ online: res.ok });
     } catch {

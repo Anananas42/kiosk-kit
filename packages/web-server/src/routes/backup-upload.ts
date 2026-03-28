@@ -1,11 +1,9 @@
 import { desc, eq } from "drizzle-orm";
+import { BACKUP_FETCH_TIMEOUT_MS, MAX_RETAINED_BACKUPS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
 import { deleteFile, uploadFile } from "../services/s3.js";
-
-const MAX_RETAINED_BACKUPS = 30;
-const FETCH_TIMEOUT_MS = 60_000;
 
 /**
  * Pull a backup from a single device: fetch its /api/backup endpoint,
@@ -16,7 +14,7 @@ export async function pullBackupFromDevice(
   device: { id: string; tailscaleIp: string | null },
 ): Promise<{ id: string; sizeBytes: number; createdAt: string }> {
   const res = await fetchDeviceProxy(device, "/api/backup", {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    signal: AbortSignal.timeout(BACKUP_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {

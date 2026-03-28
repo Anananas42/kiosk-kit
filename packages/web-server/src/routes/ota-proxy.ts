@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { OTA_PROXY_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { devices, releases } from "../db/schema.js";
 
 const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
-const FETCH_TIMEOUT_MS = 60_000;
 
 function getClientIp(c: { req: { header: (name: string) => string | undefined } }): string | null {
   const forwarded = c.req.header("x-forwarded-for");
@@ -45,7 +45,7 @@ export function otaProxyRoutes(db: Db) {
 
     // Fetch the image from GitHub and stream it
     const upstream = await fetch(release.githubAssetUrl, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(OTA_PROXY_TIMEOUT_MS),
       headers: { Accept: "application/octet-stream" },
     });
 
