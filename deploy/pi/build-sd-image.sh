@@ -460,15 +460,16 @@ verify_app() {
     fi
   }
 
-  check "kiosk-server built"            "test -f /opt/kioskkit/packages/kiosk-server/dist/index.js"
-  check "kiosk-client built"            "test -d /opt/kioskkit/packages/kiosk-client/dist"
-  check "shared package built"          "test -d /opt/kioskkit/packages/shared/dist"
-  check "node can parse kiosk-server"    "sudo -u kiosk node --check /opt/kioskkit/packages/kiosk-server/dist/index.js"
+  check "current symlink exists"         "test -L /opt/kioskkit/current"
+  check "kiosk-server built"            "test -f /opt/kioskkit/current/packages/kiosk-server/dist/index.js"
+  check "kiosk-client built"            "test -d /opt/kioskkit/current/packages/kiosk-client/dist"
+  check "shared package built"          "test -d /opt/kioskkit/current/packages/shared/dist"
+  check "node can parse kiosk-server"    "sudo -u kiosk node --check /opt/kioskkit/current/packages/kiosk-server/dist/index.js"
   check "display-sleep.py deployed"     "test -f /opt/kioskkit/system/config/display-sleep.py"
   check "no sway config dir"            "test ! -d /home/kiosk/.config/sway"
   check "labwc autostart has port"      "grep -q 'localhost:3001' /home/kiosk/.config/labwc/autostart"
   check "labwc autostart has scale"     "grep -q 'force-device-scale-factor' /home/kiosk/.config/labwc/autostart"
-  check "app owned by kiosk user"       "test \"\$(stat -c %U /opt/kioskkit/packages/kiosk-server/dist/index.js)\" = kiosk"
+  check "app owned by kiosk user"       "test \"\$(stat -c %U /opt/kioskkit/current/packages/kiosk-server/dist/index.js)\" = kiosk"
 
   if [[ $fails -gt 0 ]]; then
     err "App layer verification failed ($fails checks). VM still running on port $SSH_PORT for debugging."

@@ -39,6 +39,10 @@
   ansible.builtin.import_tasks: ota.yml
   tags: [ota]
 
+- name: Configure app updates
+  ansible.builtin.import_tasks: app-update.yml
+  tags: [app-update]
+
 - name: Configure Tailscale
   ansible.builtin.import_tasks: tailscale.yml
   tags: [tailscale]

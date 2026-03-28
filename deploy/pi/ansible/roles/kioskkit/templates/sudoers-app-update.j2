@@ -1,0 +1,4 @@
+# Managed by Ansible — do not edit manually.
+# Allow kiosk user to run app-update scripts as root without password.
+# The tarball path must match BUNDLE_FILE in packages/kiosk-server/src/trpc/routers/app-update.service.ts
+{{ kioskkit_user }} ALL=(root) NOPASSWD: {{ kioskkit_install_dir }}/system/app-update.sh /data/app-update/pending/app-bundle.tar.gz, {{ kioskkit_install_dir }}/system/app-rollback.sh

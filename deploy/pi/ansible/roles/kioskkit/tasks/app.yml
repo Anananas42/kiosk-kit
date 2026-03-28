@@ -7,10 +7,18 @@
     group: "{{ kioskkit_user }}"
     mode: "0755"
 
-- name: Sync application files
+- name: Create releases directory
+  ansible.builtin.file:
+    path: "{{ kioskkit_install_dir }}/releases/initial"
+    state: directory
+    owner: "{{ kioskkit_user }}"
+    group: "{{ kioskkit_user }}"
+    mode: "0755"
+
+- name: Sync application files to initial release
   ansible.posix.synchronize:
     src: "{{ playbook_dir }}/../../../../"
-    dest: "{{ kioskkit_install_dir }}/"
+    dest: "{{ kioskkit_install_dir }}/releases/initial/"
     delete: true
     rsync_opts:
       - "--exclude=node_modules"
@@ -26,9 +34,9 @@
       - "--exclude=packages/landing/"
   notify: Restart kioskkit
 
-- name: Set application ownership
+- name: Set release ownership
   ansible.builtin.file:
-    path: "{{ kioskkit_install_dir }}"
+    path: "{{ kioskkit_install_dir }}/releases/initial"
     state: directory
     owner: "{{ kioskkit_user }}"
     group: "{{ kioskkit_user }}"
@@ -41,6 +49,18 @@
     owner: "{{ kioskkit_user }}"
     group: "{{ kioskkit_user }}"
     mode: "0755"
+
+- name: Create data symlink inside initial release
+  ansible.builtin.file:
+    src: "{{ kioskkit_install_dir }}/data"
+    dest: "{{ kioskkit_install_dir }}/releases/initial/data"
+    state: link
+
+- name: Create current symlink
+  ansible.builtin.file:
+    src: releases/initial
+    dest: "{{ kioskkit_install_dir }}/current"
+    state: link
 
 - name: Deploy .env file
   ansible.builtin.copy:
@@ -60,7 +80,7 @@
 - name: Strip root devDependencies and prepare script (not needed on Pi)
   ansible.builtin.shell:
     cmd: >
-      cd {{ kioskkit_install_dir }} &&
+      cd {{ kioskkit_install_dir }}/current &&
       node -e "
         const pkg = require('./package.json');
         delete pkg.devDependencies;
@@ -70,14 +90,14 @@
 
 - name: Install dependencies and build
   ansible.builtin.command:
-    cmd: bash -lc "cd {{ kioskkit_install_dir }} && pnpm install --no-frozen-lockfile --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui && NODE_ENV=production pnpm --filter @kioskkit/shared --filter @kioskkit/ui --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin build"
+    cmd: bash -lc "cd {{ kioskkit_install_dir }}/current && pnpm install --no-frozen-lockfile --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui && NODE_ENV=production pnpm --filter @kioskkit/shared --filter @kioskkit/ui --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin build"
   become: true
   become_user: "{{ kioskkit_user }}"
   changed_when: true
 
 - name: Prune devDependencies after build
   ansible.builtin.command:
-    cmd: bash -lc "cd {{ kioskkit_install_dir }} && CI=true pnpm install --no-frozen-lockfile --prod --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui"
+    cmd: bash -lc "cd {{ kioskkit_install_dir }}/current && CI=true pnpm install --no-frozen-lockfile --prod --filter @kioskkit/kiosk-server --filter @kioskkit/kiosk-client --filter @kioskkit/kiosk-admin --filter @kioskkit/shared --filter @kioskkit/ui"
   become: true
   become_user: "{{ kioskkit_user }}"
   changed_when: true
