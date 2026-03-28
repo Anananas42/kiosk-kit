@@ -4,7 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { Writable } from "node:stream";
 import { AppUpdateResult, AppUpdateStep } from "@kioskkit/shared";
 import { Hono } from "hono";
-import { writeStateFile } from "./lib/update-helpers.js";
+import { writeStateFile } from "./lib/app-update-helpers.js";
 
 const STATE_DIR = "/data/app-update";
 const PENDING_DIR = "/data/app-update/pending";
@@ -59,6 +59,14 @@ export function appUploadRoute() {
     const bytesTotal = Number(contentLength);
     if (!Number.isFinite(bytesTotal) || bytesTotal <= 0) {
       return c.json({ error: "Invalid Content-Length" }, 400);
+    }
+
+    const MAX_BUNDLE_SIZE = 500 * 1024 * 1024; // 500 MB
+    if (bytesTotal > MAX_BUNDLE_SIZE) {
+      return c.json(
+        { error: `Bundle too large: ${bytesTotal} bytes exceeds ${MAX_BUNDLE_SIZE} byte limit` },
+        413,
+      );
     }
 
     const body = c.req.raw.body;

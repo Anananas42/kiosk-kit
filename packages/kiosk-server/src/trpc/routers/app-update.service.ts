@@ -8,7 +8,7 @@ import {
   readTextFile,
   spawnDetachedSudoScript,
   writeStateFile,
-} from "../../lib/update-helpers.js";
+} from "../../lib/app-update-helpers.js";
 
 const STATE_DIR = "/data/app-update";
 const STATE_FILE = "/data/app-update/state.json";
@@ -105,7 +105,7 @@ export async function cancelUpload(): Promise<void> {
     status: AppUpdateStep.Idle,
     lastUpdate: currentState.lastUpdate,
     lastResult: currentState.lastResult,
-  } as StateJson);
+  });
 }
 
 export async function rollbackApp(): Promise<void> {
@@ -131,9 +131,9 @@ export async function rollbackApp(): Promise<void> {
 
   await writeState({
     status: AppUpdateStep.RollingBack,
-    lastUpdate: currentState?.lastUpdate ?? null,
-    lastResult: currentState?.lastResult ?? null,
-  } as StateJson);
+    lastUpdate: currentState?.lastUpdate,
+    lastResult: currentState?.lastResult,
+  });
 
   // Fire-and-forget: the script restarts the service (killing this process),
   // so we spawn detached and return immediately. The script writes final state.

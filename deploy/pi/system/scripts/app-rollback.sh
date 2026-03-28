@@ -56,6 +56,10 @@ mv -T "$INSTALL_DIR/current.tmp" "$INSTALL_DIR/current"
 # Remove the failed release
 rm -rf "$CURRENT_RELEASE"
 
+# Clear Chromium cache so stale frontend assets aren't served
+KIOSK_USER="${KIOSKKIT_USER:-kiosk}"
+rm -rf "/home/$KIOSK_USER/.cache/chromium"
+
 log "Restarting kioskkit.service..."
 systemctl restart kioskkit.service
 

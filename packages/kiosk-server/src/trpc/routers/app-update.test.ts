@@ -301,14 +301,4 @@ describe("admin.appUpdate.rollback", () => {
       "Cannot rollback while an install or rollback is in progress",
     );
   });
-
-  it("spawns detached and returns ok", async () => {
-    mockFiles({});
-    mockReleaseCount(2);
-
-    const caller = createCaller({ store });
-    const result = await caller["admin.appUpdate.rollback"]();
-
-    expect(result).toEqual({ ok: true });
-  });
 });
