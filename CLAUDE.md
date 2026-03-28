@@ -50,6 +50,7 @@ A Docker-based isolated environment for running Claude Code agents. Each contain
 | Git identity | `kiosk-kit-agent[bot]`, no GPG signing, HTTPS remote |
 | GitHub CLI | `gh`, authenticated via app token from `dev/agents/scripts/github-app-token.sh` |
 | gh-attach | `gh attach` extension for uploading screenshots to PR comments |
+| shellcheck | Pre-installed for `pnpm lint:shell` |
 | Playwright | Chromium pre-installed for screenshot verification |
 | Docker CLI | Available in image; connects to DinD sidecar when `--docker` flag is used |
 | Postgres | Isolated sidecar (port 5432 internal), schema auto-pushed on start |
@@ -82,7 +83,19 @@ STITCH_API_KEY=...
 6. Postgres health check passes, then `db:push` applies the schema
 7. A `CLAUDE.md` is generated at `/workspace/CLAUDE.md` by concatenating all `dev/agents/skills/*/SKILL.md` files — every agent conversation starts with all skills as context
 8. Claude starts with the provided task or in interactive mode
-9. After claude finishes a non-interactive task, the **PR watch loop** takes over (unless `--no-loop`)
+9. After claude finishes a non-interactive task, its session ID is captured so the watch loop can resume it
+10. The **PR watch loop** takes over (unless `--no-loop`), resuming the primary session for fixes
+11. On exit, `run.sh` tears down sidecar containers (postgres, dind) and networks via `docker compose down`. Named volumes (pnpm store, node_modules) are preserved for caching across runs.
+
+## Cleanup
+
+When the agent exits (normally or via Ctrl-C), `run.sh` automatically runs `docker compose down --remove-orphans` to stop sidecar containers and remove networks. Named volumes are intentionally kept for build caching.
+
+To reclaim all space including cached volumes:
+
+```bash
+docker compose -f dev/agents/container/docker-compose.yml down --volumes --remove-orphans --rmi local
+```
 
 ## PR watch loop
 
@@ -90,11 +103,18 @@ When a task is provided via `AGENT_TASK`, the container does not exit after clau
 
 1. Polls the PR for the current branch every 30 seconds
 2. Checks CI status and review comments
-3. If CI is failing or reviews need attention → re-invokes claude with full context (logs, comments)
+3. If CI is failing or reviews need attention → resumes the primary agent session via `claude --resume` with the failure/feedback details. This preserves the agent's full conversation history from the implementation phase.
 4. If PR is merged or closed → container exits cleanly
-5. After 5 consecutive failed fix attempts → posts a comment asking for human help and exits
+5. After 5 consecutive failed fix attempts → posts a comment asking for human help and continues polling for `@continue`
 
 Use `--no-loop` to skip the watch loop (useful for testing). Interactive sessions also skip it.
+
+### PR comment commands
+
+The watch loop recognizes special commands in PR comments from non-bot users:
+
+- **`@continue`** — Resets the attempt counter to 0 and resumes the polling loop. Use this after the agent has hit the max attempts limit and a human has provided guidance or fixed the underlying issue. The agent will pick up any pending CI failures or review comments on the next iteration.
+- **`@tester`** — Invokes the testing agent on demand, even if it already ran once for this PR. Useful for re-testing after additional changes. If `@tester` appears alongside other review feedback, the agent addresses the feedback first, then runs the testing agent.
 
 ## Testing agent
 
@@ -151,6 +171,48 @@ The container is the intended runtime for the `cicd-workflow` skill. A typical a
 
 The agent will branch, implement, push via app token, create a PR, and enter the watch loop — all inside the container.
 
+## Database seeding
+
+The container auto-seeds databases on startup. **Never add test data or mock devices in application code** — use the existing seed infrastructure.
+
+### Postgres (web-server)
+
+On container start, the entrypoint automatically:
+1. Pushes the schema via `pnpm --filter @kioskkit/web-server db:push`
+2. Seeds a test admin user via `pnpm --filter @kioskkit/web-server db:seed-test-user`:
+   - Email: `test@kioskkit.local`, role: `admin`
+   - Session token exported as `TEST_SESSION_TOKEN` env var (valid 1 year)
+
+To reset Postgres to a clean state (drop all tables, re-push schema, re-seed):
+
+```bash
+./dev/agents/scripts/db-reset.sh
+```
+
+To add new Postgres seed data, edit `packages/web-server/src/seed-test-user.ts`.
+
+### SQLite (kiosk-server)
+
+kiosk-server uses SQLite and seeds on first run via `packages/kiosk-server/src/seed.ts`:
+- 5 buyers (labels 101–103, 201–202)
+- 3 catalog categories (Drinks, Snacks, Pastries) with items
+- Default kiosk settings (locale, currency, etc.)
+
+To drop and re-seed the kiosk-server SQLite database:
+
+```bash
+pnpm --filter @kioskkit/kiosk-server db:reseed
+```
+
+To add new SQLite seed data, edit `packages/kiosk-server/src/seed.ts`.
+
+### Rules for agents
+
+- **NEVER** hardcode test data, mock devices, or fake users in application code
+- Use `TEST_SESSION_TOKEN` for authenticated requests in tests
+- If you need additional seed data, add it to the appropriate seed script
+- Use `db-reset.sh` or `db:reseed` when you need a clean database state
+
 ## Key files
 
 - `dev/agents/container/Dockerfile` — container image definition
@@ -160,6 +222,7 @@ The agent will branch, implement, push via app token, create a PR, and enter the
 - `dev/agents/scripts/run.sh` — host-side launcher
 - `dev/agents/scripts/github-app-token.sh` — GitHub App token generator
 - `dev/agents/scripts/screenshot.mjs` — Playwright screenshot tool
+- `dev/agents/scripts/db-reset.sh` — Postgres database reset (drop, re-push, re-seed)
 - `.mcp.json` — MCP server configuration (loaded by Claude Code)
 
 ---

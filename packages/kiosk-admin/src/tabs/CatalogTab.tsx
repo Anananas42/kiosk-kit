@@ -1,7 +1,8 @@
 import { formatCurrency, parsePrice } from "@kioskkit/shared";
 import { Badge, Button, Card, CardContent, Input } from "@kioskkit/ui";
 import { type FormEvent, useCallback, useState } from "react";
-import { useData, useFormStatus } from "../hooks.js";
+import { toast } from "sonner";
+import { useData } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
 export function CatalogTab() {
@@ -9,7 +10,6 @@ export function CatalogTab() {
   const { data: catalog, error, loading, reload } = useData(fetcher);
   const settingsFetcher = useCallback(() => trpc["admin.settings.get"].query(), []);
   const { data: settings } = useData(settingsFetcher);
-  const form = useFormStatus();
 
   const locale = settings?.locale ?? "cs";
   const currency = settings?.currency ?? "CZK";
@@ -25,33 +25,30 @@ export function CatalogTab() {
 
   const handleAddCategory = (e: FormEvent) => {
     e.preventDefault();
-    form.clear();
     trpc["admin.catalog.createCategory"]
       .mutate({ name: catName, preorder: catPreorder, sortOrder: 0 })
       .then(() => {
-        form.setSuccess("Category created");
+        toast.success("Category created");
         setCatName("");
         setCatPreorder(false);
         reload();
       })
-      .catch((err: Error) => form.setError(err.message));
+      .catch((err: Error) => toast.error(err.message));
   };
 
   const handleDeleteCategory = (id: number, name: string) => {
     if (!confirm(`Delete category "${name}"? All its items will also be deleted.`)) return;
-    form.clear();
     trpc["admin.catalog.deleteCategory"]
       .mutate({ id })
       .then(() => {
-        form.setSuccess("Category deleted");
+        toast.success("Category deleted");
         reload();
       })
-      .catch((err: Error) => form.setError(err.message));
+      .catch((err: Error) => toast.error(err.message));
   };
 
   const handleAddItem = (e: FormEvent) => {
     e.preventDefault();
-    form.clear();
     trpc["admin.catalog.createItem"]
       .mutate({
         categoryId: Number(itemCatId),
@@ -62,26 +59,25 @@ export function CatalogTab() {
         sortOrder: 0,
       })
       .then(() => {
-        form.setSuccess("Item created");
+        toast.success("Item created");
         setItemName("");
         setItemQty("");
         setItemPrice("");
         setItemDph("");
         reload();
       })
-      .catch((err: Error) => form.setError(err.message));
+      .catch((err: Error) => toast.error(err.message));
   };
 
   const handleDeleteItem = (id: number, name: string) => {
     if (!confirm(`Delete item "${name}"?`)) return;
-    form.clear();
     trpc["admin.catalog.deleteItem"]
       .mutate({ id })
       .then(() => {
-        form.setSuccess("Item deleted");
+        toast.success("Item deleted");
         reload();
       })
-      .catch((err: Error) => form.setError(err.message));
+      .catch((err: Error) => toast.error(err.message));
   };
 
   if (loading) return <p className="text-muted-foreground">Loading...</p>;
@@ -89,9 +85,6 @@ export function CatalogTab() {
 
   return (
     <div>
-      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
-      {form.success && <p className="my-2 text-success">{form.success}</p>}
-
       {catalog && catalog.length === 0 && (
         <p className="italic text-muted-foreground">No categories yet.</p>
       )}

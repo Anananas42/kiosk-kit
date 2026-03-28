@@ -1,6 +1,7 @@
 import type { PreorderConfig } from "@kioskkit/shared";
 import { useCallback, useEffect, useState } from "react";
-import { useData, useFormStatus } from "../hooks.js";
+import { toast } from "sonner";
+import { useData } from "../hooks.js";
 import { trpc } from "../trpc.js";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -9,7 +10,6 @@ const DISPLAY_TO_WEEKDAY = [1, 2, 3, 4, 5, 6, 0];
 export function PreorderTab() {
   const fetcher = useCallback(() => trpc["preorderConfig.get"].query(), []);
   const { data: config, error, loading, reload } = useData(fetcher);
-  const form = useFormStatus();
   const [draft, setDraft] = useState<PreorderConfig | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -33,7 +33,6 @@ export function PreorderTab() {
     setDraft(newDraft);
 
     setSaving(true);
-    form.clear();
     trpc["admin.preorderConfig.update"]
       .mutate({
         weekday,
@@ -41,11 +40,11 @@ export function PreorderTab() {
         delivery: newDraft.deliveryDays[weekday],
       })
       .then(() => {
-        form.setSuccess("Updated");
+        toast.success("Updated");
         reload();
       })
       .catch((err: Error) => {
-        form.setError(err.message);
+        toast.error(err.message);
         if (config) {
           setDraft({
             orderingDays: [...config.orderingDays],
@@ -62,9 +61,6 @@ export function PreorderTab() {
 
   return (
     <div>
-      {form.error && <p className="my-2 text-destructive">{form.error}</p>}
-      {form.success && <p className="my-2 text-success">{form.success}</p>}
-
       <div className="grid grid-cols-[auto_repeat(7,1fr)] gap-px overflow-hidden rounded-md border border-border">
         {/* Header row */}
         <div className="flex items-center justify-center bg-secondary p-2 text-xs font-semibold text-muted-foreground" />
