@@ -13,6 +13,10 @@ export async function claimDevice(code: string): Promise<Device> {
   return trpc["devices.claim"].mutate({ code });
 }
 
+export async function renameDevice(id: string, name: string): Promise<Device> {
+  return trpc["devices.rename"].mutate({ id, name });
+}
+
 export async function fetchDeviceStatus(id: string): Promise<DeviceStatus> {
   const data = await trpc["devices.status"].query({ id });
   return data.status;

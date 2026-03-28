@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { claimDevice, fetchDevice, fetchDeviceStatus, fetchDevices } from "../api/devices.js";
+import {
+  claimDevice,
+  fetchDevice,
+  fetchDeviceStatus,
+  fetchDevices,
+  renameDevice,
+} from "../api/devices.js";
 import { queryClient } from "../queryClient.js";
 import { queryKeys } from "./query-keys.js";
 
@@ -22,6 +28,16 @@ export function useClaimDevice() {
   return useMutation({
     mutationFn: (code: string) => claimDevice(code),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.devices });
+    },
+  });
+}
+
+export function useRenameDevice() {
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => renameDevice(id, name),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.device(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.devices });
     },
   });

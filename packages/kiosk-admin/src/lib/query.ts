@@ -19,6 +19,9 @@ export const queryKeys = {
   settings: {
     get: () => ["settings"] as const,
   },
+  network: {
+    status: () => ["network", "status"] as const,
+  },
   consumption: {
     report: () => ["consumption", "report"] as const,
   },
