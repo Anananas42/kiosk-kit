@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@kioskkit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -100,16 +101,17 @@ function BuyerRow({ buyer }: { buyer: Buyer }) {
       <TableCell>{buyer.label}</TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
-          <Button variant="outline" size="sm" onClick={startEdit}>
-            Edit
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={startEdit}>
+            <Pencil className="size-4" />
           </Button>
           <Button
-            variant="destructive"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
             onClick={() => setConfirmDelete(true)}
             disabled={deleteMutation.isPending}
           >
-            Delete
+            <Trash2 className="size-4" />
           </Button>
         </div>
       </TableCell>
@@ -203,7 +205,7 @@ export function BuyersTab() {
             <TableRow>
               <TableHead className="w-20">ID</TableHead>
               <TableHead>Label</TableHead>
-              <TableHead className="w-40 text-right">Actions</TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
