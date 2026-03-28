@@ -101,13 +101,22 @@ function BuyerRow({ buyer }: { buyer: Buyer }) {
       <TableCell>{buyer.label}</TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={startEdit}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Edit"
+            onClick={startEdit}
+          >
             <Pencil className="size-4" />
           </Button>
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            aria-label="Delete"
             onClick={() => setConfirmDelete(true)}
             disabled={deleteMutation.isPending}
           >
@@ -133,7 +142,7 @@ function AddBuyerForm() {
 
   const form = useForm<CreateInput>({
     resolver: zodResolver(AdminBuyerCreateSchema),
-    defaultValues: { id: undefined as unknown as number, label: "" },
+    defaultValues: { id: "" as unknown as number, label: "" },
   });
 
   const createMutation = useMutation({
@@ -158,10 +167,15 @@ function AddBuyerForm() {
             type="number"
             placeholder="ID"
             {...form.register("id", { valueAsNumber: true })}
+            min="1"
             className="w-20"
           />
           {form.formState.errors.id && (
-            <p className="mt-1 text-xs text-destructive">{form.formState.errors.id.message}</p>
+            <p className="mt-1 text-xs text-destructive">
+              {form.formState.errors.id.type === "invalid_type"
+                ? "ID is required"
+                : form.formState.errors.id.message}
+            </p>
           )}
         </div>
         <div>
