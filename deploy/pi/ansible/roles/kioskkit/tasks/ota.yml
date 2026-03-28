@@ -20,11 +20,6 @@
     - ota-rollback.sh
     - boot-confirm.sh
 
-- name: Remove OTA sudoers rules (replaced by privileged helper)
-  ansible.builtin.file:
-    path: /etc/sudoers.d/kioskkit-ota
-    state: absent
-
 - name: Deploy boot-confirm service
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../../system/services/kioskkit-boot-confirm.service"

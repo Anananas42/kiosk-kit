@@ -22,11 +22,6 @@
     - wifi-enable.sh
     - wifi-disable.sh
 
-- name: Remove WiFi sudoers rules (replaced by privileged helper)
-  ansible.builtin.file:
-    path: /etc/sudoers.d/wifi
-    state: absent
-
 - name: Enable wpa_supplicant for wlan0
   ansible.builtin.systemd:
     name: "wpa_supplicant@wlan0.service"

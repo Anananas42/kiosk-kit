@@ -60,11 +60,6 @@
     dest: /etc/chromium/policies/managed/kioskkit.json
     mode: "0644"
 
-- name: Remove chromium dev-shm workaround (redirects shm to /tmp which is only 64M)
-  ansible.builtin.file:
-    path: /etc/chromium.d/dev-shm
-    state: absent
-
 - name: Generate empty cursor theme
   ansible.builtin.script:
     cmd: "{{ playbook_dir }}/../../system/config/make-empty-cursor.py"

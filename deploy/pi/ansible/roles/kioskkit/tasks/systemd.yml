@@ -24,14 +24,3 @@
     name: kioskkit.service
     enabled: true
 
-- name: Remove old deploy service
-  ansible.builtin.file:
-    path: /etc/systemd/system/kioskkit-deploy.service
-    state: absent
-  notify: Reload systemd
-
-- name: Remove old deploy timer
-  ansible.builtin.file:
-    path: /etc/systemd/system/kioskkit-deploy.timer
-    state: absent
-  notify: Reload systemd
