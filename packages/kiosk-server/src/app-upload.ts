@@ -4,19 +4,54 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { Writable } from "node:stream";
 import { AppUpdateResult, AppUpdateStep } from "@kioskkit/shared";
 import { Hono } from "hono";
-import { writeStateFile } from "./lib/app-update-helpers.js";
-
-const STATE_DIR = "/data/app-update";
-const PENDING_DIR = "/data/app-update/pending";
-const STATE_FILE = "/data/app-update/state.json";
-const BUNDLE_FILE = "/data/app-update/pending/app-bundle.tar.gz";
-const PROGRESS_FILE = "/data/app-update/pending/progress.json";
-const VERSION_FILE = "/data/app-update/pending/version";
+import {
+  APP_UPDATE_BUNDLE_FILE,
+  APP_UPDATE_PENDING_DIR,
+  APP_UPDATE_PROGRESS_FILE,
+  APP_UPDATE_STATE_DIR,
+  APP_UPDATE_STATE_FILE,
+  APP_UPDATE_VERSION_FILE,
+  MAX_BUNDLE_SIZE,
+} from "./lib/app-update-constants.js";
+import { isActiveOperation, writeStateFile } from "./lib/app-update-helpers.js";
 
 interface UploadStateJson {
   status?: string;
   lastUpdate?: string;
   lastResult?: string;
+}
+
+function validateUploadHeaders(
+  version: string | undefined,
+  sha256: string | undefined,
+  contentLength: string | undefined,
+): { error: string; status: 400 | 413 } | { version: string; sha256: string; bytesTotal: number } {
+  if (!version || !sha256 || !contentLength) {
+    return {
+      error: "Missing required headers: X-App-Version, X-SHA256, Content-Length",
+      status: 400,
+    };
+  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]{0,127}$/.test(version)) {
+    return {
+      error: "Invalid X-App-Version: alphanumeric, dots, hyphens only, max 128 chars",
+      status: 400,
+    };
+  }
+  if (!/^[a-f0-9]{64}$/.test(sha256)) {
+    return { error: "Invalid X-SHA256: must be 64 hex characters", status: 400 };
+  }
+  const bytesTotal = Number(contentLength);
+  if (!Number.isFinite(bytesTotal) || bytesTotal <= 0) {
+    return { error: "Invalid Content-Length", status: 400 };
+  }
+  if (bytesTotal > MAX_BUNDLE_SIZE) {
+    return {
+      error: `Bundle too large: ${bytesTotal} bytes exceeds ${MAX_BUNDLE_SIZE} byte limit`,
+      status: 413,
+    };
+  }
+  return { version, sha256, bytesTotal };
 }
 
 /**
@@ -34,64 +69,35 @@ export function appUploadRoute() {
   const app = new Hono();
 
   app.post("/", async (c) => {
-    const version = c.req.header("X-App-Version");
-    const sha256 = c.req.header("X-SHA256");
-    const contentLength = c.req.header("Content-Length");
-
-    if (!version || !sha256 || !contentLength) {
-      return c.json(
-        { error: "Missing required headers: X-App-Version, X-SHA256, Content-Length" },
-        400,
-      );
+    const validation = validateUploadHeaders(
+      c.req.header("X-App-Version"),
+      c.req.header("X-SHA256"),
+      c.req.header("Content-Length"),
+    );
+    if ("error" in validation) {
+      return c.json({ error: validation.error }, validation.status);
     }
-
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]{0,127}$/.test(version)) {
-      return c.json(
-        { error: "Invalid X-App-Version: alphanumeric, dots, hyphens only, max 128 chars" },
-        400,
-      );
-    }
-
-    if (!/^[a-f0-9]{64}$/.test(sha256)) {
-      return c.json({ error: "Invalid X-SHA256: must be 64 hex characters" }, 400);
-    }
-
-    const bytesTotal = Number(contentLength);
-    if (!Number.isFinite(bytesTotal) || bytesTotal <= 0) {
-      return c.json({ error: "Invalid Content-Length" }, 400);
-    }
-
-    const MAX_BUNDLE_SIZE = 500 * 1024 * 1024; // 500 MB
-    if (bytesTotal > MAX_BUNDLE_SIZE) {
-      return c.json(
-        { error: `Bundle too large: ${bytesTotal} bytes exceeds ${MAX_BUNDLE_SIZE} byte limit` },
-        413,
-      );
-    }
+    const { version, sha256, bytesTotal } = validation;
 
     const body = c.req.raw.body;
     if (!body) {
       return c.json({ error: "Empty request body" }, 400);
     }
 
-    // Check for concurrent upload
+    // Check for concurrent upload or active operation
     let currentState: UploadStateJson | null = null;
     try {
-      const raw = await readFile(STATE_FILE, "utf-8");
+      const raw = await readFile(APP_UPDATE_STATE_FILE, "utf-8");
       currentState = JSON.parse(raw) as UploadStateJson;
     } catch {
       // No state file — fresh device
     }
 
-    if (
-      currentState?.status === AppUpdateStep.Uploading ||
-      currentState?.status === AppUpdateStep.Installing ||
-      currentState?.status === AppUpdateStep.RollingBack
-    ) {
+    if (isActiveOperation(currentState?.status)) {
       return c.json({ error: "An operation is already in progress" }, 409);
     }
 
-    await mkdir(PENDING_DIR, { recursive: true });
+    await mkdir(APP_UPDATE_PENDING_DIR, { recursive: true });
 
     // Write initial uploading state
     const stateBase = {
@@ -105,13 +111,13 @@ export function appUploadRoute() {
     let bytesReceived = 0;
 
     try {
-      const fileStream = createWriteStream(BUNDLE_FILE);
+      const fileStream = createWriteStream(APP_UPDATE_BUNDLE_FILE);
       const writer = Writable.toWeb(fileStream);
 
       const progressInterval = setInterval(async () => {
         try {
           await writeFile(
-            PROGRESS_FILE,
+            APP_UPDATE_PROGRESS_FILE,
             JSON.stringify({
               version,
               progress: bytesTotal > 0 ? Math.round((bytesReceived / bytesTotal) * 100) : 0,
@@ -143,7 +149,7 @@ export function appUploadRoute() {
 
       // Write final progress
       await writeFile(
-        PROGRESS_FILE,
+        APP_UPDATE_PROGRESS_FILE,
         JSON.stringify({
           version,
           progress: 100,
@@ -153,12 +159,12 @@ export function appUploadRoute() {
       );
 
       // Write version file for the install script
-      await writeFile(VERSION_FILE, version);
+      await writeFile(APP_UPDATE_VERSION_FILE, version);
 
       // Verify checksum
       const actualSha256 = hash.digest("hex");
       if (actualSha256 !== sha256) {
-        await rm(PENDING_DIR, { recursive: true, force: true });
+        await rm(APP_UPDATE_PENDING_DIR, { recursive: true, force: true });
         await writeState({
           status: AppUpdateStep.Idle,
           ...stateBase,
@@ -178,12 +184,12 @@ export function appUploadRoute() {
 
       return c.json({ ok: true, bytesReceived });
     } catch (err) {
-      await rm(PENDING_DIR, { recursive: true, force: true }).catch(() => {});
+      await rm(APP_UPDATE_PENDING_DIR, { recursive: true, force: true }).catch(() => {});
       // Re-read state before writing — cancelUpload may have already reset it to idle.
       // If so, don't overwrite with a stale FailedUpload result.
       let latestState: UploadStateJson | null = null;
       try {
-        const raw = await readFile(STATE_FILE, "utf-8");
+        const raw = await readFile(APP_UPDATE_STATE_FILE, "utf-8");
         latestState = JSON.parse(raw) as UploadStateJson;
       } catch {
         // State file missing or corrupt — safe to write
@@ -205,5 +211,5 @@ export function appUploadRoute() {
 }
 
 async function writeState(state: object): Promise<void> {
-  await writeStateFile(STATE_DIR, STATE_FILE, state);
+  await writeStateFile(APP_UPDATE_STATE_DIR, APP_UPDATE_STATE_FILE, state);
 }

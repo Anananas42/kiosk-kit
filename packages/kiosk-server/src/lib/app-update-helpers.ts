@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { AppUpdateStep } from "@kioskkit/shared";
 
 const SCRIPTS_DIR = "/opt/kioskkit/system";
 
@@ -35,6 +36,26 @@ export async function countDirEntries(path: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+export function isActiveOperation(status: string | undefined): boolean {
+  return (
+    status === AppUpdateStep.Uploading ||
+    status === AppUpdateStep.Installing ||
+    status === AppUpdateStep.RollingBack
+  );
+}
+
+export function isMutatingOperation(status: string | undefined): boolean {
+  return status === AppUpdateStep.Installing || status === AppUpdateStep.RollingBack;
+}
+
+export function hasRequiredUploadHeaders(
+  version: string | undefined,
+  sha256: string | undefined,
+  contentLength: string | undefined,
+): version is string {
+  return Boolean(version && sha256 && contentLength);
 }
 
 export async function writeStateFile(
