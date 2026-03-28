@@ -6,7 +6,7 @@ import {
   DeviceUpdateInputSchema,
 } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray, max } from "drizzle-orm";
+import { and, eq, inArray, isNull, max } from "drizzle-orm";
 import { z } from "zod";
 import { backups, devices } from "../../db/schema.js";
 import { LOCAL_DEVICE_ID, makeLocalDevice } from "../../local-dev.js";
@@ -19,6 +19,7 @@ import {
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
 
 const isDev = process.env.NODE_ENV === "development";
+const DEVICE_TIMEOUT_MS = 5_000;
 
 function tailscaleIpFromDevice(td: TailscaleDevice): string | null {
   return td.addresses.find((a) => a.startsWith("100.")) ?? null;
@@ -75,7 +76,7 @@ export const devicesRouter = router({
         online,
         lastSeen,
         hostname: device.name,
-        userLinked: device.userLinked,
+        userLinked: device.userId !== null,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -110,7 +111,7 @@ export const devicesRouter = router({
         online: false,
         lastSeen: null,
         hostname: device.name,
-        userLinked: device.userLinked,
+        userLinked: device.userId !== null,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -138,7 +139,7 @@ export const devicesRouter = router({
         online: false,
         lastSeen: null,
         hostname: device.name,
-        userLinked: device.userLinked,
+        userLinked: device.userId !== null,
         createdAt: device.createdAt.toISOString(),
       };
     }),
@@ -174,7 +175,7 @@ export const devicesRouter = router({
       const [device] = await ctx.db
         .select()
         .from(devices)
-        .where(and(eq(devices.pairingCode, input.code), eq(devices.userLinked, false)));
+        .where(and(eq(devices.pairingCode, input.code), isNull(devices.userId)));
 
       if (!device) {
         throw new TRPCError({
@@ -185,7 +186,7 @@ export const devicesRouter = router({
 
       const [updated] = await ctx.db
         .update(devices)
-        .set({ userId: ctx.user.id, userLinked: true, pairingCode: null })
+        .set({ userId: ctx.user.id, pairingCode: null })
         .where(eq(devices.id, device.id))
         .returning();
 
@@ -195,7 +196,7 @@ export const devicesRouter = router({
           await fetchDeviceProxy(
             { id: updated.id, tailscaleIp: updated.tailscaleIp },
             "/api/pairing/consume",
-            { method: "POST", signal: AbortSignal.timeout(5000) },
+            { method: "POST", signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS) },
           );
         } catch {
           // Device may be unreachable — not critical
@@ -210,7 +211,7 @@ export const devicesRouter = router({
         online: false,
         lastSeen: null,
         hostname: updated.name,
-        userLinked: updated.userLinked,
+        userLinked: updated.userId !== null,
         createdAt: updated.createdAt.toISOString(),
       };
     }),
@@ -225,7 +226,7 @@ async function fetchPairingCode(device: {
   if (!device.tailscaleIp) return null;
   try {
     const res = await fetchDeviceProxy(device, "/api/pairing", {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const body = (await res.json()) as { code?: string };
@@ -297,7 +298,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
       }
 
       // Retry fetching pairing code for devices that don't have one yet
-      if (!dbDevice.pairingCode && !dbDevice.userLinked) {
+      if (!dbDevice.pairingCode && !dbDevice.userId) {
         const code = await fetchPairingCode({ id: dbDevice.id, tailscaleIp: tsIp });
         if (code) {
           updates.pairingCode = code;
@@ -321,7 +322,7 @@ async function listForAdmin(db: import("../../db/index.js").Db): Promise<Device[
       lastSeen: td.lastSeen,
       lastBackupAt: lastBackupMap.get(dbDevice.id) ?? null,
       hostname: td.hostname,
-      userLinked: dbDevice.userLinked,
+      userLinked: dbDevice.userId !== null,
       createdAt: dbDevice.createdAt.toISOString(),
     });
   }
@@ -389,7 +390,7 @@ async function listForCustomer(
         lastSeen,
         lastBackupAt: lastBackupMap.get(d.id) ?? null,
         hostname: d.name,
-        userLinked: d.userLinked,
+        userLinked: d.userId !== null,
         createdAt: d.createdAt.toISOString(),
       };
     }),
