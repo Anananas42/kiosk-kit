@@ -4,7 +4,7 @@ import type { Store } from "../../db/store.js";
 import { appRouter } from "../router.js";
 import { createCallerFactory } from "../trpc.js";
 
-const mockSpawn = vi.hoisted(() => vi.fn());
+const mockSpawnScript = vi.hoisted(() => vi.fn());
 const mockReadFile = vi.hoisted(() => vi.fn());
 const mockWriteFile = vi.hoisted(() => vi.fn());
 const mockMkdir = vi.hoisted(() => vi.fn());
@@ -15,7 +15,7 @@ const mockRename = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({
   execFile: vi.fn(),
-  spawn: mockSpawn,
+  spawn: vi.fn(() => ({ unref: vi.fn() })),
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -27,6 +27,11 @@ vi.mock("node:fs/promises", () => ({
   access: mockAccess,
   rename: mockRename,
 }));
+
+vi.mock("../../lib/app-update-helpers.js", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, spawnDetachedSudoScript: mockSpawnScript };
+});
 
 const createCaller = createCallerFactory(appRouter);
 const store = {} as unknown as Store;
@@ -55,7 +60,6 @@ beforeEach(() => {
   mockRm.mockResolvedValue(undefined);
   mockRename.mockResolvedValue(undefined);
   mockAccess.mockRejectedValue(new Error("ENOENT"));
-  mockSpawn.mockReturnValue({ unref: vi.fn() });
   mockReleaseCount(0);
 });
 
@@ -209,11 +213,9 @@ describe("admin.appUpdate.install", () => {
     const result = await caller["admin.appUpdate.install"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockSpawn).toHaveBeenCalledWith(
-      "sudo",
-      ["/opt/kioskkit/system/app-update.sh", "/data/app-update/pending/app-bundle.tar.gz"],
-      { detached: true, stdio: "ignore" },
-    );
+    expect(mockSpawnScript).toHaveBeenCalledWith("app-update.sh", [
+      "/data/app-update/pending/app-bundle.tar.gz",
+    ]);
   });
 });
 
@@ -261,10 +263,7 @@ describe("admin.appUpdate.rollback", () => {
     const result = await caller["admin.appUpdate.rollback"]();
 
     expect(result).toEqual({ ok: true });
-    expect(mockSpawn).toHaveBeenCalledWith("sudo", ["/opt/kioskkit/system/app-rollback.sh"], {
-      detached: true,
-      stdio: "ignore",
-    });
+    expect(mockSpawnScript).toHaveBeenCalledWith("app-rollback.sh");
   });
 
   it("rejects when no previous release available", async () => {
