@@ -9,7 +9,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import LoadingDots from "./components/LoadingDots.js";
 import SuccessFlash from "./components/SuccessFlash.js";
-import { useBootState } from "./hooks/useBootState.js";
+import { BootState, useBootState } from "./hooks/useBootState.js";
 import { useCatalog } from "./hooks/useCatalog.js";
 import { useHealth } from "./hooks/useHealth.js";
 import { useIdleDim } from "./hooks/useIdleDim.js";
@@ -68,7 +68,7 @@ export default function App() {
     loading: catalogLoading,
   } = useCatalog();
 
-  if (bootState !== "ready") {
+  if (bootState !== BootState.Ready) {
     return (
       <I18nProvider locale={settings.locale}>
         <BootScreen state={bootState} pairingCode={pairingCode} />

@@ -6,20 +6,33 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trpc } from "../trpc.js";
 
-export type BootState =
-  | "connecting"
-  | "no-network-no-wifi"
-  | "no-network-has-wifi"
-  | "connecting-cloud"
-  | "pairing"
-  | "ready";
+export enum BootState {
+  Connecting = "connecting",
+  NoNetworkNoWifi = "no_network_no_wifi",
+  NoNetworkHasWifi = "no_network_has_wifi",
+  ConnectingCloud = "connecting_cloud",
+  Pairing = "pairing",
+  Ready = "ready",
+}
 
 interface NetworkStatus {
   hasNetwork: boolean;
   hasSavedWifi: boolean;
 }
 
-const PAIRING_CONSUMED_KEY = "kioskkit_pairing_consumed";
+function isNetworkCheckState(state: BootState): boolean {
+  return (
+    state === BootState.Connecting ||
+    state === BootState.NoNetworkNoWifi ||
+    state === BootState.NoNetworkHasWifi
+  );
+}
+
+function getPollInterval(state: BootState): number {
+  if (state === BootState.Pairing) return BOOT_PAIRING_POLL_MS;
+  if (state === BootState.ConnectingCloud) return BOOT_TAILSCALE_POLL_MS;
+  return BOOT_NETWORK_POLL_MS;
+}
 
 async function fetchNetworkStatus(): Promise<NetworkStatus> {
   const status = await trpc["admin.network.list"].query();
@@ -35,51 +48,43 @@ async function fetchTailscaleConnected(): Promise<boolean> {
   return data.connected;
 }
 
-async function fetchPairingConsumed(): Promise<{ code: string; consumed: boolean }> {
+async function fetchPairingStatus(): Promise<{ code: string; consumed: boolean }> {
   const res = await fetch("/api/pairing");
   if (!res.ok) throw new Error("Failed to fetch pairing status");
   return (await res.json()) as { code: string; consumed: boolean };
 }
 
 export function useBootState() {
-  const [state, setState] = useState<BootState>(() => {
-    if (localStorage.getItem(PAIRING_CONSUMED_KEY) === "true") return "ready";
-    return "connecting";
-  });
+  const [state, setState] = useState<BootState>(BootState.Connecting);
   const [pairingCode, setPairingCode] = useState<string>("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const poll = useCallback(async () => {
-    if (state === "ready") return;
+    if (state === BootState.Ready) return;
 
     try {
-      if (
-        state === "connecting" ||
-        state === "no-network-no-wifi" ||
-        state === "no-network-has-wifi"
-      ) {
+      if (isNetworkCheckState(state)) {
         const net = await fetchNetworkStatus();
         if (!net.hasNetwork) {
-          setState(net.hasSavedWifi ? "no-network-has-wifi" : "no-network-no-wifi");
+          setState(net.hasSavedWifi ? BootState.NoNetworkHasWifi : BootState.NoNetworkNoWifi);
           return;
         }
-        setState("connecting-cloud");
+        setState(BootState.ConnectingCloud);
         return;
       }
 
-      if (state === "connecting-cloud") {
+      if (state === BootState.ConnectingCloud) {
         const connected = await fetchTailscaleConnected();
         if (!connected) return;
-        setState("pairing");
+        setState(BootState.Pairing);
         return;
       }
 
-      if (state === "pairing") {
-        const pairing = await fetchPairingConsumed();
+      if (state === BootState.Pairing) {
+        const pairing = await fetchPairingStatus();
         setPairingCode(pairing.code);
         if (pairing.consumed) {
-          localStorage.setItem(PAIRING_CONSUMED_KEY, "true");
-          setState("ready");
+          setState(BootState.Ready);
         }
       }
     } catch {
@@ -88,19 +93,11 @@ export function useBootState() {
   }, [state]);
 
   useEffect(() => {
-    if (state === "ready") return;
+    if (state === BootState.Ready) return;
 
-    // Run immediately on state change
     poll();
 
-    const interval =
-      state === "pairing"
-        ? BOOT_PAIRING_POLL_MS
-        : state === "connecting-cloud"
-          ? BOOT_TAILSCALE_POLL_MS
-          : BOOT_NETWORK_POLL_MS;
-
-    timerRef.current = setInterval(poll, interval);
+    timerRef.current = setInterval(poll, getPollInterval(state));
     return () => clearInterval(timerRef.current);
   }, [state, poll]);
 
