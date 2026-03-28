@@ -29,17 +29,21 @@ fi
 
 CURRENT_RELEASE=$(readlink -f "$INSTALL_DIR/current")
 
-# Find the most recent release that isn't current (sorted descending by name/timestamp).
-# Note: the Ansible-created "initial" release sorts after numeric timestamps in reverse,
-# so it won't be picked as a rollback target if a newer release exists — this is intentional
-# (the initial release is the SD image build, not a proper update target).
+# Find the most recent numeric (timestamp) release that isn't current.
+# The Ansible-created "initial" release is only used as a last resort — it's
+# the SD image build, not a proper update target.
 PREVIOUS_RELEASE=""
 while IFS= read -r dir; do
   if [[ -d "$dir" && "$dir" != "$CURRENT_RELEASE" ]]; then
     PREVIOUS_RELEASE="$dir"
     break
   fi
-done < <(printf '%s\n' "$RELEASES_DIR"/*/ | sed 's|/$||' | sort -r)
+done < <(printf '%s\n' "$RELEASES_DIR"/*/ | sed 's|/$||' | grep -v '/initial$' | sort -rn)
+
+# Fall back to "initial" if no numeric release is available
+if [[ -z "$PREVIOUS_RELEASE" && -d "$RELEASES_DIR/initial" && "$RELEASES_DIR/initial" != "$CURRENT_RELEASE" ]]; then
+  PREVIOUS_RELEASE="$RELEASES_DIR/initial"
+fi
 
 if [[ -z "$PREVIOUS_RELEASE" ]]; then
   log "ERROR: No previous release found to roll back to"

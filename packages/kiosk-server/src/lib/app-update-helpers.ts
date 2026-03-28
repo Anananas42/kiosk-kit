@@ -50,14 +50,6 @@ export function isMutatingOperation(status: string | undefined): boolean {
   return status === AppUpdateStep.Installing || status === AppUpdateStep.RollingBack;
 }
 
-export function hasRequiredUploadHeaders(
-  version: string | undefined,
-  sha256: string | undefined,
-  contentLength: string | undefined,
-): version is string {
-  return Boolean(version && sha256 && contentLength);
-}
-
 export async function writeStateFile(
   stateDir: string,
   stateFile: string,
