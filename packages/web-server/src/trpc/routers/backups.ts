@@ -2,14 +2,13 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { backups, devices } from "../../db/schema.js";
-import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID } from "../../local-dev.js";
 import { pullBackupFromDevice } from "../../routes/backup-upload.js";
+import { fetchDeviceProxy } from "../../services/device-network.js";
 import { downloadFile, getSignedDownloadUrl } from "../../services/s3.js";
 import { adminProcedure, authedProcedure, router } from "../trpc.js";
 
 const HEALTH_TIMEOUT_MS = 5_000;
 const RESTORE_TIMEOUT_MS = 60_000;
-const isDev = process.env.NODE_ENV === "development";
 
 export const backupsRouter = router({
   /** Admin-only: trigger an on-demand backup pull from a device. */
@@ -125,13 +124,9 @@ export const backupsRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
       }
 
-      // Resolve device host
-      const deviceHost =
-        isDev && device.id === LOCAL_DEVICE_ID ? LOCAL_DEVICE_HOST : `${device.tailscaleIp}:3001`;
-
       // Check device is online
       try {
-        const healthRes = await fetch(`http://${deviceHost}/api/health`, {
+        const healthRes = await fetchDeviceProxy(device, "/api/health", {
           signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
         });
         if (!healthRes.ok) throw new Error("Health check failed");
@@ -146,7 +141,7 @@ export const backupsRouter = router({
       const backupData = await downloadFile(backup.s3Key);
 
       // POST the backup to the device's restore endpoint
-      const restoreRes = await fetch(`http://${deviceHost}/api/restore`, {
+      const restoreRes = await fetchDeviceProxy(device, "/api/restore", {
         method: "POST",
         headers: { "Content-Type": "application/gzip" },
         body: new Uint8Array(backupData),

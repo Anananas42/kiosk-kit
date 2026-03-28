@@ -2,20 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Db } from "../db/index.js";
 import { devices } from "../db/schema.js";
-import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
+import { LOCAL_DEVICE_ID, LOCAL_KIOSK_ADMIN_HOST } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
 const PROXY_TIMEOUT_MS = 10_000;
 const HEALTH_TIMEOUT_MS = 5_000;
 const isDev = process.env.NODE_ENV === "development";
-
-function getDeviceHost(device: { id: string; tailscaleIp: string | null }): string {
-  if (isDev && device.id === LOCAL_DEVICE_ID) {
-    return LOCAL_DEVICE_HOST;
-  }
-  return `${device.tailscaleIp}:3001`;
-}
 
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
   if (isDev && deviceId === LOCAL_DEVICE_ID) {
@@ -58,7 +52,7 @@ export function deviceProxyRoutes(db: Db) {
     if (!device) return c.json({ error: "Not found" }, 404);
 
     try {
-      const res = await fetch(`http://${getDeviceHost(device)}/api/health`, {
+      const res = await fetchDeviceProxy(device, "/api/health", {
         signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
       });
       return c.json({ online: res.ok });
@@ -74,14 +68,12 @@ export function deviceProxyRoutes(db: Db) {
     if (!device) return c.json({ error: "Not found" }, 404);
 
     const kioskPath = c.req.path.replace(/^.*?\/kiosk\//, "");
-    // In dev, route admin SPA requests to the kiosk-admin Vite dev server
-    const isAdminPath = kioskPath.startsWith("admin");
-    const host =
-      isDev && device.id === LOCAL_DEVICE_ID && isAdminPath
-        ? LOCAL_KIOSK_ADMIN_HOST
-        : getDeviceHost(device);
     const queryString = new URL(c.req.url).search;
-    const targetUrl = `http://${host}/${kioskPath}${queryString}`;
+    const path = `/${kioskPath}${queryString}`;
+
+    // In dev, route admin SPA requests to the kiosk-admin Vite dev server
+    const useAdminDevServer =
+      isDev && device.id === LOCAL_DEVICE_ID && kioskPath.startsWith("admin");
 
     try {
       const headers = new Headers(c.req.raw.headers);
@@ -89,14 +81,17 @@ export function deviceProxyRoutes(db: Db) {
       headers.delete("host");
       headers.delete("connection");
 
-      const res = await fetch(targetUrl, {
+      const fetchInit = {
         method: c.req.method,
         headers,
         body: c.req.method !== "GET" && c.req.method !== "HEAD" ? c.req.raw.body : undefined,
         signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
-        // @ts-expect-error -- Node fetch supports duplex for streaming request bodies
         duplex: "half",
-      });
+      };
+
+      const res = useAdminDevServer
+        ? await fetch(`http://${LOCAL_KIOSK_ADMIN_HOST}${path}`, fetchInit)
+        : await fetchDeviceProxy(device, path, fetchInit);
 
       return new Response(res.body, {
         status: res.status,

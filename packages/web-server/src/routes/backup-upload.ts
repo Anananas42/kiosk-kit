@@ -1,19 +1,11 @@
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
+import { fetchDeviceProxy } from "../services/device-network.js";
 import { deleteFile, uploadFile } from "../services/s3.js";
 
 const MAX_RETAINED_BACKUPS = 30;
 const FETCH_TIMEOUT_MS = 60_000;
-const isDev = process.env.NODE_ENV === "development";
-
-/** Resolve the host:port for a device's kiosk-server. */
-function getDeviceHost(device: { id: string; tailscaleIp: string | null }): string {
-  if (isDev && device.id === "00000000-0000-0000-0000-000000000000") {
-    return "localhost:3001";
-  }
-  return `${device.tailscaleIp}:3001`;
-}
 
 /**
  * Pull a backup from a single device: fetch its /api/backup endpoint,
@@ -23,10 +15,7 @@ export async function pullBackupFromDevice(
   db: Db,
   device: { id: string; tailscaleIp: string | null },
 ): Promise<{ id: string; sizeBytes: number; createdAt: string }> {
-  const host = getDeviceHost(device);
-  const url = `http://${host}/api/backup`;
-
-  const res = await fetch(url, {
+  const res = await fetchDeviceProxy(device, "/api/backup", {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 

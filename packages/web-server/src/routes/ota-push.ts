@@ -2,20 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { Db } from "../db/index.js";
 import { devices, releases } from "../db/schema.js";
-import { LOCAL_DEVICE_HOST, LOCAL_DEVICE_ID } from "../local-dev.js";
+import { LOCAL_DEVICE_ID } from "../local-dev.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { fetchDeviceProxy } from "../services/device-network.js";
 import { getTailscaleClient } from "../services/tailscale.js";
 
 const isDev = process.env.NODE_ENV === "development";
 const FETCH_TIMEOUT_MS = 120_000;
 const PUSH_TIMEOUT_MS = 300_000; // 5 min for large images
-
-function getDeviceHost(device: { id: string; tailscaleIp: string | null }): string {
-  if (isDev && device.id === LOCAL_DEVICE_ID) {
-    return LOCAL_DEVICE_HOST;
-  }
-  return `${device.tailscaleIp}:3001`;
-}
 
 async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
   if (isDev && deviceId === LOCAL_DEVICE_ID) {
@@ -99,9 +93,8 @@ export function otaPushRoutes(db: Db) {
     }
 
     // Push to device
-    const host = getDeviceHost(device);
     try {
-      const pushRes = await fetch(`http://${host}/api/ota/upload`, {
+      const pushRes = await fetchDeviceProxy(device, "/api/ota/upload", {
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",

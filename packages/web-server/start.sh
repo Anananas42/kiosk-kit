@@ -38,4 +38,5 @@ else
   tailscale up --authkey="${auth_key}" --hostname=kioskkit-web --advertise-tags=tag:kioskkit,tag:server
 fi
 
+export TAILSCALE_SOCKS_PROXY=localhost:1055
 node dist/index.js
