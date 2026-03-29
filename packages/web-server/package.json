@@ -16,7 +16,8 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed-test-user": "tsx src/seed-test-user.ts"
+    "db:seed-test-user": "tsx src/seed-test-user.ts",
+    "db:seed-test-data": "tsx src/seed-test-data.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1017.0",

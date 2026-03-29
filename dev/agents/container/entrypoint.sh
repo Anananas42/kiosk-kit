@@ -48,6 +48,9 @@ echo "==> Seeding test user..."
 TEST_SESSION_TOKEN=$(pnpm --filter @kioskkit/web-server db:seed-test-user 2>/dev/null | tail -1)
 export TEST_SESSION_TOKEN
 
+echo "==> Seeding test data (devices, backups, releases)..."
+pnpm --filter @kioskkit/web-server db:seed-test-data 2>/dev/null || true
+
 echo "==> Seeding kiosk-server SQLite database..."
 pnpm --filter @kioskkit/kiosk-server seed
 
