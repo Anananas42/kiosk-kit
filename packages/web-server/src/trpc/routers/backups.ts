@@ -20,6 +20,14 @@ import {
 import { downloadFile, getSignedDownloadUrl } from "../../services/s3.js";
 import { authedProcedure, router } from "../trpc.js";
 
+const backupConfigInput = z.object({
+  deviceId: z.uuid(),
+  backupIntervalHours: z
+    .union([z.literal(6), z.literal(12), z.literal(24), z.literal(168)])
+    .optional(),
+  maxRetainedBackups: z.number().int().min(1).max(100).optional(),
+});
+
 export const backupsRouter = router({
   "backups.list": authedProcedure
     .input(z.object({ deviceId: z.uuid() }))
@@ -203,7 +211,11 @@ export const backupsRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Verify device exists and user owns it
       const [device] = await ctx.db
-        .select({ id: devices.id, tailscaleIp: devices.tailscaleIp })
+        .select({
+          id: devices.id,
+          tailscaleIp: devices.tailscaleIp,
+          maxRetainedBackups: devices.maxRetainedBackups,
+        })
         .from(devices)
         .where(and(eq(devices.id, input.deviceId), eq(devices.userId, ctx.user.id)));
 
@@ -226,7 +238,7 @@ export const backupsRouter = router({
 
       // Only kick off a new backup if this is a freshly created operation
       if (isNew) {
-        pullBackupFromDevice(ctx.db, device)
+        pullBackupFromDevice(ctx.db, device, device.maxRetainedBackups)
           .then(() => completeOperation(ctx.db, op.id))
           .catch((err) =>
             failOperation(ctx.db, op.id, err instanceof Error ? err.message : "Backup failed"),
@@ -234,5 +246,61 @@ export const backupsRouter = router({
       }
 
       return formatOperationResponse(op);
+    }),
+
+  "backups.getConfig": authedProcedure
+    .input(z.object({ deviceId: z.uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [device] = await ctx.db
+        .select({
+          backupIntervalHours: devices.backupIntervalHours,
+          maxRetainedBackups: devices.maxRetainedBackups,
+        })
+        .from(devices)
+        .where(and(eq(devices.id, input.deviceId), eq(devices.userId, ctx.user.id)));
+
+      if (!device) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
+      }
+
+      return device;
+    }),
+
+  "backups.updateConfig": authedProcedure
+    .input(backupConfigInput)
+    .mutation(async ({ ctx, input }) => {
+      // Verify ownership
+      const [device] = await ctx.db
+        .select({ id: devices.id })
+        .from(devices)
+        .where(and(eq(devices.id, input.deviceId), eq(devices.userId, ctx.user.id)));
+
+      if (!device) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Device not found" });
+      }
+
+      const updates: Partial<{
+        backupIntervalHours: number;
+        maxRetainedBackups: number;
+      }> = {};
+      if (input.backupIntervalHours !== undefined)
+        updates.backupIntervalHours = input.backupIntervalHours;
+      if (input.maxRetainedBackups !== undefined)
+        updates.maxRetainedBackups = input.maxRetainedBackups;
+
+      if (Object.keys(updates).length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No fields to update" });
+      }
+
+      const [updated] = await ctx.db
+        .update(devices)
+        .set(updates)
+        .where(eq(devices.id, input.deviceId))
+        .returning({
+          backupIntervalHours: devices.backupIntervalHours,
+          maxRetainedBackups: devices.maxRetainedBackups,
+        });
+
+      return updated!;
     }),
 });

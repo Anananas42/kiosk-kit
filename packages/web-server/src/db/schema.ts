@@ -32,6 +32,8 @@ export const devices = pgTable("devices", {
   name: text("name").notNull(),
   hostname: text("hostname"),
   pairingCode: text("pairing_code").unique(),
+  backupIntervalHours: integer("backup_interval_hours").notNull().default(24),
+  maxRetainedBackups: integer("max_retained_backups").notNull().default(30),
   lastSeen: timestamp("last_seen", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

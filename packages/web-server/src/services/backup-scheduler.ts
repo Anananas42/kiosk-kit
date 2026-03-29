@@ -1,14 +1,14 @@
-import { BACKUP_INTERVAL_MS } from "../config.js";
+import { BACKUP_POLL_INTERVAL_MS } from "../config.js";
 import type { Db } from "../db/index.js";
-import { pullBackupsFromAllDevices } from "../routes/backup-upload.js";
+import { pullBackupsFromDueDevices } from "../routes/backup-upload.js";
 
 /**
- * Start a daily backup scheduler that pulls backups from all known devices.
+ * Start a backup scheduler that polls for devices due for backup.
  * Only call this when S3 and Tailscale are configured.
  */
 export function startBackupScheduler(db: Db): void {
   const run = () => {
-    pullBackupsFromAllDevices(db).catch((err) => {
+    pullBackupsFromDueDevices(db).catch((err) => {
       console.error(
         "[backup-scheduler] Unexpected error:",
         err instanceof Error ? err.message : err,
@@ -16,6 +16,6 @@ export function startBackupScheduler(db: Db): void {
     });
   };
 
-  setInterval(run, BACKUP_INTERVAL_MS);
-  console.log("[backup-scheduler] Scheduled daily backup pulls for all devices");
+  setInterval(run, BACKUP_POLL_INTERVAL_MS);
+  console.log("[backup-scheduler] Polling for due backups every 30 minutes");
 }
