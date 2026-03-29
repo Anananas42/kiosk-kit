@@ -1,5 +1,5 @@
 import type { WifiStatus } from "@kioskkit/shared";
-import { Badge, Button, Card, CardContent, Spinner, Table, TableBody } from "@kioskkit/ui";
+import { Badge, Button, Card, CardContent, Skeleton, Table, TableBody } from "@kioskkit/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -30,7 +30,11 @@ export function NetworkTab() {
   const [forgetWarningSsid, setForgetWarningSsid] = useState<string | null>(null);
   const [expandedNetwork, setExpandedNetwork] = useState<string | null>(null);
 
-  const { data: status, isLoading } = useQuery({
+  const {
+    data: status,
+    isLoading,
+    isFetching,
+  } = useQuery({
     queryKey: queryKeys.network.status(),
     queryFn: () => trpc["admin.network.list"].query(),
     refetchInterval: (query) => (query.state.data?.enabled ? 10_000 : false),
@@ -68,8 +72,21 @@ export function NetworkTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-4 text-muted-foreground">
-        <Spinner /> Loading network status...
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-28 rounded-md" />
+          <Skeleton className="h-8 w-16 rounded-md" />
+        </div>
+        <Card>
+          <CardContent className="p-0">
+            {["skeleton-1", "skeleton-2", "skeleton-3"].map((id) => (
+              <div key={id} className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-4 w-40 rounded" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -96,13 +113,12 @@ export function NetworkTab() {
           variant="outline"
           size="sm"
           onClick={() => toggleWifiMutation.mutate()}
-          disabled={toggleWifiMutation.isPending}
+          loading={toggleWifiMutation.isPending}
         >
-          {toggleWifiMutation.isPending ? <Spinner className="mr-1" /> : null}
           {status.enabled ? "Disable WiFi" : "Enable WiFi"}
         </Button>
         {status.enabled && (
-          <Button variant="outline" size="sm" onClick={invalidateNetwork}>
+          <Button variant="outline" size="sm" onClick={invalidateNetwork} loading={isFetching}>
             Scan
           </Button>
         )}
@@ -158,7 +174,9 @@ export function NetworkTab() {
       )}
 
       {status.enabled && !hasNetworks && (
-        <p className="italic text-muted-foreground">No networks found. Click Scan to search.</p>
+        <p className="italic text-muted-foreground">
+          {isFetching ? "Scanning for networks..." : "No networks found. Click Scan to search."}
+        </p>
       )}
 
       {status.enabled && <HiddenNetworkForm />}

@@ -1,5 +1,5 @@
 import type { WifiNetwork } from "@kioskkit/shared";
-import { Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Button, TableCell, TableRow } from "@kioskkit/ui";
 import { Lock } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
@@ -66,8 +66,7 @@ export function AvailableRow({ network, expanded, onToggle }: AvailableRowProps)
                   ssid={network.ssid}
                 />
               )}
-              <Button type="submit" size="sm" disabled={connectMutation.isPending}>
-                {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
+              <Button type="submit" size="sm" loading={connectMutation.isPending}>
                 Connect
               </Button>
             </form>

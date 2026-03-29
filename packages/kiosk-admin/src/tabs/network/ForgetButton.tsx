@@ -15,7 +15,7 @@ export function ForgetButton({ ssid, forgettingSsid, onForget }: ForgetButtonPro
       size="icon"
       className="h-8 w-8 text-muted-foreground hover:text-destructive"
       aria-label="Forget network"
-      disabled={forgettingSsid === ssid}
+      loading={forgettingSsid === ssid}
       onClick={(e) => {
         e.stopPropagation();
         onForget(ssid);
