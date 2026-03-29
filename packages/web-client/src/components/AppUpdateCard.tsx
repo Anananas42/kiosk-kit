@@ -158,7 +158,9 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
 
         {cardState === CardState.UpToDate && (
           <p className="text-muted-foreground text-sm">
-            {t("appUpdate.upToDate", { version: currentVersion ?? "" })}
+            {currentVersion
+              ? t("appUpdate.upToDate", { version: currentVersion })
+              : t("appUpdate.upToDateNoVersion")}
           </p>
         )}
 

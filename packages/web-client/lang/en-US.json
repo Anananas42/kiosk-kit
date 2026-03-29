@@ -64,6 +64,7 @@
   "appUpdate.checkingForUpdates": "Checking for updates\u2026",
   "appUpdate.loadError": "Failed to load app update status",
   "appUpdate.upToDate": "Running v{version} (latest)",
+  "appUpdate.upToDateNoVersion": "Up to date",
   "appUpdate.updateAvailable": "v{version} available",
   "appUpdate.download": "Download",
   "appUpdate.downloadingVersion": "Downloading v{version}\u2026",
