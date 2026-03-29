@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Spinner,
 } from "@kioskkit/ui";
 import { useMemo, useState } from "react";
 import { useDeviceStatus } from "../hooks/devices.js";
@@ -66,8 +67,8 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
     isLoading,
     error: otaError,
   } = useOtaStatus(deviceId, {
-    refetchInterval: (query) => {
-      const data = (query as { state: { data: OtaStatus | null | undefined } }).state.data;
+    refetchInterval: (query: { state: { data: OtaStatus | null | undefined } }) => {
+      const data = query.state.data;
       if (!data) return false;
       if (data.status === OtaStep.Uploading) return 3000;
       if (data.status === OtaStep.Installing) return 5000;
@@ -96,7 +97,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
     setActionError(null);
     if (release) {
       otaDownload.mutate(release.version, {
-        onError: (e) => setActionError(e instanceof Error ? e.message : "Download failed"),
+        onError: (e) => setActionError(e instanceof Error ? e.message : t("ota.downloadFailed")),
       });
     }
   };
@@ -104,21 +105,21 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
   const handleCancel = () => {
     setActionError(null);
     otaCancel.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Cancel failed"),
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("ota.cancelFailed")),
     });
   };
 
   const handleInstall = () => {
     setActionError(null);
     otaInstall.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Install failed"),
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("ota.installFailed")),
     });
   };
 
   const handleRollback = () => {
     setActionError(null);
     otaRollback.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Rollback failed"),
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("ota.rollbackFailed")),
     });
   };
 
@@ -126,7 +127,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-4">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          <Spinner className="h-4 w-4" />
           <span className="text-muted-foreground text-sm">{t("ota.checkingForUpdates")}</span>
         </CardContent>
       </Card>
@@ -243,7 +244,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
 
         {cardState === CardState.Installing && (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <Spinner className="h-4 w-4" />
             <p className="text-sm">{t("ota.rebooting")}</p>
           </div>
         )}

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Spinner,
 } from "@kioskkit/ui";
 import { useMemo, useState } from "react";
 import {
@@ -64,8 +65,8 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
     isLoading,
     error: statusError,
   } = useAppUpdateStatus(deviceId, {
-    refetchInterval: (query) => {
-      const data = (query as { state: { data: AppUpdateStatus | null | undefined } }).state.data;
+    refetchInterval: (query: { state: { data: AppUpdateStatus | null | undefined } }) => {
+      const data = query.state.data;
       if (!data) return false;
       if (data.status === AppUpdateStep.Uploading) return 3000;
       if (data.status === AppUpdateStep.Installing) return 5000;
@@ -120,7 +121,7 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-4">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          <Spinner className="h-4 w-4" />
           <span className="text-muted-foreground text-sm">{t("app.checkingForUpdates")}</span>
         </CardContent>
       </Card>
@@ -237,7 +238,7 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
 
         {cardState === CardState.Installing && (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <Spinner className="h-4 w-4" />
             <p className="text-sm">{t("app.installing")}</p>
           </div>
         )}

@@ -1,17 +1,7 @@
 import type { AppUpdateStatus, ReleaseInfo } from "@kioskkit/shared";
 import { AppUpdateStep, ReleaseType } from "@kioskkit/shared";
 import { trpc } from "../trpc.js";
-
-interface ServerOperation {
-  id: string;
-  deviceId: string;
-  type: string;
-  status: string;
-  error: string | null;
-  startedAt: string;
-  completedAt: string | null;
-  metadata: Record<string, unknown> | null;
-}
+import type { ServerOperation } from "./types.js";
 
 type StatusResponse =
   | { source: "device"; result: { data: AppUpdateStatus } }

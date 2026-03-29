@@ -3,7 +3,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   cancelOtaDownload,
   fetchLatestOtaRelease,
-  fetchLatestRelease,
   fetchOtaStatus,
   triggerOtaDownload,
   triggerOtaInstall,
@@ -11,13 +10,6 @@ import {
 } from "../api/ota.js";
 import { queryClient } from "../queryClient.js";
 import { queryKeys } from "./query-keys.js";
-
-export function useLatestRelease() {
-  return useQuery({
-    queryKey: queryKeys.latestRelease,
-    queryFn: fetchLatestRelease,
-  });
-}
 
 export function useLatestOtaRelease() {
   return useQuery({

@@ -1,26 +1,12 @@
 import type { OtaStatus, ReleaseInfo } from "@kioskkit/shared";
 import { OtaStep, ReleaseType } from "@kioskkit/shared";
 import { trpc } from "../trpc.js";
-
-interface ServerOperation {
-  id: string;
-  deviceId: string;
-  type: string;
-  status: string;
-  error: string | null;
-  startedAt: string;
-  completedAt: string | null;
-  metadata: Record<string, unknown> | null;
-}
+import type { ServerOperation } from "./types.js";
 
 type StatusResponse =
   | { source: "device"; result: { data: OtaStatus } }
   | { source: "server"; operation: ServerOperation }
   | { source: "server"; status: "none" };
-
-export async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
-  return trpc["releases.latest"].query();
-}
 
 export async function fetchLatestOtaRelease(): Promise<ReleaseInfo | null> {
   return trpc["releases.latest"].query({ type: ReleaseType.Ota });
