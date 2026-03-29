@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { createDb } from "./db/index.js";
 import { backups, devices, releases, users } from "./db/schema.js";
 
@@ -36,22 +35,17 @@ async function main() {
   const db = createDb(connectionString);
 
   // --- Customer user ---
-  const existingCustomer = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.id, CUSTOMER_USER_ID))
-    .limit(1);
-
-  if (existingCustomer.length === 0) {
-    await db.insert(users).values({
+  await db
+    .insert(users)
+    .values({
       id: CUSTOMER_USER_ID,
       email: "customer@kioskkit.local",
       name: "Test Customer",
       googleId: "test-customer-google-id",
       role: "customer",
-    });
-    console.log("Seeded customer user");
-  }
+    })
+    .onConflictDoNothing({ target: users.id });
+  console.log("Seeded customer user");
 
   // --- Devices ---
   const deviceValues = [
@@ -87,16 +81,7 @@ async function main() {
     },
   ];
 
-  for (const device of deviceValues) {
-    const existing = await db
-      .select({ id: devices.id })
-      .from(devices)
-      .where(eq(devices.id, device.id))
-      .limit(1);
-    if (existing.length === 0) {
-      await db.insert(devices).values(device);
-    }
-  }
+  await db.insert(devices).values(deviceValues).onConflictDoNothing({ target: devices.id });
   console.log("Seeded devices");
 
   // --- Backups ---
@@ -131,16 +116,7 @@ async function main() {
     },
   ];
 
-  for (const backup of backupValues) {
-    const existing = await db
-      .select({ id: backups.id })
-      .from(backups)
-      .where(eq(backups.id, backup.id))
-      .limit(1);
-    if (existing.length === 0) {
-      await db.insert(backups).values(backup);
-    }
-  }
+  await db.insert(backups).values(backupValues).onConflictDoNothing({ target: backups.id });
   console.log("Seeded backups");
 
   // --- Releases ---
@@ -183,16 +159,7 @@ async function main() {
     },
   ];
 
-  for (const release of releaseValues) {
-    const existing = await db
-      .select({ id: releases.id })
-      .from(releases)
-      .where(eq(releases.id, release.id))
-      .limit(1);
-    if (existing.length === 0) {
-      await db.insert(releases).values(release);
-    }
-  }
+  await db.insert(releases).values(releaseValues).onConflictDoNothing({ target: releases.id });
   console.log("Seeded releases");
 
   console.log("Done seeding test data.");
