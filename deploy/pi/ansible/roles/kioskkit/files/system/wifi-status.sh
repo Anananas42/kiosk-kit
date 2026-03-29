@@ -25,7 +25,7 @@ if [ -f /sys/class/net/eth0/carrier ] && [ "$(cat /sys/class/net/eth0/carrier 2>
 fi
 
 # Saved networks (wifi connection profiles managed by NM)
-SAVED=$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | grep ':802-11-wireless$' | cut -d: -f1 | awk '
+SAVED=$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | { grep ':802-11-wireless$' || true; } | cut -d: -f1 | awk '
     BEGIN { printf "[" }
     NR > 1 { printf "," }
     {
@@ -36,9 +36,5 @@ SAVED=$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | grep ':802-11-wirele
     }
     END { printf "]" }
 ')
-
-if [ -z "$SAVED" ]; then
-    SAVED="[]"
-fi
 
 echo "{\"current\":$CURRENT,\"ethernet\":$ETHERNET,\"saved\":$SAVED}"
