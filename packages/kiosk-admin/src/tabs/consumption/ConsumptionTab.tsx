@@ -15,6 +15,7 @@ function getStartOfMonth(): string {
 export function ConsumptionTab() {
   const [from, setFrom] = useState(getStartOfMonth);
   const [to, setTo] = useState("");
+  const [buyer, setBuyer] = useState("all");
 
   const { data: settings } = useQuery({
     queryKey: queryKeys.settings.get(),
@@ -29,6 +30,7 @@ export function ConsumptionTab() {
   const locale = settings?.locale ?? "cs";
   const currency = settings?.currency ?? "CZK";
   const buyers = buyersData?.buyers ?? [];
+  const selectedBuyer = buyer === "all" ? undefined : Number(buyer);
 
   if (buyersLoading) {
     return (
@@ -40,7 +42,15 @@ export function ConsumptionTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <DateFilterBar from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
+      <DateFilterBar
+        from={from}
+        to={to}
+        buyer={buyer}
+        buyers={buyers}
+        onFromChange={setFrom}
+        onToChange={setTo}
+        onBuyerChange={setBuyer}
+      />
 
       <Tabs defaultValue="summary">
         <TabsList>
@@ -49,11 +59,25 @@ export function ConsumptionTab() {
         </TabsList>
 
         <TabsContent value="summary">
-          <SummaryTable from={from} to={to} buyers={buyers} locale={locale} currency={currency} />
+          <SummaryTable
+            from={from}
+            to={to}
+            selectedBuyer={selectedBuyer}
+            buyers={buyers}
+            locale={locale}
+            currency={currency}
+          />
         </TabsContent>
 
         <TabsContent value="logs">
-          <TransactionLog from={from} to={to} buyers={buyers} locale={locale} currency={currency} />
+          <TransactionLog
+            from={from}
+            to={to}
+            selectedBuyer={selectedBuyer}
+            buyers={buyers}
+            locale={locale}
+            currency={currency}
+          />
         </TabsContent>
       </Tabs>
     </div>

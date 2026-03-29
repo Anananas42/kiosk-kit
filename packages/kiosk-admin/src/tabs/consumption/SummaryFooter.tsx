@@ -69,7 +69,9 @@ export function SummaryFooter({
         const rateBuyers = taxByRateAndBuyer.get(rate);
         return (
           <TableRow key={rate} className="text-muted-foreground text-sm">
-            <TableCell className="sticky left-0 bg-muted/50 z-10">Tax {rate}%</TableCell>
+            <TableCell className="sticky left-0 bg-muted/50 z-10">
+              {rate ? `Tax ${rate}%` : "Tax (unset)"}
+            </TableCell>
             <TableCell />
             <TableCell />
             <TableCell />

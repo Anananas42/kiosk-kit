@@ -9,15 +9,28 @@ import { TransactionRow } from "./TransactionRow.js";
 interface TransactionLogProps {
   from: string;
   to: string;
+  selectedBuyer: number | undefined;
   buyers: Buyer[];
   locale: string;
   currency: string;
 }
 
-export function TransactionLog({ from, to, buyers, locale, currency }: TransactionLogProps) {
+export function TransactionLog({
+  from,
+  to,
+  selectedBuyer,
+  buyers,
+  locale,
+  currency,
+}: TransactionLogProps) {
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.consumption.logs(from, to || undefined),
-    queryFn: () => trpc["records.list"].query({ from, to: to || undefined }),
+    queryKey: queryKeys.consumption.logs(from, to || undefined, selectedBuyer),
+    queryFn: () =>
+      trpc["records.list"].query({
+        from,
+        to: to || undefined,
+        buyer: selectedBuyer,
+      }),
   });
 
   const buyerMap = useMemo(() => new Map(buyers.map((b) => [b.id, b])), [buyers]);
