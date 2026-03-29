@@ -7,8 +7,10 @@ export enum OperationType {
   Restore = "restore",
   OtaPush = "ota_push",
   OtaInstall = "ota_install",
+  OtaRollback = "ota_rollback",
   AppPush = "app_push",
   AppInstall = "app_install",
+  AppRollback = "app_rollback",
 }
 
 export enum OperationStatus {

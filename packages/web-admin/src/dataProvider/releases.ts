@@ -1,3 +1,4 @@
+import type { ReleaseType } from "@kioskkit/shared";
 import type { DataProvider, Identifier } from "react-admin";
 import { trpc } from "../trpc.js";
 
@@ -42,14 +43,16 @@ export const releasesDataProvider: DataProvider = {
   },
 
   create: async (_resource, params) => {
-    const { version, githubAssetUrl, sha256, releaseNotes } = params.data as {
+    const { version, releaseType, githubAssetUrl, sha256, releaseNotes } = params.data as {
       version: string;
+      releaseType: ReleaseType;
       githubAssetUrl: string;
       sha256: string;
       releaseNotes?: string;
     };
     const result = await trpc["releases.publish"].mutate({
       version,
+      releaseType,
       githubAssetUrl,
       sha256,
       releaseNotes,

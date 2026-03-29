@@ -5,11 +5,14 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Db } from "./db/index.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { appPushRoutes } from "./routes/app-push.js";
+import { appUpdateRoutes } from "./routes/app-update.js";
 import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
 import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";
 import { otaPushRoutes } from "./routes/ota-push.js";
+import { otaUpdateRoutes } from "./routes/ota-update.js";
 import { tailscaleWebhookRoute } from "./routes/tailscale-webhook.js";
 import { createContextFactory } from "./trpc/context.js";
 import { adminRouter, appRouter } from "./trpc/router.js";
@@ -56,6 +59,9 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
   app.use("/api/*", authMiddleware(db));
 
   app.route("/api/devices", otaPushRoutes(db));
+  app.route("/api/devices", otaUpdateRoutes(db));
+  app.route("/api/devices", appPushRoutes(db));
+  app.route("/api/devices", appUpdateRoutes(db));
   app.route("/api/devices", deviceProxyRoutes(db));
 
   // Host-based static serving: admin.* → web-admin, everything else → web-client

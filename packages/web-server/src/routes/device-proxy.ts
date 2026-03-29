@@ -1,38 +1,9 @@
-import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { PROXY_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
-import { devices } from "../db/schema.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
-import { getTailscaleClient } from "../services/tailscale.js";
-
-async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
-  const conditions =
-    role === "admin"
-      ? eq(devices.id, deviceId)
-      : and(eq(devices.id, deviceId), eq(devices.userId, userId));
-  const [device] = await db.select().from(devices).where(conditions);
-
-  if (!device) return null;
-
-  // If tailscaleIp is missing, fetch from Tailscale API and cache it
-  if (!device.tailscaleIp) {
-    try {
-      const ts = getTailscaleClient();
-      const td = await ts.getDevice(device.tailscaleNodeId);
-      const ip = td.addresses.find((a) => a.startsWith("100.")) ?? null;
-      if (ip) {
-        await db.update(devices).set({ tailscaleIp: ip }).where(eq(devices.id, device.id));
-        return { ...device, tailscaleIp: ip };
-      }
-    } catch {
-      // Tailscale API unavailable
-    }
-  }
-
-  return device;
-}
+import { getAccessibleDevice } from "../services/update-helpers.js";
 
 export function deviceProxyRoutes(db: Db) {
   const app = new Hono<AuthEnv>();

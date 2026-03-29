@@ -52,6 +52,15 @@ export type CatalogCategory = z.infer<typeof CatalogCategorySchema>;
 
 export const CatalogListOutputSchema = z.array(CatalogCategorySchema);
 
+// ── Release schemas ─────────────────────────────────────────────────
+
+export enum ReleaseType {
+  Ota = "ota",
+  App = "app",
+}
+
+export const ReleaseTypeSchema = z.enum(ReleaseType);
+
 // ── Device schemas ──────────────────────────────────────────────────
 
 export enum DeviceStatus {
