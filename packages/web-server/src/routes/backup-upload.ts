@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { BACKUP_FETCH_TIMEOUT_MS, BACKUP_STALE_OP_MS, MAX_RETAINED_BACKUPS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
@@ -18,6 +18,7 @@ import { deleteFile, uploadFile } from "../services/s3.js";
 export async function pullBackupFromDevice(
   db: Db,
   device: { id: string; tailscaleIp: string | null },
+  maxRetainedBackups: number = MAX_RETAINED_BACKUPS,
 ): Promise<{ id: string; sizeBytes: number; createdAt: string }> {
   const res = await fetchDeviceProxy(device, "/api/backup", {
     signal: AbortSignal.timeout(BACKUP_FETCH_TIMEOUT_MS),
@@ -53,7 +54,7 @@ export async function pullBackupFromDevice(
     .where(eq(backups.deviceId, device.id))
     .orderBy(desc(backups.createdAt));
 
-  const toDelete = allBackups.slice(MAX_RETAINED_BACKUPS);
+  const toDelete = allBackups.slice(maxRetainedBackups);
   if (toDelete.length > 0) {
     await Promise.all(
       toDelete.map(async (old) => {
@@ -71,18 +72,46 @@ export async function pullBackupFromDevice(
 }
 
 /**
- * Pull backups from all devices that have a known Tailscale IP.
+ * Pull backups from devices that are due based on their per-device backupIntervalHours.
+ * A device is due if it has a tailscaleIp, a userId, and either no backups exist
+ * or the most recent backup is older than the device's configured interval.
  * Errors on individual devices are logged but do not stop the batch.
  * Each device pull is tracked as a device operation.
  */
-export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
-  const allDevices = await db
-    .select({ id: devices.id, tailscaleIp: devices.tailscaleIp })
-    .from(devices);
+export async function pullBackupsFromDueDevices(db: Db): Promise<void> {
+  // Subquery: most recent backup createdAt per device
+  const latestBackup = db
+    .select({
+      deviceId: backups.deviceId,
+      latestCreatedAt: sql<Date>`max(${backups.createdAt})`.as("latest_created_at"),
+    })
+    .from(backups)
+    .groupBy(backups.deviceId)
+    .as("latest_backup");
 
-  const reachable = allDevices.filter((d) => d.tailscaleIp);
+  const dueDevices = await db
+    .select({
+      id: devices.id,
+      tailscaleIp: devices.tailscaleIp,
+      maxRetainedBackups: devices.maxRetainedBackups,
+    })
+    .from(devices)
+    .leftJoin(latestBackup, eq(devices.id, latestBackup.deviceId))
+    .where(
+      and(
+        isNotNull(devices.tailscaleIp),
+        isNotNull(devices.userId),
+        or(
+          isNull(latestBackup.latestCreatedAt),
+          lt(
+            latestBackup.latestCreatedAt,
+            sql`now() - make_interval(hours => ${devices.backupIntervalHours})`,
+          ),
+        ),
+      ),
+    );
 
-  for (const device of reachable) {
+  for (const device of dueDevices) {
     const { operation: op } = await startOperation(db, {
       deviceId: device.id,
       type: OperationType.Backup,
@@ -90,7 +119,7 @@ export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
     });
 
     try {
-      const result = await pullBackupFromDevice(db, device);
+      const result = await pullBackupFromDevice(db, device, device.maxRetainedBackups);
       await completeOperation(db, op.id);
       console.log(`[backup] Pulled backup from device ${device.id} (${result.sizeBytes} bytes)`);
     } catch (err) {

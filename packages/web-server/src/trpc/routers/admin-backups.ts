@@ -18,7 +18,11 @@ export const adminBackupsRouter = router({
     .input(z.object({ deviceId: z.uuid() }))
     .mutation(async ({ ctx, input }) => {
       const [device] = await ctx.db
-        .select({ id: devices.id, tailscaleIp: devices.tailscaleIp })
+        .select({
+          id: devices.id,
+          tailscaleIp: devices.tailscaleIp,
+          maxRetainedBackups: devices.maxRetainedBackups,
+        })
         .from(devices)
         .where(eq(devices.id, input.deviceId));
 
@@ -38,7 +42,7 @@ export const adminBackupsRouter = router({
 
       // Only kick off a new backup if this is a freshly created operation
       if (isNew) {
-        pullBackupFromDevice(ctx.db, device)
+        pullBackupFromDevice(ctx.db, device, device.maxRetainedBackups)
           .then(() => completeOperation(ctx.db, op.id))
           .catch((err) =>
             failOperation(ctx.db, op.id, err instanceof Error ? err.message : "Backup failed"),
