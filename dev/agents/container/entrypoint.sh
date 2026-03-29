@@ -298,42 +298,7 @@ while true; do
   CI_FAILING=$(echo "$CI_OUTPUT" | grep -c "fail\|X" || true)
   CI_PENDING=$(echo "$CI_OUTPUT" | grep -c "pending\|\*" || true)
 
-  # --- Testing agent (runs once after CI passes) ---
   TESTING_DONE_MARKER="/tmp/.testing-done-${PR_NUMBER}"
-  if [ "$CI_FAILING" -eq 0 ] && [ "$CI_PENDING" -eq 0 ] && [ ! -f "$TESTING_DONE_MARKER" ]; then
-    echo "==> CI passed. Running testing agent for PR #$PR_NUMBER..."
-
-    TESTING_CMD=$(cat .claude/commands/testing.md 2>/dev/null || echo "")
-    if [ -n "$TESTING_CMD" ]; then
-      PR_BODY=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
-      CHANGED_FILES=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json files --jq '.files[].path' 2>/dev/null || echo "")
-
-      start_log_tailer
-      claude --dangerously-skip-permissions -p "$(cat <<TESTING_EOF
-$TESTING_CMD
-
----
-
-PR number: $PR_NUMBER
-Branch: $BRANCH
-
-## PR Description
-
-$PR_BODY
-
-## Changed Files
-
-$CHANGED_FILES
-TESTING_EOF
-      )" || true
-
-      echo "==> Testing agent finished for PR #$PR_NUMBER."
-    else
-      echo "==> Warning: .claude/commands/testing.md not found. Skipping testing agent."
-    fi
-
-    touch "$TESTING_DONE_MARKER"
-  fi
 
   # Check for new review comments
   PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
@@ -456,9 +421,19 @@ $NEEDS_ACTION"; then
     ATTEMPT_COUNT=0
   fi
 
-  # --- Invoke testing agent on @tester command ---
+  # --- Testing agent (single trigger point) ---
+  # Runs on @tester command OR automatically once after CI passes
+  RUN_TESTING=false
   if [ "$HAS_TESTER" = true ]; then
-    echo "==> Running testing agent on @tester request for PR #$PR_NUMBER..."
+    echo "==> @tester command: will run testing agent."
+    RUN_TESTING=true
+  elif [ "$CI_FAILING" -eq 0 ] && [ "$CI_PENDING" -eq 0 ] && [ ! -f "$TESTING_DONE_MARKER" ]; then
+    echo "==> CI passed (first time). Will run testing agent."
+    RUN_TESTING=true
+  fi
+
+  if [ "$RUN_TESTING" = true ]; then
+    echo "==> Running testing agent for PR #$PR_NUMBER..."
     TESTING_CMD=$(cat .claude/commands/testing.md 2>/dev/null || echo "")
     if [ -n "$TESTING_CMD" ]; then
       PR_BODY=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
@@ -488,7 +463,7 @@ TESTING_EOF
       echo "==> Warning: .claude/commands/testing.md not found. Skipping testing agent."
     fi
 
-    touch "/tmp/.testing-done-${PR_NUMBER}"
+    touch "$TESTING_DONE_MARKER"
 
     # Re-count comments after testing agent (it may have posted comments)
     GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
