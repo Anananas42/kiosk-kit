@@ -59,6 +59,14 @@ The container has a pre-seeded test user session. Before navigating to any authe
 
 Do this once per origin. The cookie persists for subsequent navigations to the same origin.
 
+After authenticating (and after any `browser_navigate` to a new page), zoom out the UI so more content fits in the viewport:
+
+```js
+browser_evaluate: document.body.style.zoom = '0.6'
+```
+
+This is equivalent to pressing Ctrl+minus in the browser. It makes the UI 40% smaller so screenshots and snapshots capture more of the page. Apply this after every navigation — it does not persist across page loads.
+
 ## Step 3: Execute tests
 
 Use Playwright MCP tools to execute each test step:
