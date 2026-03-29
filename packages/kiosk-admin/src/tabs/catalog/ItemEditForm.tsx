@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AdminItemUpdateSchema, type CatalogItem } from "@kioskkit/shared";
 import { Button, Field, FieldError, FieldGroup, FieldLabel, Input, Spinner } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -21,12 +21,10 @@ type ItemUpdateInput = {
 
 interface ItemEditFormProps {
   item: CatalogItem;
-  isFirst: boolean;
-  isLast: boolean;
   onClose: () => void;
 }
 
-export function ItemEditForm({ item, isFirst, isLast, onClose }: ItemEditFormProps) {
+export function ItemEditForm({ item, onClose }: ItemEditFormProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
@@ -63,19 +61,6 @@ export function ItemEditForm({ item, isFirst, isLast, onClose }: ItemEditFormPro
     },
     onError: (err: Error) => toast.error(err.message),
   });
-
-  const moveMutation = useMutation({
-    mutationFn: (input: { id: number; direction: "up" | "down" }) =>
-      trpc["admin.catalog.moveItem"].mutate(input),
-    onSuccess: () => {
-      invalidateCatalog();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  function handleMove(direction: "up" | "down") {
-    moveMutation.mutate({ id: Number(item.id), direction });
-  }
 
   return (
     <form
@@ -124,31 +109,6 @@ export function ItemEditForm({ item, isFirst, isLast, onClose }: ItemEditFormPro
         <Button type="button" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </Button>
-
-        <div className="flex items-center gap-1 ml-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1 text-xs"
-            aria-label="Move up"
-            onClick={() => handleMove("up")}
-            disabled={isFirst || moveMutation.isPending}
-          >
-            <ArrowUp className="size-3" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1 text-xs"
-            aria-label="Move down"
-            onClick={() => handleMove("down")}
-            disabled={isLast || moveMutation.isPending}
-          >
-            <ArrowDown className="size-3" />
-          </Button>
-        </div>
 
         <div className="flex-1" />
 
