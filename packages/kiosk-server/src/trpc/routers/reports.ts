@@ -1,7 +1,6 @@
 import {
   ConsumptionReportInputSchema,
   ConsumptionReportSchema,
-  ConsumptionReportV2Schema,
   type ConsumptionSummaryRow,
   getDeliveryDate,
   noDeliveryDaysSet,
@@ -10,53 +9,9 @@ import {
 import { baseProcedure, router } from "../trpc.js";
 
 export const reportsRouter = router({
-  "reports.consumption": baseProcedure.output(ConsumptionReportSchema).query(({ ctx }) => {
-    const records = ctx.store.getRecords();
-
-    const agg = new Map<
-      string,
-      {
-        item: string;
-        itemId: string;
-        category: string;
-        quantity: string;
-        price: string;
-        byBuyer: Map<number, number>;
-      }
-    >();
-
-    for (const r of records) {
-      const key = r.itemId || r.item;
-      let entry = agg.get(key);
-      if (!entry) {
-        entry = {
-          item: r.item,
-          itemId: r.itemId,
-          category: r.category,
-          quantity: r.quantity,
-          price: r.price,
-          byBuyer: new Map(),
-        };
-        agg.set(key, entry);
-      }
-      entry.byBuyer.set(r.buyer, (entry.byBuyer.get(r.buyer) ?? 0) + r.count);
-    }
-
-    const rows = Array.from(agg.values()).map((e) => ({
-      item: e.item,
-      itemId: e.itemId,
-      category: e.category,
-      quantity: e.quantity,
-      price: e.price,
-      byBuyer: Object.fromEntries(e.byBuyer),
-    }));
-
-    return { rows };
-  }),
-
-  "reports.consumptionV2": baseProcedure
+  "reports.consumption": baseProcedure
     .input(ConsumptionReportInputSchema)
-    .output(ConsumptionReportV2Schema)
+    .output(ConsumptionReportSchema)
     .query(({ ctx, input }) => {
       const rawSummary = ctx.store.getConsumptionSummary(input.from, input.to);
       const summary: ConsumptionSummaryRow[] = rawSummary.map((row) => ({
