@@ -1,5 +1,5 @@
-import { MdWifiOff } from "react-icons/md";
+import { WifiOff } from "lucide-react";
 
 export default function WifiOffIcon() {
-  return <MdWifiOff size={80} aria-label="No WiFi" />;
+  return <WifiOff size={80} aria-label="No WiFi" />;
 }

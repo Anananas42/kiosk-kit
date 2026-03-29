@@ -1,14 +1,14 @@
 import { DeviceStatus } from "@kioskkit/shared";
-import type { IconType } from "react-icons";
-import { MdErrorOutline, MdWifiOff } from "react-icons/md";
+import type { LucideIcon } from "lucide-react";
+import { CircleAlert, WifiOff } from "lucide-react";
 import { useTranslate } from "../hooks/useTranslate.js";
 import { DeviceStatusBadge } from "./DeviceStatusBadge.js";
 
 type DisconnectedStatus = DeviceStatus.Offline | DeviceStatus.AppNotConnected;
 
-const ICON: Record<DisconnectedStatus, IconType> = {
-  [DeviceStatus.Offline]: MdWifiOff,
-  [DeviceStatus.AppNotConnected]: MdErrorOutline,
+const ICON: Record<DisconnectedStatus, LucideIcon> = {
+  [DeviceStatus.Offline]: WifiOff,
+  [DeviceStatus.AppNotConnected]: CircleAlert,
 };
 
 const MESSAGE_KEY = {
