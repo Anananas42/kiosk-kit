@@ -55,10 +55,10 @@ export type FetchAndStreamOptions = {
 };
 
 /**
- * Fetch a release asset and stream it to a device endpoint.
+ * Fetch a release asset from upstream and stream it to a device endpoint.
  *
  * When `assetUrl` and `sha256` are provided, the release DB lookup is skipped.
- * Otherwise, it looks up the release by version and type.
+ * Otherwise, looks up the release by version and type.
  */
 export async function fetchAndStreamToDevice(
   opts: FetchAndStreamOptions,
