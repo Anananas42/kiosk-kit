@@ -140,6 +140,7 @@ export const RecordEntrySchema = z.object({
   itemId: z.string(),
   quantity: z.string(),
   price: z.string(),
+  dphRate: z.string(),
 });
 
 export type RecordEntry = z.infer<typeof RecordEntrySchema>;
@@ -153,6 +154,7 @@ export const RecordRowSchema = z.object({
   itemId: z.string(),
   quantity: z.string(),
   price: z.string(),
+  dphRate: z.string(),
 });
 
 export type RecordRow = z.infer<typeof RecordRowSchema>;
@@ -286,6 +288,51 @@ export const ConsumptionRowSchema = z.object({
 export const ConsumptionReportSchema = z.object({
   rows: z.array(ConsumptionRowSchema),
 });
+
+// ── Consumption report v2 schemas ──────────────────────────────────
+
+export const ConsumptionReportInputSchema = z.object({
+  from: z.string(),
+  to: z.string().optional(),
+});
+
+export type ConsumptionReportInput = z.infer<typeof ConsumptionReportInputSchema>;
+
+export const BuyerAggSchema = z.object({
+  count: z.number(),
+  total: z.number(),
+});
+
+export const ConsumptionSummaryRowSchema = z.object({
+  itemKey: z.string(),
+  item: z.string(),
+  itemId: z.string(),
+  category: z.string(),
+  quantity: z.string(),
+  dphRate: z.string(),
+  byBuyer: z.record(z.string(), BuyerAggSchema),
+  totalCount: z.number(),
+  grandTotal: z.number(),
+  unitPrice: z.number().nullable(),
+});
+
+export type ConsumptionSummaryRow = z.infer<typeof ConsumptionSummaryRowSchema>;
+
+export const BuyerTaxTotalSchema = z.object({
+  buyer: z.number().int(),
+  taxRate: z.string(),
+  netCount: z.number(),
+  netTotal: z.number(),
+});
+
+export type BuyerTaxTotal = z.infer<typeof BuyerTaxTotalSchema>;
+
+export const ConsumptionReportV2Schema = z.object({
+  summary: z.array(ConsumptionSummaryRowSchema),
+  buyerTotals: z.array(BuyerTaxTotalSchema),
+});
+
+export type ConsumptionReportV2 = z.infer<typeof ConsumptionReportV2Schema>;
 
 export const PreorderReportRowSchema = z.object({
   date: z.string(),

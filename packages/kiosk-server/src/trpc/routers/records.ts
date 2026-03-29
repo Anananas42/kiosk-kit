@@ -62,6 +62,8 @@ export const recordsRouter = router({
           }
         }
 
+        const dphRate = ctx.store.getCatalogItemDphRate(input.itemId ?? "", input.item);
+
         const entry: RecordEntry = {
           id: randomUUID(),
           timestamp: new Date().toISOString(),
@@ -72,6 +74,7 @@ export const recordsRouter = router({
           itemId: input.itemId ?? "",
           quantity: input.quantity ?? "",
           price: input.price ?? "",
+          dphRate,
         };
 
         ctx.store.insertRecord(entry);
@@ -80,12 +83,21 @@ export const recordsRouter = router({
     }),
 
   "records.list": baseProcedure
-    .input(z.object({ buyer: z.number().int().min(1) }).optional())
+    .input(
+      z
+        .object({
+          buyer: z.number().int().min(1).optional(),
+          from: z.string().optional(),
+          to: z.string().optional(),
+        })
+        .optional(),
+    )
     .output(OverviewResponseSchema)
     .query(({ ctx, input }) => {
+      const dateOpts = { from: input?.from, to: input?.to };
       const records = input?.buyer
-        ? ctx.store.getRecordsByBuyer(input.buyer)
-        : ctx.store.getRecords();
+        ? ctx.store.getRecordsByBuyer(input.buyer, dateOpts)
+        : ctx.store.getRecords(dateOpts);
       return { records };
     }),
 

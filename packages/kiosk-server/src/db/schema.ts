@@ -36,6 +36,7 @@ export const records = sqliteTable("records", {
   itemId: text("item_id").notNull().default(""),
   quantity: text("quantity").notNull().default(""),
   price: text("price").notNull().default(""),
+  dphRate: text("dph_rate").notNull().default(""),
 });
 
 export const settings = sqliteTable("settings", {

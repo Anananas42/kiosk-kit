@@ -15,6 +15,13 @@
       "when": 1774715261770,
       "tag": "0001_acoustic_reptil",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774747327182,
+      "tag": "0002_dapper_wither",
+      "breakpoints": true
     }
   ]
 }

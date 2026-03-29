@@ -15,6 +15,7 @@ const mockRecords = [
     itemId: "10",
     quantity: "1 cup",
     price: "50",
+    dphRate: "21",
   },
 ];
 
@@ -24,6 +25,7 @@ describe("records.submit procedure", () => {
     const store = {
       insertRecord,
       getItemBalance: () => 0,
+      getCatalogItemDphRate: () => "21",
     } as unknown as Store;
     const caller = createCaller({ store });
 
