@@ -5,11 +5,15 @@ import { devices, releases } from "../db/schema.js";
 import { fetchDeviceProxy } from "./device-network.js";
 import { getTailscaleClient } from "./tailscale.js";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Look up a device by ID, verifying ownership (or admin access).
  * If the device's Tailscale IP is missing, attempts to fetch and cache it.
  */
 export async function getAccessibleDevice(db: Db, deviceId: string, userId: string, role: string) {
+  if (!UUID_RE.test(deviceId)) return null;
+
   const conditions =
     role === "admin"
       ? eq(devices.id, deviceId)

@@ -8,7 +8,7 @@ import { deviceProxyRoutes } from "./device-proxy.js";
 type User = typeof users.$inferSelect;
 
 const DEVICE = {
-  id: "device-1",
+  id: "a0000000-0000-4000-8000-000000000001",
   userId: "user-1",
   name: "Test Kiosk",
   tailscaleIp: "100.64.1.5",
@@ -69,7 +69,7 @@ describe("device proxy", () => {
         ),
     );
 
-    const res = await app.request("/devices/device-1/kiosk/catalog");
+    const res = await app.request("/devices/a0000000-0000-4000-8000-000000000001/kiosk/catalog");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ items: [] });
 
@@ -83,7 +83,7 @@ describe("device proxy", () => {
     const app = makeApp(createMockDb([DEVICE]));
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
 
-    const res = await app.request("/devices/device-1/kiosk/catalog");
+    const res = await app.request("/devices/a0000000-0000-4000-8000-000000000001/kiosk/catalog");
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Device unreachable" });
 
@@ -108,7 +108,7 @@ describe("device proxy", () => {
         ),
     );
 
-    const res = await app.request("/devices/device-1/kiosk/catalog");
+    const res = await app.request("/devices/a0000000-0000-4000-8000-000000000001/kiosk/catalog");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ items: [] });
 
