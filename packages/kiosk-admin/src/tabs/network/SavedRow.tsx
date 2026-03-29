@@ -1,5 +1,6 @@
 import type { WifiStatus } from "@kioskkit/shared";
 import { Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Lock } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { ForgetButton } from "./ForgetButton.js";
@@ -41,11 +42,14 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
           {network.inRange && network.signal != null ? (
             <SignalIcon dBm={network.signal} />
           ) : (
-            <SignalIcon dBm={-100} />
+            <SignalIcon dBm={-100} offline />
           )}
         </TableCell>
         <TableCell className="font-medium">
-          {network.ssid}
+          <span className="inline-flex items-center gap-1.5">
+            {network.ssid}
+            {network.security === "wpa" && <Lock className="h-3 w-3 text-muted-foreground" />}
+          </span>
           {!(network.inRange && network.signal != null) && (
             <span className="ml-2 text-xs italic text-muted-foreground">out of range</span>
           )}

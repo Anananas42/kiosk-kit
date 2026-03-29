@@ -1,5 +1,6 @@
 import type { WifiStatus } from "@kioskkit/shared";
 import { Badge, TableCell, TableRow } from "@kioskkit/ui";
+import { Lock } from "lucide-react";
 import { ForgetButton } from "./ForgetButton.js";
 import { SignalIcon } from "./SignalIcon.js";
 
@@ -15,7 +16,12 @@ export function ConnectedRow({ current, forgettingSsid, onForget }: ConnectedRow
       <TableCell className="w-8">
         <SignalIcon dBm={current.signal} />
       </TableCell>
-      <TableCell className="font-medium">{current.ssid}</TableCell>
+      <TableCell className="font-medium">
+        <span className="inline-flex items-center gap-1.5">
+          {current.ssid}
+          {current.security === "wpa" && <Lock className="h-3 w-3 text-muted-foreground" />}
+        </span>
+      </TableCell>
       <TableCell>
         <Badge className="bg-success text-white">Connected</Badge>
       </TableCell>

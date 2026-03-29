@@ -48,9 +48,9 @@ export async function getWifiStatus(): Promise<WifiStatus> {
 
   const scanned = parseJson<WifiNetwork[]>(scanOutput, "wifi-scan");
   const status = parseJson<{
-    current: { ssid: string; signal: number } | null;
+    current: { ssid: string; signal: number; security?: "open" | "wpa" } | null;
     ethernet: boolean;
-    saved: { ssid: string }[];
+    saved: { ssid: string; security?: "open" | "wpa" }[];
   }>(statusOutput, "wifi-status");
 
   const scannedBySsid = new Map(scanned.map((n) => [n.ssid, n]));
@@ -62,6 +62,7 @@ export async function getWifiStatus(): Promise<WifiStatus> {
       ssid: s.ssid,
       inRange: !!scan,
       ...(scan ? { signal: scan.signal } : {}),
+      ...(s.security ? { security: s.security } : {}),
     };
   });
 
