@@ -22,6 +22,7 @@ export function ReleaseShow() {
     <Show actions={<ReleaseShowActions />}>
       <SimpleShowLayout>
         <TextField source="version" />
+        <TextField source="releaseType" label="Release Type" />
         <TextField source="otaAssetUrl" label="OTA Asset URL" />
         <TextField source="otaSha256" label="OTA SHA256 Checksum" />
         <TextField source="appAssetUrl" label="App Bundle URL" />

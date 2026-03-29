@@ -69,9 +69,9 @@ export async function fetchAndStreamToDevice(
   // Fetch asset from GitHub
   let upstream: Response;
   try {
-    const assetUrl = release.otaAssetUrl;
+    const assetUrl = opts.releaseType === "app" ? release.appAssetUrl : release.otaAssetUrl;
     if (!assetUrl) {
-      return { ok: false, error: "Release has no OTA asset", status: 404 };
+      return { ok: false, error: `Release has no ${opts.releaseType} asset`, status: 404 };
     }
 
     upstream = await fetch(assetUrl, {
@@ -101,7 +101,8 @@ export async function fetchAndStreamToDevice(
   // Populate sha256 from release
   for (const [key, value] of Object.entries(deviceHeaders)) {
     if (value === "__SHA256__") {
-      deviceHeaders[key] = release.otaSha256 ?? "";
+      const sha256 = opts.releaseType === "app" ? release.appSha256 : release.otaSha256;
+      deviceHeaders[key] = sha256 ?? "";
     }
   }
 

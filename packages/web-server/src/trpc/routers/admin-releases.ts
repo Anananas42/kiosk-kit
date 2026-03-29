@@ -114,6 +114,7 @@ export const adminReleasesRouter = router({
       return {
         id: release!.id,
         version: release!.version,
+        releaseType: release!.releaseType,
         otaAssetUrl: release!.otaAssetUrl,
         otaSha256: release!.otaSha256,
         appAssetUrl: release!.appAssetUrl,

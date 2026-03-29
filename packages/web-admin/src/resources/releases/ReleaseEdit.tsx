@@ -5,6 +5,7 @@ export function ReleaseEdit() {
     <Edit redirect="show">
       <SimpleForm>
         <TextInput source="version" disabled />
+        <TextInput source="releaseType" label="Release Type" disabled />
         <TextInput source="otaAssetUrl" label="OTA Asset URL" disabled fullWidth />
         <TextInput source="otaSha256" label="OTA SHA256 Checksum" disabled fullWidth />
         <TextInput source="appAssetUrl" label="App Bundle URL" disabled fullWidth />
