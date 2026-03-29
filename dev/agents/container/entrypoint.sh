@@ -41,6 +41,9 @@ for _i in $(seq 1 30); do
   sleep 1
 done
 
+echo "==> Building shared package..."
+pnpm --filter @kioskkit/shared build
+
 echo "==> Pushing database schema..."
 pnpm --filter @kioskkit/web-server db:push
 
