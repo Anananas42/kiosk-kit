@@ -510,6 +510,25 @@ export type UpdateStatus = z.infer<typeof UpdateStatusSchema>;
 export const UpdateTypeSchema = z.enum(["full", "live"]);
 export type UpdateType = z.infer<typeof UpdateTypeSchema>;
 
+export const UpdateActionSchema = z.enum(["push", "install"]);
+export type UpdateAction = z.infer<typeof UpdateActionSchema>;
+
+export const UpdateOpResultSchema = z.enum(["pending", "success", "failed"]);
+export type UpdateOpResult = z.infer<typeof UpdateOpResultSchema>;
+
+export const UpdateOpSchema = z.object({
+  id: z.string(),
+  deviceId: z.string(),
+  updateType: UpdateTypeSchema,
+  action: UpdateActionSchema,
+  version: z.string(),
+  result: UpdateOpResultSchema,
+  error: z.string().nullable(),
+  startedAt: z.string(),
+  finishedAt: z.string().nullable(),
+});
+export type UpdateOp = z.infer<typeof UpdateOpSchema>;
+
 export const DeviceUpdateInfoSchema = z.object({
   type: z.enum(["full", "live", "up_to_date"]),
   currentVersion: z.string().nullable(),

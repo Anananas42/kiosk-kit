@@ -59,6 +59,8 @@ export {
   InputOTPSlot,
 } from "./components/ui/input-otp";
 export { Label } from "./components/ui/label";
+export type { ProgressBarProps } from "./components/ui/progress-bar";
+export { ProgressBar } from "./components/ui/progress-bar";
 export {
   Select,
   SelectContent,

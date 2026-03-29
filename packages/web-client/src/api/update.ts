@@ -1,4 +1,4 @@
-import type { DeviceUpdateInfo, UpdateStatus } from "@kioskkit/shared";
+import type { DeviceUpdateInfo, UpdateOp, UpdateStatus } from "@kioskkit/shared";
 
 /**
  * Calls tRPC procedures on the admin router (/api/admin/trpc/).
@@ -49,20 +49,8 @@ export async function triggerUpdateCancel(deviceId: string) {
   return adminMutate<{ ok: boolean }>("devices.updateCancel", { id: deviceId });
 }
 
-export interface ServerUpdateOp {
-  id: string;
-  deviceId: string;
-  updateType: string;
-  action: string;
-  version: string;
-  result: string;
-  error: string | null;
-  startedAt: string;
-  finishedAt: string | null;
-}
-
 export async function fetchServerUpdateStatus(deviceId: string) {
-  return adminQuery<{ operation: ServerUpdateOp | null }>("devices.updateStatus", { id: deviceId });
+  return adminQuery<{ operation: UpdateOp | null }>("devices.updateStatus", { id: deviceId });
 }
 
 export async function triggerUpdatePush(deviceId: string): Promise<void> {

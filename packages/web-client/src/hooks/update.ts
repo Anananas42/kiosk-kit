@@ -7,16 +7,17 @@ import {
   triggerUpdateInstall,
   triggerUpdatePush,
 } from "../api/update.js";
+import { PollInterval } from "../constants.js";
 import { queryKeys } from "./query-keys.js";
 
-export function useUpdateInfo(deviceId: string) {
+export function useUpdateInfoQuery(deviceId: string) {
   return useQuery({
     queryKey: queryKeys.updateInfo(deviceId),
     queryFn: () => fetchUpdateInfo(deviceId),
   });
 }
 
-export function useDeviceUpdateStatus(
+export function useDeviceUpdateStatusQuery(
   deviceId: string,
   options?: { refetchInterval?: number | false },
 ) {
@@ -27,16 +28,16 @@ export function useDeviceUpdateStatus(
   });
 }
 
-export function useServerUpdateStatus(deviceId: string, enabled: boolean) {
+export function useServerUpdateStatusQuery(deviceId: string, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.serverUpdateStatus(deviceId),
     queryFn: () => fetchServerUpdateStatus(deviceId),
     enabled,
-    refetchInterval: enabled ? 5000 : false,
+    refetchInterval: enabled ? PollInterval.ServerStatus : false,
   });
 }
 
-export function useUpdatePush(deviceId: string) {
+export function useUpdatePushMutation(deviceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => triggerUpdatePush(deviceId),
@@ -47,7 +48,7 @@ export function useUpdatePush(deviceId: string) {
   });
 }
 
-export function useUpdateInstall(deviceId: string) {
+export function useUpdateInstallMutation(deviceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => triggerUpdateInstall(deviceId),
@@ -58,7 +59,7 @@ export function useUpdateInstall(deviceId: string) {
   });
 }
 
-export function useUpdateCancel(deviceId: string) {
+export function useUpdateCancelMutation(deviceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => triggerUpdateCancel(deviceId),

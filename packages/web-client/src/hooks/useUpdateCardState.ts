@@ -1,23 +1,21 @@
 import {
   type DeviceUpdateInfo,
+  type UpdateOp,
   UpdateResult,
   type UpdateStatus,
   UpdateStep,
+  type UpdateType,
 } from "@kioskkit/shared";
 import { useMemo, useRef } from "react";
-import type { ServerUpdateOp } from "../api/update.js";
+import { PollInterval } from "../constants.js";
 import {
-  useDeviceUpdateStatus,
-  useServerUpdateStatus,
-  useUpdateCancel,
-  useUpdateInfo,
-  useUpdateInstall,
-  useUpdatePush,
+  useDeviceUpdateStatusQuery,
+  useServerUpdateStatusQuery,
+  useUpdateCancelMutation,
+  useUpdateInfoQuery,
+  useUpdateInstallMutation,
+  useUpdatePushMutation,
 } from "./update.js";
-
-// ---------------------------------------------------------------------------
-// State derivation (pure, exported for testing)
-// ---------------------------------------------------------------------------
 
 export enum CardState {
   UpToDate = "up-to-date",
@@ -28,8 +26,6 @@ export enum CardState {
   Success = "success",
   Failed = "failed",
 }
-
-export type UpdateType = "live" | "full";
 
 export interface DerivedUpdate {
   state: CardState;
@@ -47,12 +43,12 @@ export interface DerivedUpdate {
 export function deriveUpdate(
   deviceStatus: UpdateStatus | undefined,
   deviceError: boolean,
-  serverOp: ServerUpdateOp | null,
+  serverOp: UpdateOp | null,
   updateInfo: DeviceUpdateInfo | undefined,
 ): DerivedUpdate {
   const currentVersion = deviceStatus?.currentVersion ?? updateInfo?.currentVersion ?? null;
   const infoType: UpdateType | null =
-    updateInfo?.type === "live" || updateInfo?.type === "full" ? updateInfo.type : null;
+    updateInfo?.type === "full" || updateInfo?.type === "live" ? updateInfo.type : null;
 
   // Primary: device is reachable
   if (deviceStatus) {
@@ -87,7 +83,7 @@ export function deriveUpdate(
 
   // Fallback: device unreachable but server shows an active operation
   if (deviceError && serverOp) {
-    const opType: UpdateType = serverOp.updateType === "live" ? "live" : "full";
+    const opType = serverOp.updateType;
     const fallbackState =
       serverOp.action === "install" ? CardState.Installing : CardState.Downloading;
     return { state: fallbackState, type: opType, targetVersion: serverOp.version, currentVersion };
@@ -106,34 +102,23 @@ export function deriveUpdate(
   return { state: CardState.UpToDate, type: null, targetVersion: null, currentVersion };
 }
 
-// ---------------------------------------------------------------------------
-// Polling interval config
-// ---------------------------------------------------------------------------
-
-const POLL_INTERVALS: Partial<Record<UpdateStep, number>> = {
-  [UpdateStep.Uploading]: 3000,
-  [UpdateStep.Installing]: 5000,
-};
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+function getPollInterval(status: UpdateStep | undefined): number | false {
+  if (status === UpdateStep.Uploading) return PollInterval.Uploading;
+  if (status === UpdateStep.Installing) return PollInterval.Installing;
+  return false;
+}
 
 export function useUpdateCardState(deviceId: string) {
-  // Track the last-known device status to compute poll interval.
-  // On first render lastStatus is undefined → no polling.
-  // After data arrives, re-render uses the updated ref for the next interval.
   const lastStatusRef = useRef<UpdateStep | undefined>(undefined);
 
-  const updateInfo = useUpdateInfo(deviceId);
-  const deviceUpdateStatus = useDeviceUpdateStatus(deviceId, {
-    refetchInterval: POLL_INTERVALS[lastStatusRef.current!] ?? false,
+  const updateInfo = useUpdateInfoQuery(deviceId);
+  const deviceUpdateStatus = useDeviceUpdateStatusQuery(deviceId, {
+    refetchInterval: getPollInterval(lastStatusRef.current),
   });
 
-  // Update the ref after the hook call so next render uses the latest status.
   lastStatusRef.current = deviceUpdateStatus.data?.status;
 
-  const serverUpdateStatus = useServerUpdateStatus(deviceId, !!deviceUpdateStatus.error);
+  const serverUpdateStatus = useServerUpdateStatusQuery(deviceId, !!deviceUpdateStatus.error);
 
   const derived = useMemo(
     () =>
@@ -151,9 +136,9 @@ export function useUpdateCardState(deviceId: string) {
     ],
   );
 
-  const push = useUpdatePush(deviceId);
-  const install = useUpdateInstall(deviceId);
-  const cancel = useUpdateCancel(deviceId);
+  const push = useUpdatePushMutation(deviceId);
+  const install = useUpdateInstallMutation(deviceId);
+  const cancel = useUpdateCancelMutation(deviceId);
 
   return {
     derived,

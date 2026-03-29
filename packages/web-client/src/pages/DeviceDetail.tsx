@@ -6,7 +6,7 @@ import { BackupSection } from "../components/BackupSection.js";
 import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
 import { StatusCard } from "../components/StatusCard.js";
-import { UpdateCard } from "../components/UpdateCard.js";
+import { UpdateCard } from "../components/UpdateCard/UpdateCard.js";
 import { useBackups } from "../hooks/backups.js";
 import { useDevice, useDeviceStatus, useRenameDevice } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
