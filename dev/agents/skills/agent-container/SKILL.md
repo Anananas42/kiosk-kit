@@ -108,6 +108,7 @@ The watch loop recognizes special commands in PR comments from non-bot users:
 
 - **`@continue`** — Resets the attempt counter to 0 and resumes the polling loop. Use this after the agent has hit the max attempts limit and a human has provided guidance or fixed the underlying issue. The agent will pick up any pending CI failures or review comments on the next iteration.
 - **`@tester`** — Invokes the testing agent on demand, even if it already ran once for this PR. Useful for re-testing after additional changes. If `@tester` appears alongside other review feedback, the agent addresses the feedback first, then runs the testing agent.
+- **`@reviewer`** — Invokes the reviewing agent on demand, even if it already ran once for this PR. Useful for re-reviewing after the main agent has addressed feedback.
 
 ## Testing agent
 
@@ -119,10 +120,28 @@ After CI passes on a PR, the watch loop automatically runs a **testing agent** �
 4. Posts structured pass/fail results as a PR comment
 5. Optionally requests changes if critical failures are found (>50% steps fail)
 
+After the testing agent finishes, its comment(s) are handed to the main agent, which decides whether to act on them (fix failures) or acknowledge them (thumbs up reaction).
+
 Key properties:
-- **Runs exactly once per PR** — tracked via a marker file at `/tmp/.testing-done-<PR_NUMBER>`. Once touched, the testing agent is not re-invoked even if the loop continues polling.
+- **Runs exactly once per PR** — tracked via a marker file at `/tmp/.testing-done-<PR_NUMBER>`. Re-invoked on `@tester` command.
 - **Does NOT modify code or push changes** — it is read-only. Any failures it finds must be addressed by the main agent in a subsequent fix cycle.
 - **Crash-safe** — the testing agent invocation uses `|| true`, so a crash does not kill the watch loop. The marker file is touched unconditionally after invocation.
+
+## Reviewing agent
+
+After the testing agent finishes, the watch loop automatically runs a **reviewing agent** — a separate `claude` invocation that:
+
+1. Reads `.claude/commands/reviewing.md` and the changed files
+2. Reviews code quality: component structure, naming, UI library usage, error handling, schema migrations
+3. Posts structured findings as a PR comment
+4. Optionally requests changes if must-fix issues are found
+
+After the reviewing agent finishes, its comment(s) are handed to the main agent, which decides whether to act on them (fix issues) or acknowledge them (thumbs up reaction).
+
+Key properties:
+- **Runs exactly once per PR** — tracked via a marker file at `/tmp/.reviewing-done-<PR_NUMBER>`. Re-invoked on `@reviewer` command.
+- **Does NOT modify code or push changes** — it is read-only. Any issues it finds must be addressed by the main agent in a subsequent fix cycle.
+- **Crash-safe** — same `|| true` pattern as the testing agent.
 
 ## Docker-in-Docker (DinD) sidecar
 

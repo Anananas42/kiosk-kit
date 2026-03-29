@@ -320,8 +320,9 @@ while true; do
     fi
   fi
 
-  # --- Check for @tester command ---
+  # --- Check for @tester and @reviewer commands ---
   HAS_TESTER=false
+  HAS_REVIEWER=false
   if [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ] || [ "$HAS_CONTINUE" = true ]; then
     TESTER_COUNT=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$CHECK_SINCE_TIMESTAMP\" or .updated_at > \"$CHECK_SINCE_TIMESTAMP\") and (.body | test(\"@tester\")))] | length" 2>/dev/null || echo "0")
     if [ "$TESTER_COUNT" -gt 0 ]; then
@@ -329,6 +330,12 @@ while true; do
       HAS_TESTER=true
       # Reset the testing marker so it runs again
       rm -f "/tmp/.testing-done-${PR_NUMBER}"
+    fi
+    REVIEWER_COUNT=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$CHECK_SINCE_TIMESTAMP\" or .updated_at > \"$CHECK_SINCE_TIMESTAMP\") and (.body | test(\"@reviewer\")))] | length" 2>/dev/null || echo "0")
+    if [ "$REVIEWER_COUNT" -gt 0 ]; then
+      echo "==> @reviewer command detected. Will invoke reviewing agent."
+      HAS_REVIEWER=true
+      rm -f "/tmp/.reviewing-done-${PR_NUMBER}"
     fi
   fi
 
@@ -491,6 +498,77 @@ Tester comment IDs: $TESTER_COMMENT_IDS" || true
     fi
 
     touch "$TESTING_DONE_MARKER"
+  fi
+
+  # --- Reviewing agent (single trigger point) ---
+  # Runs on @reviewer command OR automatically once after tester finishes
+  REVIEWING_DONE_MARKER="/tmp/.reviewing-done-${PR_NUMBER}"
+  RUN_REVIEWING=false
+  if [ "$HAS_REVIEWER" = true ]; then
+    echo "==> @reviewer command: will run reviewing agent."
+    RUN_REVIEWING=true
+  elif [ -f "$TESTING_DONE_MARKER" ] && [ ! -f "$REVIEWING_DONE_MARKER" ]; then
+    echo "==> Tester done. Will run reviewing agent."
+    RUN_REVIEWING=true
+  fi
+
+  if [ "$RUN_REVIEWING" = true ]; then
+    echo "==> Running reviewing agent for PR #$PR_NUMBER..."
+    REVIEWING_CMD=$(cat .claude/commands/reviewing.md 2>/dev/null || echo "")
+    if [ -n "$REVIEWING_CMD" ]; then
+      REVIEWING_BEFORE_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      PR_BODY=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
+      CHANGED_FILES=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json files --jq '.files[].path' 2>/dev/null || echo "")
+
+      start_log_tailer
+      claude --dangerously-skip-permissions -p "$(cat <<REVIEWING_EOF
+$REVIEWING_CMD
+
+---
+
+PR number: $PR_NUMBER
+Branch: $BRANCH
+
+## PR Description
+
+$PR_BODY
+
+## Changed Files
+
+$CHANGED_FILES
+REVIEWING_EOF
+      )" || true
+
+      echo "==> Reviewing agent finished for PR #$PR_NUMBER."
+
+      # Capture the reviewer's comment(s) and hand them to the main agent.
+      GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
+      REVIEWER_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" \
+        --jq "[.[] | select(.user.login == \"kiosk-kit-agent[bot]\" and .created_at > \"$REVIEWING_BEFORE_TIMESTAMP\")] | map({id, body})" 2>/dev/null || echo "[]")
+      REVIEWER_COMMENT_COUNT=$(echo "$REVIEWER_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+
+      if [ "$REVIEWER_COMMENT_COUNT" -gt 0 ]; then
+        echo "==> Handing $REVIEWER_COMMENT_COUNT reviewer comment(s) to the main agent..."
+        REVIEWER_COMMENT_IDS=$(echo "$REVIEWER_COMMENTS" | jq -r '.[].id' 2>/dev/null || echo "")
+
+        ATTEMPT_COUNT=$((ATTEMPT_COUNT + 1))
+        if [ "$ATTEMPT_COUNT" -le "$MAX_ATTEMPTS" ]; then
+          resume_claude "The code reviewing agent ran on PR #$PR_NUMBER and posted the following findings:
+
+$REVIEWER_COMMENTS
+
+Review the findings. If there are must-fix or should-fix issues, address them, commit, and push. If the review looks clean (no actionable findings), leave a thumbs up reaction on each reviewer comment using: gh api repos/Anananas42/kiosk-kit/issues/comments/COMMENT_ID/reactions -f content='+1'
+
+Reviewer comment IDs: $REVIEWER_COMMENT_IDS" || true
+        fi
+
+        LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      fi
+    else
+      echo "==> Warning: .claude/commands/reviewing.md not found. Skipping reviewing agent."
+    fi
+
+    touch "$REVIEWING_DONE_MARKER"
   fi
 
   echo "==> Sleeping ${POLL_INTERVAL}s..."
