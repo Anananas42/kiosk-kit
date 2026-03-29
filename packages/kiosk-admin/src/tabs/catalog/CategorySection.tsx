@@ -24,7 +24,7 @@ export function CategorySection({
 
   return (
     <AccordionItem value={category.id}>
-      <CategoryTrigger category={category} />
+      <CategoryTrigger category={category} isFirst={isFirst} isLast={isLast} />
       <AccordionContent>
         {items.length === 0 && (
           <p className="py-2 italic text-muted-foreground">No items in this category.</p>
@@ -58,7 +58,7 @@ export function CategorySection({
           />
         </div>
 
-        <CategoryActions category={category} isFirst={isFirst} isLast={isLast} />
+        <CategoryActions category={category} />
       </AccordionContent>
     </AccordionItem>
   );

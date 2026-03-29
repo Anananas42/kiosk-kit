@@ -1,7 +1,7 @@
 import type { CatalogCategory } from "@kioskkit/shared";
 import { Button } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, RefreshCw, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
@@ -10,25 +10,14 @@ import { trpc } from "../../trpc.js";
 
 interface CategoryActionsProps {
   category: CatalogCategory;
-  isFirst: boolean;
-  isLast: boolean;
 }
 
-export function CategoryActions({ category, isFirst, isLast }: CategoryActionsProps) {
+export function CategoryActions({ category }: CategoryActionsProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
 
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const moveMutation = useMutation({
-    mutationFn: (input: { id: number; direction: "up" | "down" }) =>
-      trpc["admin.catalog.moveCategory"].mutate(input),
-    onSuccess: () => {
-      invalidateCatalog();
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
 
   const togglePreorderMutation = useMutation({
     mutationFn: () =>
@@ -53,37 +42,8 @@ export function CategoryActions({ category, isFirst, isLast }: CategoryActionsPr
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function handleMove(direction: "up" | "down") {
-    moveMutation.mutate({ id: Number(category.id), direction });
-  }
-
   return (
     <div className="flex items-center gap-1 border-t border-border/50 pt-3 mt-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => handleMove("up")}
-        disabled={isFirst || moveMutation.isPending}
-        className="h-7 gap-1 text-xs"
-      >
-        <ArrowUp className="size-3" />
-        Move up
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => handleMove("down")}
-        disabled={isLast || moveMutation.isPending}
-        className="h-7 gap-1 text-xs"
-      >
-        <ArrowDown className="size-3" />
-        Move down
-      </Button>
-
-      <div className="flex-1" />
-
       <Button
         type="button"
         variant="outline"
@@ -95,6 +55,8 @@ export function CategoryActions({ category, isFirst, isLast }: CategoryActionsPr
         <RefreshCw className="size-3" />
         {category.preorder ? "Switch to standard" : "Switch to preorder"}
       </Button>
+
+      <div className="flex-1" />
 
       <Button
         type="button"

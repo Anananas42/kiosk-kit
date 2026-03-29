@@ -1,15 +1,18 @@
 import type { CatalogCategory } from "@kioskkit/shared";
-import { AccordionChevron, AccordionHeader, Badge, InlineEdit } from "@kioskkit/ui";
+import { AccordionChevron, AccordionHeader, Badge, Button, InlineEdit } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
 
 interface CategoryTriggerProps {
   category: CatalogCategory;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-export function CategoryTrigger({ category }: CategoryTriggerProps) {
+export function CategoryTrigger({ category, isFirst, isLast }: CategoryTriggerProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
@@ -17,6 +20,15 @@ export function CategoryTrigger({ category }: CategoryTriggerProps) {
   const updateMutation = useMutation({
     mutationFn: (input: { id: number; name: string; preorder: boolean; sortOrder: number }) =>
       trpc["admin.catalog.updateCategory"].mutate(input),
+    onSuccess: () => {
+      invalidateCatalog();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: (input: { id: number; direction: "up" | "down" }) =>
+      trpc["admin.catalog.moveCategory"].mutate(input),
     onSuccess: () => {
       invalidateCatalog();
     },
@@ -33,16 +45,42 @@ export function CategoryTrigger({ category }: CategoryTriggerProps) {
   }
 
   return (
-    <AccordionHeader className="flex items-center gap-2 py-4">
-      <div className="flex flex-1 items-center gap-2">
-        <InlineEdit
-          value={category.name}
-          onSave={handleRename}
-          disabled={updateMutation.isPending}
-        />
+    <AccordionHeader className="group flex items-center gap-2 py-4">
+      <InlineEdit value={category.name} onSave={handleRename} disabled={updateMutation.isPending} />
 
-        {category.preorder && <Badge variant="secondary">preorder</Badge>}
-      </div>
+      <span
+        role="toolbar"
+        className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          aria-label="Move category up"
+          disabled={isFirst || moveMutation.isPending}
+          onClick={() => moveMutation.mutate({ id: Number(category.id), direction: "up" })}
+        >
+          <ArrowUp className="size-3" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          aria-label="Move category down"
+          disabled={isLast || moveMutation.isPending}
+          onClick={() => moveMutation.mutate({ id: Number(category.id), direction: "down" })}
+        >
+          <ArrowDown className="size-3" />
+        </Button>
+      </span>
+
+      {category.preorder && <Badge variant="secondary">preorder</Badge>}
+
+      <div className="flex-1" />
 
       <AccordionChevron />
     </AccordionHeader>

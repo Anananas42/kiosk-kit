@@ -83,7 +83,7 @@ function InlineEdit({
 
   if (isEditing) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("inline-flex items-center gap-2", className)}>
         {renderInput ? (
           renderInput({
             value: tempValue,
@@ -121,12 +121,12 @@ function InlineEdit({
       type="button"
       disabled={disabled}
       className={cn(
-        "group hover:bg-muted/50 flex w-full cursor-pointer items-center gap-2 rounded-md border border-transparent px-3 py-1 text-left",
+        "group hover:bg-muted/50 inline-flex cursor-pointer items-center gap-2 rounded-md border border-transparent px-3 py-1 text-left",
         className,
       )}
       onClick={handleEdit}
     >
-      <span className="flex-1 truncate">
+      <span className="truncate">
         {currentValue || <span className="text-muted-foreground italic">Click to edit...</span>}
       </span>
       {!disabled && (
