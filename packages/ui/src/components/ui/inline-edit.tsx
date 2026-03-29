@@ -121,7 +121,7 @@ function InlineEdit({
       type="button"
       disabled={disabled}
       className={cn(
-        "group hover:bg-muted/50 inline-flex cursor-pointer items-center gap-2 rounded-md border border-transparent px-3 py-1 text-left",
+        "group hover:bg-muted/50 inline-flex cursor-pointer items-center gap-2 rounded-md border border-transparent px-1.5 py-1 text-left",
         className,
       )}
       onClick={handleEdit}
