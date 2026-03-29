@@ -14,7 +14,9 @@ dotenv.config({ path: "../../.env" });
 
 import pg from "pg";
 
-const [version, appAssetUrl, appSha256] = process.argv.slice(2);
+const [rawVersion, appAssetUrl, appSha256] = process.argv.slice(2);
+// Strip leading "v" prefix if present (e.g. v1.2.3 -> 1.2.3)
+const version = rawVersion?.replace(/^v/, "");
 
 if (!version || !appAssetUrl || !appSha256) {
   console.error("Usage: tsx src/register-app-release.ts <version> <app_asset_url> <app_sha256>");
