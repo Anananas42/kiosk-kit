@@ -60,6 +60,7 @@ export function CategoryTrigger({ category, isFirst, isLast }: CategoryTriggerPr
             onKeyDown={(e) => e.stopPropagation()}
           >
             <InlineEdit
+              className="-ml-1.5 font-semibold"
               value={category.name}
               onSave={handleRename}
               disabled={updateMutation.isPending}
