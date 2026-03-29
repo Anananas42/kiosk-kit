@@ -12,6 +12,17 @@ function isAdminAssetPath(kioskPath: string): boolean {
   return kioskPath.startsWith("admin/") || kioskPath === "admin";
 }
 
+function rewriteHtmlWithBase(html: string, status: number, proxyBase: string): Response {
+  const rewritten = html.replace("<head>", `<head><base href="${proxyBase}">`);
+  return new Response(rewritten, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-cache, no-store, must-revalidate",
+    },
+  });
+}
+
 export function deviceProxyRoutes(db: Db) {
   const app = new Hono<AuthEnv>();
 
@@ -69,19 +80,10 @@ export function deviceProxyRoutes(db: Db) {
           );
         }
 
-        // Inject <base> into admin HTML so relative asset paths resolve through the proxy prefix
         const contentType = res.headers.get("content-type") ?? "";
         if (contentType.includes("text/html")) {
-          const html = body.toString("utf-8");
           const proxyBase = `/api/devices/${c.req.param("id")}/kiosk/admin/`;
-          const rewritten = html.replace("<head>", `<head><base href="${proxyBase}">`);
-          return new Response(rewritten, {
-            status: res.status,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "cache-control": "no-cache, no-store, must-revalidate",
-            },
-          });
+          return rewriteHtmlWithBase(body.toString("utf-8"), res.status, proxyBase);
         }
 
         return new Response(body, {
@@ -93,16 +95,8 @@ export function deviceProxyRoutes(db: Db) {
       // Non-admin paths or non-OK responses: pass through as-is
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("text/html")) {
-        const html = await res.text();
         const proxyBase = `/api/devices/${c.req.param("id")}/kiosk/admin/`;
-        const rewritten = html.replace("<head>", `<head><base href="${proxyBase}">`);
-        return new Response(rewritten, {
-          status: res.status,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-cache, no-store, must-revalidate",
-          },
-        });
+        return rewriteHtmlWithBase(await res.text(), res.status, proxyBase);
       }
 
       return new Response(res.body, {

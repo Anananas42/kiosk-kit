@@ -62,6 +62,11 @@ export const UPDATE_STALE_OP_MS = 15 * 60 * 1000;
 /** How long an update operation in device_update_ops can run before it's considered stale. */
 export const UPDATE_ACTIVE_OP_MS = 60 * 60 * 1000;
 
+// ── Caches ──────────────────────────────────────────────────────────
+
+/** How long a cached device app version is considered fresh. */
+export const DEVICE_VERSION_TTL_MS = 60_000;
+
 // ── Device network ───────────────────────────────────────────────────
 
 /** Port kiosk-server listens on. */

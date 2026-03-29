@@ -87,10 +87,15 @@ export function githubWebhookRoute(db: Db) {
     const sha256 = sha256Match[1]!;
 
     // Parse admin manifest from release body (CI writes <!-- admin-manifest:JSON --> into it)
+    let adminManifest: Record<string, string> | null = null;
     const manifestMatch = payload.release.body?.match(/<!-- admin-manifest:([\s\S]*?) -->/);
-    const adminManifest = manifestMatch
-      ? (JSON.parse(manifestMatch[1]!) as Record<string, string>)
-      : null;
+    if (manifestMatch) {
+      try {
+        adminManifest = JSON.parse(manifestMatch[1]!) as Record<string, string>;
+      } catch {
+        console.error(`[github-webhook] Malformed admin manifest in release ${version}`);
+      }
+    }
 
     // Upsert release record
     const [existing] = await db

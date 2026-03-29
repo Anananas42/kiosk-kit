@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { DEVICE_VERSION_TTL_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { releases } from "../db/schema.js";
 
@@ -44,7 +45,6 @@ export function clearManifestCaches(): void {
  * Entries expire after TTL_MS so version changes are picked up promptly.
  */
 const deviceVersionCache = new Map<string, { version: string | null; fetchedAt: number }>();
-const VERSION_TTL_MS = 60_000;
 
 /**
  * Fetch the app version a device is currently running by calling its health endpoint.
@@ -55,7 +55,7 @@ export async function getDeviceAppVersion(
   deviceId: string,
 ): Promise<string | null> {
   const cached = deviceVersionCache.get(deviceId);
-  if (cached && Date.now() - cached.fetchedAt < VERSION_TTL_MS) {
+  if (cached && Date.now() - cached.fetchedAt < DEVICE_VERSION_TTL_MS) {
     return cached.version;
   }
 
