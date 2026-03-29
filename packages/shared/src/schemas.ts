@@ -35,12 +35,14 @@ export const CatalogItemSchema = z.object({
   quantity: z.string(),
   price: z.string(),
   taxRate: z.string(),
+  sortOrder: z.number().int(),
 });
 
 export const CatalogCategorySchema = z.object({
   id: z.string(),
   name: z.string(),
   preorder: z.boolean(),
+  sortOrder: z.number().int(),
   items: z.array(CatalogItemSchema),
 });
 

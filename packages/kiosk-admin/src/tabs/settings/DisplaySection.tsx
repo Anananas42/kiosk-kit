@@ -24,7 +24,7 @@ export function DisplaySection({ draft, onChange }: DisplaySectionProps) {
     <fieldset className="space-y-3">
       <legend className="text-sm font-semibold">Display</legend>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-wrap gap-6">
         <div className="space-y-1">
           <Label htmlFor={idleDimId}>Idle dim timeout</Label>
           <div className="flex items-center gap-2">

@@ -1,3 +1,9 @@
+export {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./components/ui/accordion";
 export { Badge, badgeVariants } from "./components/ui/badge";
 export type { ButtonProps } from "./components/ui/button";
 export { Button, buttonVariants } from "./components/ui/button";
@@ -9,6 +15,11 @@ export {
   CardHeader,
   CardTitle,
 } from "./components/ui/card";
+export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./components/ui/collapsible";
 export {
   Dialog,
   DialogClose,
