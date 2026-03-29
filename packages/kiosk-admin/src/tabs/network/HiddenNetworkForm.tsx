@@ -1,6 +1,7 @@
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner } from "@kioskkit/ui";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { PasswordInput } from "./PasswordInput.js";
 import { useConnectMutation } from "./useConnectMutation.js";
 
 export function HiddenNetworkForm() {
@@ -41,15 +42,16 @@ export function HiddenNetworkForm() {
             value={ssid}
             onChange={(e) => setSsid(e.target.value)}
             disabled={connectMutation.isPending}
-            className="w-auto min-w-[200px]"
+            autoComplete="off"
+            name="wifi-ssid-hidden"
+            className="w-auto min-w-[300px]"
           />
-          <Input
-            type="password"
-            placeholder="Password (optional)"
+          <PasswordInput
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
             disabled={connectMutation.isPending}
-            className="w-auto min-w-[200px]"
+            placeholder="Password (optional)"
+            ssid="hidden"
           />
           <Button type="submit" size="sm" disabled={connectMutation.isPending || !ssid.trim()}>
             {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
