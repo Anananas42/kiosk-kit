@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Spinner,
 } from "@kioskkit/ui";
 import { useMemo, useState } from "react";
 import {
@@ -120,7 +121,7 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-4">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          <Spinner className="h-4 w-4" />
           <span className="text-muted-foreground text-sm">{t("appUpdate.checkingForUpdates")}</span>
         </CardContent>
       </Card>
@@ -245,7 +246,7 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
 
         {cardState === CardState.Installing && (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <Spinner className="h-4 w-4" />
             <p className="text-sm">{t("appUpdate.installing")}</p>
           </div>
         )}
@@ -267,11 +268,14 @@ export function AppUpdateCard({ deviceId }: { deviceId: string }) {
           </div>
         )}
 
-        {appStatus.rollbackAvailable && (
-          <Button size="sm" variant="outline" onClick={handleRollback} disabled={actionLoading}>
-            {t("appUpdate.rollback")}
-          </Button>
-        )}
+        {appStatus.rollbackAvailable &&
+          (cardState === CardState.UpToDate ||
+            cardState === CardState.Success ||
+            cardState === CardState.Failed) && (
+            <Button size="sm" variant="outline" onClick={handleRollback} disabled={actionLoading}>
+              {t("appUpdate.rollback")}
+            </Button>
+          )}
       </CardContent>
     </Card>
   );
