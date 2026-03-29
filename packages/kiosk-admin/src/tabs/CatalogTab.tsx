@@ -55,7 +55,7 @@ export function CatalogTab() {
         name: itemName,
         quantity: itemQty,
         price: itemPrice,
-        dphRate: itemDph,
+        taxRate: itemDph,
         sortOrder: 0,
       })
       .then(() => {
@@ -116,9 +116,9 @@ export function CatalogTab() {
                       {item.price
                         ? ` @ ${formatCurrency(parsePrice(item.price), locale, currency)}`
                         : ""}
-                      {item.dphRate ? (
+                      {item.taxRate ? (
                         <span className="ml-1 text-[0.85em] text-muted-foreground">
-                          ({item.dphRate}% DPH)
+                          ({item.taxRate}%)
                         </span>
                       ) : null}
                     </span>

@@ -66,7 +66,7 @@ export class Store {
             name: it.name,
             quantity: it.quantity,
             price: it.price,
-            dphRate: it.dphRate,
+            taxRate: it.taxRate,
           }),
         ),
       };
@@ -99,12 +99,12 @@ export class Store {
     name: string,
     quantity: string,
     price: string,
-    dphRate: string,
+    taxRate: string,
     sortOrder: number,
   ): number {
     const result = this.db
       .insert(catalogItems)
-      .values({ categoryId, name, quantity, price, dphRate, sortOrder })
+      .values({ categoryId, name, quantity, price, taxRate, sortOrder })
       .returning({ id: catalogItems.id })
       .get();
     return result.id;
@@ -115,18 +115,35 @@ export class Store {
     name: string,
     quantity: string,
     price: string,
-    dphRate: string,
+    taxRate: string,
     sortOrder: number,
   ): void {
     this.db
       .update(catalogItems)
-      .set({ name, quantity, price, dphRate, sortOrder })
+      .set({ name, quantity, price, taxRate, sortOrder })
       .where(eq(catalogItems.id, id))
       .run();
   }
 
   deleteItem(id: number): void {
     this.db.delete(catalogItems).where(eq(catalogItems.id, id)).run();
+  }
+
+  getCatalogItemTaxRate(itemId: string, itemName: string): string {
+    if (itemId) {
+      const row = this.db
+        .select({ taxRate: catalogItems.taxRate })
+        .from(catalogItems)
+        .where(eq(catalogItems.id, Number(itemId)))
+        .get();
+      if (row) return row.taxRate;
+    }
+    const row = this.db
+      .select({ taxRate: catalogItems.taxRate })
+      .from(catalogItems)
+      .where(eq(catalogItems.name, itemName))
+      .get();
+    return row?.taxRate ?? "";
   }
 
   isCategoryPreorder(categoryName: string): boolean {
@@ -140,37 +157,42 @@ export class Store {
 
   // ── Records ─────────────────────────────────────────────────────────────
 
-  getRecords(): RecordRow[] {
+  private get recordColumns() {
+    return {
+      timestamp: records.timestamp,
+      buyer: records.buyer,
+      count: records.count,
+      category: records.category,
+      item: records.item,
+      itemId: records.itemId,
+      quantity: records.quantity,
+      price: records.price,
+      taxRate: records.taxRate,
+    } as const;
+  }
+
+  getRecords(opts?: { from?: string; to?: string }): RecordRow[] {
+    const conditions = [];
+    if (opts?.from) conditions.push(sql`${records.timestamp} >= ${opts.from}`);
+    if (opts?.to) conditions.push(sql`${records.timestamp} < ${opts.to}`);
+
     return this.db
-      .select({
-        timestamp: records.timestamp,
-        buyer: records.buyer,
-        count: records.count,
-        category: records.category,
-        item: records.item,
-        itemId: records.itemId,
-        quantity: records.quantity,
-        price: records.price,
-      })
+      .select(this.recordColumns)
       .from(records)
+      .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(sql`${records.timestamp} DESC`)
       .all();
   }
 
-  getRecordsByBuyer(buyer: number): RecordRow[] {
+  getRecordsByBuyer(buyer: number, opts?: { from?: string; to?: string }): RecordRow[] {
+    const conditions = [eq(records.buyer, buyer)];
+    if (opts?.from) conditions.push(sql`${records.timestamp} >= ${opts.from}`);
+    if (opts?.to) conditions.push(sql`${records.timestamp} < ${opts.to}`);
+
     return this.db
-      .select({
-        timestamp: records.timestamp,
-        buyer: records.buyer,
-        count: records.count,
-        category: records.category,
-        item: records.item,
-        itemId: records.itemId,
-        quantity: records.quantity,
-        price: records.price,
-      })
+      .select(this.recordColumns)
       .from(records)
-      .where(eq(records.buyer, buyer))
+      .where(and(...conditions))
       .orderBy(sql`${records.timestamp} DESC`)
       .all();
   }
@@ -183,20 +205,7 @@ export class Store {
         )
       : and(eq(records.buyer, buyer), eq(records.item, item));
 
-    return this.db
-      .select({
-        timestamp: records.timestamp,
-        buyer: records.buyer,
-        count: records.count,
-        category: records.category,
-        item: records.item,
-        itemId: records.itemId,
-        quantity: records.quantity,
-        price: records.price,
-      })
-      .from(records)
-      .where(condition)
-      .all();
+    return this.db.select(this.recordColumns).from(records).where(condition).all();
   }
 
   getItemBalance(buyer: number, item: string, itemId?: string): number {
@@ -234,8 +243,105 @@ export class Store {
         itemId: entry.itemId,
         quantity: entry.quantity,
         price: entry.price,
+        taxRate: entry.taxRate,
       })
       .run();
+  }
+
+  // ── Consumption Report ─────────────────────────────────────────────────
+
+  getConsumptionSummary(
+    from: string,
+    to?: string,
+  ): Array<{
+    itemKey: string;
+    item: string;
+    itemId: string;
+    category: string;
+    quantity: string;
+    taxRate: string;
+    byBuyer: string;
+    totalCount: number;
+    grandTotal: number;
+    unitPrice: number | null;
+  }> {
+    const stmt = this.db.all(sql`
+      WITH item_buyer AS (
+        SELECT
+          COALESCE(NULLIF(${records.itemId}, ''), ${records.item}) AS item_key,
+          ${records.item} AS item,
+          ${records.itemId} AS itemId,
+          ${records.category} AS category,
+          ${records.quantity} AS quantity,
+          ${records.taxRate} AS taxRate,
+          ${records.buyer} AS buyer,
+          SUM(${records.count})               AS net_count,
+          SUM(CAST(${records.price} AS REAL)) AS net_total
+        FROM ${records}
+        WHERE ${records.timestamp} >= ${from}
+          AND (${to ?? null} IS NULL OR ${records.timestamp} < ${to ?? null})
+        GROUP BY item_key, buyer
+      )
+      SELECT
+        item_key,
+        item,
+        itemId,
+        category,
+        quantity,
+        taxRate,
+        json_group_object(
+          CAST(buyer AS TEXT),
+          json_object('count', net_count, 'total', net_total)
+        ) AS by_buyer,
+        SUM(net_count)  AS total_count,
+        SUM(net_total)  AS grand_total,
+        CASE WHEN SUM(net_count) != 0
+          THEN SUM(net_total) / SUM(net_count)
+          ELSE NULL
+        END AS unit_price
+      FROM item_buyer
+      GROUP BY item_key
+    `);
+    return (stmt as Array<Record<string, unknown>>).map((row) => ({
+      itemKey: row.item_key as string,
+      item: row.item as string,
+      itemId: row.itemId as string,
+      category: row.category as string,
+      quantity: row.quantity as string,
+      taxRate: row.taxRate as string,
+      byBuyer: row.by_buyer as string,
+      totalCount: row.total_count as number,
+      grandTotal: row.grand_total as number,
+      unitPrice: row.unit_price as number | null,
+    }));
+  }
+
+  getTotalsByBuyerAndTaxRate(
+    from: string,
+    to?: string,
+  ): Array<{
+    buyer: number;
+    taxRate: string;
+    netCount: number;
+    netTotal: number;
+  }> {
+    const stmt = this.db.all(sql`
+      SELECT
+        ${records.buyer} AS buyer,
+        ${records.taxRate} AS tax_rate,
+        SUM(${records.count})               AS net_count,
+        SUM(CAST(${records.price} AS REAL)) AS net_total
+      FROM ${records}
+      WHERE ${records.timestamp} >= ${from}
+        AND (${to ?? null} IS NULL OR ${records.timestamp} < ${to ?? null})
+      GROUP BY ${records.buyer}, ${records.taxRate}
+    `);
+    return (stmt as Array<Record<string, unknown>>).map((row) => ({
+      buyer: row.buyer as number,
+      taxRate: row.tax_rate as string,
+      netCount: row.net_count as number,
+      netTotal: row.net_total as number,
+    }));
   }
 
   // ── Settings ────────────────────────────────────────────────────────────
