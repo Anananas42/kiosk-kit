@@ -24,6 +24,8 @@ export const queryKeys = {
   },
   consumption: {
     report: () => ["consumption", "report"] as const,
+    summary: (from: string, to?: string) => ["consumption", "summary", from, to] as const,
+    logs: (from: string, to?: string) => ["consumption", "logs", from, to] as const,
   },
   preorder: {
     config: () => ["preorder", "config"] as const,
