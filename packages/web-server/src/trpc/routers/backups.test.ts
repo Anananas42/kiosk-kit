@@ -56,7 +56,7 @@ const deviceRow = {
   name: "Kiosk",
   hostname: "kiosk-1",
   pairingCode: null,
-  backupIntervalHours: 24,
+  backupIntervalHours: 2,
   maxRetainedBackups: 30,
   lastSeen: null,
   createdAt: new Date("2025-01-01T00:00:00Z"),
@@ -129,7 +129,7 @@ describe("backups procedures", () => {
       const caller = callerFor(customerUser, createMockDb([deviceRow]));
       const result = await caller["backups.getConfig"]({ deviceId: deviceRow.id });
       expect(result).toMatchObject({
-        backupIntervalHours: 24,
+        backupIntervalHours: 2,
         maxRetainedBackups: 30,
       });
     });

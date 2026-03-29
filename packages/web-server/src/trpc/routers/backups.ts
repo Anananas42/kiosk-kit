@@ -23,10 +23,8 @@ import { authedProcedure, router } from "../trpc.js";
 const backupConfigInput = z
   .object({
     deviceId: z.uuid(),
-    backupIntervalHours: z
-      .union([z.literal(6), z.literal(12), z.literal(24), z.literal(168)])
-      .optional(),
-    maxRetainedBackups: z.number().int().min(1).max(100).optional(),
+    backupIntervalHours: z.number().int().min(1).optional(),
+    maxRetainedBackups: z.number().int().min(1).max(50).optional(),
   })
   .refine((d) => d.backupIntervalHours !== undefined || d.maxRetainedBackups !== undefined, {
     message: "At least one config field must be provided",

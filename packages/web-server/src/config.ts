@@ -30,7 +30,7 @@ export const OTA_PROXY_TIMEOUT_MS = 60_000;
 // ── Intervals ────────────────────────────────────────────────────────
 
 /** How often to poll for devices that are due for backup. */
-export const BACKUP_POLL_INTERVAL_MS = 30 * 60 * 1000;
+export const BACKUP_POLL_INTERVAL_MS = 60 * 60 * 1000;
 
 /** How often to clean up stale device operations. */
 export const STALE_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
