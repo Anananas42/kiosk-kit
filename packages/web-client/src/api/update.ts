@@ -1,20 +1,20 @@
 import type { DeviceUpdateInfo, UpdateStatus } from "@kioskkit/shared";
-import { adminTrpc } from "../trpc.js";
+import { trpc } from "../trpc.js";
 
 export async function fetchUpdateInfo(deviceId: string): Promise<DeviceUpdateInfo> {
-  return adminTrpc["devices.updateInfo"].query({ id: deviceId });
+  return trpc["devices.updateInfo"].query({ id: deviceId });
 }
 
 export async function triggerUpdateInstall(deviceId: string) {
-  return adminTrpc["devices.updateInstall"].mutate({ id: deviceId });
+  return trpc["devices.updateInstall"].mutate({ id: deviceId });
 }
 
 export async function triggerUpdateCancel(deviceId: string) {
-  return adminTrpc["devices.updateCancel"].mutate({ id: deviceId });
+  return trpc["devices.updateCancel"].mutate({ id: deviceId });
 }
 
 export async function fetchServerUpdateStatus(deviceId: string) {
-  return adminTrpc["devices.updateStatus"].query({ id: deviceId });
+  return trpc["devices.updateStatus"].query({ id: deviceId });
 }
 
 export async function triggerUpdatePush(deviceId: string): Promise<void> {

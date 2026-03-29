@@ -14,6 +14,7 @@ export const appRouter = router({
   ...devicesRouter._def.procedures,
   ...backupsRouter._def.procedures,
   ...releasesRouter._def.procedures,
+  ...deviceUpdateRouter._def.procedures,
 });
 
 export const adminRouter = router({
