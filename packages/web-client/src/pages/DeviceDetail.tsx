@@ -2,6 +2,7 @@ import { DeviceStatus } from "@kioskkit/shared";
 import { Card, CardContent, InlineEdit, Skeleton, Spinner } from "@kioskkit/ui";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import { AppUpdateCard } from "../components/AppUpdateCard.js";
 import { BackupSection } from "../components/BackupSection.js";
 import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
@@ -173,9 +174,12 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* OTA update card — only when device is online */}
+      {/* Update cards — only when device is online */}
       {!isLoading && !error && status === DeviceStatus.Online && id && (
-        <OtaUpdateCard deviceId={id} />
+        <>
+          <AppUpdateCard deviceId={id} />
+          <OtaUpdateCard deviceId={id} />
+        </>
       )}
 
       {/* Backups section */}

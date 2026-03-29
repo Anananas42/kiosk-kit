@@ -1,4 +1,4 @@
-import { OtaResult, type OtaStatus, OtaStep } from "@kioskkit/shared";
+import { AppUpdateResult, type AppUpdateStatus, AppUpdateStep } from "@kioskkit/shared";
 import {
   Button,
   Card,
@@ -13,15 +13,14 @@ import {
   DialogTrigger,
 } from "@kioskkit/ui";
 import { useMemo, useState } from "react";
-import { useDeviceStatus } from "../hooks/devices.js";
 import {
-  useLatestOtaRelease,
-  useOtaCancelDownload,
-  useOtaDownload,
-  useOtaInstall,
-  useOtaRollback,
-  useOtaStatus,
-} from "../hooks/ota.js";
+  useAppCancelDownload,
+  useAppDownload,
+  useAppInstall,
+  useAppRollback,
+  useAppUpdateStatus,
+  useLatestAppRelease,
+} from "../hooks/app-update.js";
 import { useTranslate } from "../hooks/useTranslate.js";
 import { formatFileSize } from "../lib/format.js";
 
@@ -35,90 +34,85 @@ enum CardState {
   Failed = "failed",
 }
 
-function deriveCardState(otaStatus: OtaStatus, latestVersion?: string): CardState {
-  switch (otaStatus.status) {
-    case OtaStep.Uploading:
+function deriveCardState(status: AppUpdateStatus, latestVersion?: string): CardState {
+  switch (status.status) {
+    case AppUpdateStep.Uploading:
       return CardState.Downloading;
-    case OtaStep.Downloaded:
+    case AppUpdateStep.Downloaded:
       return CardState.Downloaded;
-    case OtaStep.Installing:
+    case AppUpdateStep.Installing:
       return CardState.Installing;
-    case OtaStep.Rollback:
+    case AppUpdateStep.RollingBack:
       return CardState.Failed;
-    case OtaStep.Idle:
-    case OtaStep.Confirming: {
-      if (otaStatus.lastResult === OtaResult.Success) return CardState.Success;
-      if (otaStatus.lastResult !== null) return CardState.Failed;
-      if (latestVersion && otaStatus.currentVersion !== latestVersion)
+    case AppUpdateStep.Idle: {
+      if (status.lastResult === AppUpdateResult.Success) return CardState.Success;
+      if (status.lastResult !== null) return CardState.Failed;
+      if (latestVersion && status.currentVersion !== latestVersion)
         return CardState.UpdateAvailable;
       return CardState.UpToDate;
     }
   }
 }
 
-export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
+export function AppUpdateCard({ deviceId }: { deviceId: string }) {
   const t = useTranslate();
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: release } = useLatestOtaRelease();
+  const { data: release } = useLatestAppRelease();
   const {
-    data: otaStatus,
+    data: appStatus,
     isLoading,
-    error: otaError,
-  } = useOtaStatus(deviceId, {
+    error: statusError,
+  } = useAppUpdateStatus(deviceId, {
     refetchInterval: (query) => {
-      const data = (query as { state: { data: OtaStatus | null | undefined } }).state.data;
+      const data = (query as { state: { data: AppUpdateStatus | null | undefined } }).state.data;
       if (!data) return false;
-      if (data.status === OtaStep.Uploading) return 3000;
-      if (data.status === OtaStep.Installing) return 5000;
+      if (data.status === AppUpdateStep.Uploading) return 3000;
+      if (data.status === AppUpdateStep.Installing) return 5000;
       return false;
     },
   });
 
   const cardState = useMemo(
-    () => (otaStatus ? deriveCardState(otaStatus, release?.version) : null),
-    [otaStatus, release?.version],
+    () => (appStatus ? deriveCardState(appStatus, release?.version) : null),
+    [appStatus, release?.version],
   );
 
-  useDeviceStatus(deviceId, {
-    refetchInterval: cardState === CardState.Installing ? 5000 : false,
-  });
-
-  const otaDownload = useOtaDownload(deviceId);
-  const otaInstall = useOtaInstall(deviceId);
-  const otaRollback = useOtaRollback(deviceId);
-  const otaCancel = useOtaCancelDownload(deviceId);
+  const appDownload = useAppDownload(deviceId);
+  const appInstall = useAppInstall(deviceId);
+  const appRollback = useAppRollback(deviceId);
+  const appCancel = useAppCancelDownload(deviceId);
 
   const actionLoading =
-    otaDownload.isPending || otaInstall.isPending || otaRollback.isPending || otaCancel.isPending;
+    appDownload.isPending || appInstall.isPending || appRollback.isPending || appCancel.isPending;
 
   const handleDownload = () => {
     setActionError(null);
     if (release) {
-      otaDownload.mutate(release.version, {
-        onError: (e) => setActionError(e instanceof Error ? e.message : "Download failed"),
+      appDownload.mutate(release.version, {
+        onError: (e) => setActionError(e instanceof Error ? e.message : t("app.downloadFailed")),
       });
     }
   };
 
   const handleCancel = () => {
     setActionError(null);
-    otaCancel.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Cancel failed"),
+    appCancel.mutate(undefined, {
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("app.cancelFailed")),
     });
   };
 
   const handleInstall = () => {
     setActionError(null);
-    otaInstall.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Install failed"),
+    appInstall.mutate(undefined, {
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("app.installFailed")),
     });
   };
 
   const handleRollback = () => {
     setActionError(null);
-    otaRollback.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Rollback failed"),
+    appRollback.mutate(undefined, {
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("app.rollbackFailed")),
     });
   };
 
@@ -127,35 +121,35 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
       <Card>
         <CardContent className="flex items-center gap-2 py-4">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          <span className="text-muted-foreground text-sm">{t("ota.checkingForUpdates")}</span>
+          <span className="text-muted-foreground text-sm">{t("app.checkingForUpdates")}</span>
         </CardContent>
       </Card>
     );
   }
 
-  if (otaError || !otaStatus || !cardState) {
+  if (statusError || !appStatus || !cardState) {
     return (
       <Card>
         <CardContent className="py-4">
-          <p className="text-destructive text-sm">{t("ota.loadError")}</p>
+          <p className="text-destructive text-sm">{t("app.loadError")}</p>
         </CardContent>
       </Card>
     );
   }
 
-  const currentVersion = otaStatus.currentVersion;
+  const currentVersion = appStatus.currentVersion;
   const latestVersion = release?.version;
-  const uploadProgress = otaStatus.upload;
+  const uploadProgress = appStatus.upload;
   const isNotLatest = currentVersion && latestVersion && currentVersion !== latestVersion;
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">{t("ota.systemUpdate")}</span>
+          <span className="text-sm font-medium">{t("app.softwareUpdate")}</span>
           {currentVersion && (
             <span className="text-muted-foreground text-xs">
-              {t("ota.currentVersion", { version: currentVersion })}
+              {t("app.currentVersion", { version: currentVersion })}
             </span>
           )}
         </div>
@@ -164,20 +158,20 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
 
         {cardState === CardState.UpToDate && (
           <p className="text-muted-foreground text-sm">
-            {t("ota.upToDate", { version: currentVersion ?? "" })}
+            {t("app.upToDate", { version: currentVersion ?? "" })}
           </p>
         )}
 
         {cardState === CardState.UpdateAvailable && (
           <div className="flex items-center justify-between">
-            <p className="text-sm">{t("ota.updateAvailable", { version: latestVersion ?? "" })}</p>
+            <p className="text-sm">{t("app.updateAvailable", { version: latestVersion ?? "" })}</p>
             <Button
               size="sm"
               onClick={handleDownload}
-              loading={otaDownload.isPending}
+              loading={appDownload.isPending}
               disabled={actionLoading}
             >
-              {t("ota.download")}
+              {t("app.download")}
             </Button>
           </div>
         )}
@@ -186,7 +180,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <p className="text-sm">
-                {t("ota.downloadingVersion", {
+                {t("app.downloadingVersion", {
                   version: uploadProgress?.version ?? latestVersion ?? "",
                 })}
               </p>
@@ -211,7 +205,7 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
 
         {cardState === CardState.Downloaded && (
           <div className="flex items-center justify-between">
-            <p className="text-sm">{t("ota.readyToInstall", { version: latestVersion ?? "" })}</p>
+            <p className="text-sm">{t("app.readyToInstall", { version: latestVersion ?? "" })}</p>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={handleCancel} disabled={actionLoading}>
                 {t("common.cancel")}
@@ -219,20 +213,20 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button size="sm" disabled={actionLoading}>
-                    {t("ota.installAndReboot")}
+                    {t("app.install")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{t("ota.installDialog.title")}</DialogTitle>
-                    <DialogDescription>{t("ota.installDialog.description")}</DialogDescription>
+                    <DialogTitle>{t("app.installDialog.title")}</DialogTitle>
+                    <DialogDescription>{t("app.installDialog.description")}</DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
                     <DialogClose asChild>
                       <Button variant="outline">{t("common.cancel")}</Button>
                     </DialogClose>
                     <DialogClose asChild>
-                      <Button onClick={handleInstall}>{t("ota.confirmInstall")}</Button>
+                      <Button onClick={handleInstall}>{t("app.confirmInstall")}</Button>
                     </DialogClose>
                   </DialogFooter>
                 </DialogContent>
@@ -244,35 +238,47 @@ export function OtaUpdateCard({ deviceId }: { deviceId: string }) {
         {cardState === CardState.Installing && (
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            <p className="text-sm">{t("ota.rebooting")}</p>
+            <p className="text-sm">{t("app.installing")}</p>
           </div>
         )}
 
         {cardState === CardState.Success && (
           <p className="text-sm text-green-600">
-            {t("ota.updateSuccess", { version: currentVersion ?? "" })}
+            {t("app.updateSuccess", { version: currentVersion ?? "" })}
           </p>
         )}
 
         {cardState === CardState.Failed && (
           <div className="flex items-center justify-between">
             <p className="text-destructive text-sm">
-              {otaStatus.lastResult === OtaResult.FailedHealthCheck
-                ? t("ota.rolledBack", { version: currentVersion ?? "" })
-                : t("ota.updateFailed")}
+              {appStatus.lastResult === AppUpdateResult.FailedHealthCheck ||
+              appStatus.lastResult === AppUpdateResult.RolledBack
+                ? t("app.rolledBack", { version: currentVersion ?? "" })
+                : t("app.updateFailed")}
             </p>
-            {isNotLatest && (
-              <Button size="sm" variant="outline" onClick={handleDownload} disabled={actionLoading}>
-                {t("ota.retry")}
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {isNotLatest && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDownload}
+                  disabled={actionLoading}
+                >
+                  {t("app.retry")}
+                </Button>
+              )}
+              {appStatus.rollbackAvailable && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRollback}
+                  disabled={actionLoading}
+                >
+                  {t("app.rollback")}
+                </Button>
+              )}
+            </div>
           </div>
-        )}
-
-        {(cardState === CardState.UpToDate || cardState === CardState.Success) && isNotLatest && (
-          <Button size="sm" variant="outline" onClick={handleRollback} disabled={actionLoading}>
-            {t("ota.rollback")}
-          </Button>
         )}
       </CardContent>
     </Card>

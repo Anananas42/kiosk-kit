@@ -2,6 +2,7 @@ import type { OtaStatus } from "@kioskkit/shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   cancelOtaDownload,
+  fetchLatestOtaRelease,
   fetchLatestRelease,
   fetchOtaStatus,
   triggerOtaDownload,
@@ -18,13 +19,20 @@ export function useLatestRelease() {
   });
 }
 
+export function useLatestOtaRelease() {
+  return useQuery({
+    queryKey: queryKeys.latestOtaRelease,
+    queryFn: fetchLatestOtaRelease,
+  });
+}
+
 export function useOtaStatus(
   deviceId: string,
   options?: {
     refetchInterval?:
       | number
       | false
-      | ((query: { state: { data: OtaStatus | undefined } }) => number | false);
+      | ((query: { state: { data: OtaStatus | null | undefined } }) => number | false);
   },
 ) {
   return useQuery({

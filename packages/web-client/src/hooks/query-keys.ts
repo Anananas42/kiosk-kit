@@ -5,5 +5,8 @@ export const queryKeys = {
   deviceStatus: (id: string) => ["deviceStatus", id] as const,
   backups: (deviceId: string) => ["backups", deviceId] as const,
   latestRelease: ["latestRelease"] as const,
+  latestAppRelease: ["latestAppRelease"] as const,
+  latestOtaRelease: ["latestOtaRelease"] as const,
   otaStatus: (deviceId: string) => ["otaStatus", deviceId] as const,
+  appUpdateStatus: (deviceId: string) => ["appUpdateStatus", deviceId] as const,
 };

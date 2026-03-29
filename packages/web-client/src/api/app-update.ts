@@ -1,5 +1,5 @@
-import type { OtaStatus, ReleaseInfo } from "@kioskkit/shared";
-import { OtaStep, ReleaseType } from "@kioskkit/shared";
+import type { AppUpdateStatus, ReleaseInfo } from "@kioskkit/shared";
+import { AppUpdateStep, ReleaseType } from "@kioskkit/shared";
 import { trpc } from "../trpc.js";
 
 interface ServerOperation {
@@ -14,26 +14,22 @@ interface ServerOperation {
 }
 
 type StatusResponse =
-  | { source: "device"; result: { data: OtaStatus } }
+  | { source: "device"; result: { data: AppUpdateStatus } }
   | { source: "server"; operation: ServerOperation }
   | { source: "server"; status: "none" };
 
-export async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
-  return trpc["releases.latest"].query();
+export async function fetchLatestAppRelease(): Promise<ReleaseInfo | null> {
+  return trpc["releases.latest"].query({ type: ReleaseType.App });
 }
 
-export async function fetchLatestOtaRelease(): Promise<ReleaseInfo | null> {
-  return trpc["releases.latest"].query({ type: ReleaseType.Ota });
-}
-
-export async function fetchOtaStatus(deviceId: string): Promise<OtaStatus | null> {
-  const res = await fetch(`/api/devices/${deviceId}/ota/status`);
-  if (!res.ok) throw new Error("Failed to fetch OTA status");
+export async function fetchAppUpdateStatus(deviceId: string): Promise<AppUpdateStatus | null> {
+  const res = await fetch(`/api/devices/${deviceId}/app/status`);
+  if (!res.ok) throw new Error("Failed to fetch app update status");
   const json = (await res.json()) as StatusResponse;
-  return normalizeOtaStatus(json);
+  return normalizeAppStatus(json);
 }
 
-function normalizeOtaStatus(response: StatusResponse): OtaStatus | null {
+function normalizeAppStatus(response: StatusResponse): AppUpdateStatus | null {
   if (response.source === "device") {
     return response.result.data;
   }
@@ -45,35 +41,34 @@ function normalizeOtaStatus(response: StatusResponse): OtaStatus | null {
   const op = (response as { source: "server"; operation: ServerOperation }).operation;
 
   if (op.status === "in_progress") {
-    if (op.type === "ota_push") {
+    if (op.type === "app_push") {
       return {
-        status: OtaStep.Uploading,
-        activeSlot: "A",
-        committedSlot: "A",
+        status: AppUpdateStep.Uploading,
         currentVersion: null,
         upload: null,
         lastUpdate: null,
         lastResult: null,
+        rollbackAvailable: false,
       };
     }
-    if (op.type === "ota_install") {
+    if (op.type === "app_install") {
       return {
-        status: OtaStep.Installing,
-        activeSlot: "A",
-        committedSlot: "A",
+        status: AppUpdateStep.Installing,
         currentVersion: null,
         upload: null,
         lastUpdate: null,
         lastResult: null,
+        rollbackAvailable: false,
       };
     }
   }
 
+  // Completed or failed operations — return null to show idle state
   return null;
 }
 
-export async function triggerOtaDownload(deviceId: string, version: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/ota/push`, {
+export async function triggerAppDownload(deviceId: string, version: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/app/push`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ version }),
@@ -86,8 +81,8 @@ export async function triggerOtaDownload(deviceId: string, version: string): Pro
   }
 }
 
-export async function triggerOtaInstall(deviceId: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/ota/install`, {
+export async function triggerAppInstall(deviceId: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/app/install`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -100,8 +95,8 @@ export async function triggerOtaInstall(deviceId: string): Promise<void> {
   }
 }
 
-export async function triggerOtaRollback(deviceId: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/ota/rollback`, {
+export async function triggerAppRollback(deviceId: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/app/rollback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
@@ -114,8 +109,8 @@ export async function triggerOtaRollback(deviceId: string): Promise<void> {
   }
 }
 
-export async function cancelOtaDownload(deviceId: string): Promise<void> {
-  const res = await fetch(`/api/devices/${deviceId}/ota/cancel`, {
+export async function cancelAppDownload(deviceId: string): Promise<void> {
+  const res = await fetch(`/api/devices/${deviceId}/app/cancel`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
