@@ -25,7 +25,7 @@ describe("records.submit procedure", () => {
     const store = {
       insertRecord,
       getItemBalance: () => 0,
-      getCatalogItemDphRate: () => "21",
+      getCatalogItemTaxRate: () => "21",
     } as unknown as Store;
     const caller = createCaller({ store });
 

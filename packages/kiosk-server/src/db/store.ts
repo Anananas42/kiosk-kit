@@ -129,7 +129,7 @@ export class Store {
     this.db.delete(catalogItems).where(eq(catalogItems.id, id)).run();
   }
 
-  getCatalogItemDphRate(itemId: string, itemName: string): string {
+  getCatalogItemTaxRate(itemId: string, itemName: string): string {
     if (itemId) {
       const row = this.db
         .select({ dphRate: catalogItems.dphRate })

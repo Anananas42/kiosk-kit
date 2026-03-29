@@ -62,7 +62,7 @@ export const recordsRouter = router({
           }
         }
 
-        const dphRate = ctx.store.getCatalogItemDphRate(input.itemId ?? "", input.item);
+        const dphRate = ctx.store.getCatalogItemTaxRate(input.itemId ?? "", input.item);
 
         const entry: RecordEntry = {
           id: randomUUID(),
