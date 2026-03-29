@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchDeviceUpdateStatus,
   fetchServerUpdateStatus,
@@ -7,7 +7,6 @@ import {
   triggerUpdateInstall,
   triggerUpdatePush,
 } from "../api/update.js";
-import { queryClient } from "../queryClient.js";
 import { queryKeys } from "./query-keys.js";
 
 export function useUpdateInfo(deviceId: string) {
@@ -19,14 +18,12 @@ export function useUpdateInfo(deviceId: string) {
 
 export function useDeviceUpdateStatus(
   deviceId: string,
-  options?: {
-    refetchInterval?: number | false;
-  },
+  options?: { refetchInterval?: number | false },
 ) {
   return useQuery({
     queryKey: queryKeys.deviceUpdateStatus(deviceId),
     queryFn: () => fetchDeviceUpdateStatus(deviceId),
-    refetchInterval: options?.refetchInterval,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 }
 
@@ -40,6 +37,7 @@ export function useServerUpdateStatus(deviceId: string, enabled: boolean) {
 }
 
 export function useUpdatePush(deviceId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => triggerUpdatePush(deviceId),
     onSuccess: () => {
@@ -50,6 +48,7 @@ export function useUpdatePush(deviceId: string) {
 }
 
 export function useUpdateInstall(deviceId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => triggerUpdateInstall(deviceId),
     onSuccess: () => {
@@ -60,6 +59,7 @@ export function useUpdateInstall(deviceId: string) {
 }
 
 export function useUpdateCancel(deviceId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => triggerUpdateCancel(deviceId),
     onSuccess: () => {
