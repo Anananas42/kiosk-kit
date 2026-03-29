@@ -38,6 +38,10 @@ Read every changed file in full. Also read neighboring files in the same directo
 - **Do not map unrelated errors to a single generic message.** A catch-all like `catch (e) { setError("Something went wrong") }` is misleading — it tells the user (and the developer debugging it) nothing about what actually failed. Let unexpected errors propagate. Only catch errors you can handle meaningfully.
 - **Graceful UI error handling is fine when intentional.** A component that catches a specific, expected error (e.g., network timeout on a fetch) and shows a contextual message is good. The key distinction: handle errors you understand and expect, let everything else surface.
 
+### TypeScript conventions
+
+- **Use enums for fixed sets of string constants.** When code defines a set of related string literal constants (operation types, statuses, roles, etc.), use a TypeScript `enum` — not `const ... as const` with `typeof` union types. Enums are more readable, provide a natural namespace, and work as both a type and a value.
+
 ### Migrations and schema
 
 - **Check that schema changes have corresponding migrations.** If the PR modifies Drizzle schemas (`schema.ts` files), verify that a migration was generated. If there's no migration file, flag it — the CI migration check will fail.
@@ -104,13 +108,13 @@ Rules for the results comment:
 
 ## Step 4: Review decision
 
-Only submit a formal review requesting changes if there are 🔴 must-fix findings:
+Submit a formal review requesting changes if there are any 🔴 must-fix or 🟡 should-fix findings:
 
 ```bash
 GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
-GH_TOKEN="${GH_TOKEN}" gh pr review <pr-number> --request-changes --body "🔎 Code review agent found must-fix issues. See review comment for details."
+GH_TOKEN="${GH_TOKEN}" gh pr review <pr-number> --request-changes --body "🔎 Code review agent found issues. See review comment for details."
 ```
 
-If there are only 🟡 and 🟢 findings, just post the comment — do not request changes.
+If there are only 🟢 nit findings, post the comment but do not request changes. Nits are still real findings that should be addressed — they just don't block the review.
 
 If there are no findings at all, post a short comment confirming the code looks clean. Do not request changes.

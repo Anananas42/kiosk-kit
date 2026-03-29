@@ -120,7 +120,7 @@ After CI passes on a PR, the watch loop automatically runs a **testing agent** �
 4. Posts structured pass/fail results as a PR comment
 5. Optionally requests changes if critical failures are found (>50% steps fail)
 
-After the testing agent finishes, its comment(s) are handed to the main agent, which decides whether to act on them (fix failures) or acknowledge them (thumbs up reaction).
+After the testing agent finishes, its comment(s) are handed to the main agent to address.
 
 Key properties:
 - **Runs exactly once per PR** — tracked via a marker file at `/tmp/.testing-done-<PR_NUMBER>`. Re-invoked on `@tester` command.
@@ -134,9 +134,9 @@ After the testing agent finishes, the watch loop automatically runs a **reviewin
 1. Reads `.claude/commands/reviewing.md` and the changed files
 2. Reviews code quality: component structure, naming, UI library usage, error handling, schema migrations
 3. Posts structured findings as a PR comment
-4. Optionally requests changes if must-fix issues are found
+4. Requests changes if must-fix or should-fix issues are found
 
-After the reviewing agent finishes, its comment(s) are handed to the main agent, which decides whether to act on them (fix issues) or acknowledge them (thumbs up reaction).
+After the reviewing agent finishes, its comment(s) are handed to the main agent to address.
 
 Key properties:
 - **Runs exactly once per PR** — tracked via a marker file at `/tmp/.reviewing-done-<PR_NUMBER>`. Re-invoked on `@reviewer` command.

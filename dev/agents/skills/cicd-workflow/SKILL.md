@@ -22,6 +22,8 @@ If no PR exists, proceed with the full workflow below.
 
 Establish the correct patterns, conventions, and architecture from the very first PR. Once a codebase starts drifting toward ad-hoc solutions, the cost of correction compounds — each shortcut becomes the template for the next. Treat every task as if it's setting the precedent: choose the lowest-maintenance, most consistent approach even if it takes slightly longer up front. If you're unsure whether a pattern is right, ask — don't ship something "for now" that becomes permanent by inertia.
 
+Take pride in the codebase. Your job is not just to complete the task — it's to leave the code better than you found it. Fix warnings, address inconsistencies, clean up what you touch. Never defer small improvements to "future considerations" — if you see it and it's in scope, fix it now. Tech debt compounds silently; the best time to address it is when you're already in the file.
+
 ## Workflow
 
 1. **Linear task first** — every PR must have a linked Linear issue. Create or refine one before writing code. If code was already written without a task (e.g. sporadic changes), create a Linear issue retroactively before opening the PR — summarize what was done and why. **Update the issue status to "In Progress"** immediately when you start working on it, using the Linear MCP.

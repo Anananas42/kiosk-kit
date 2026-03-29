@@ -563,7 +563,7 @@ REVIEWING_EOF
 
 $REVIEWER_COMMENTS
 
-Review the findings. If there are must-fix or should-fix issues, address them, commit, and push. If the review looks clean (no actionable findings), leave a thumbs up reaction on each reviewer comment using: gh api repos/Anananas42/kiosk-kit/issues/comments/COMMENT_ID/reactions -f content='+1'
+Review the findings and address them — commit and push your fixes. If you genuinely disagree with a specific finding after careful consideration, reply explaining why instead of fixing it. Leave a thumbs up reaction on each reviewer comment you've addressed using: gh api repos/Anananas42/kiosk-kit/issues/comments/COMMENT_ID/reactions -f content='+1'
 
 Reviewer comment IDs: $REVIEWER_COMMENT_IDS" || true
         fi
