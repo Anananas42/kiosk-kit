@@ -101,14 +101,10 @@ if (existingRecords.length > 0) {
   const DAY_MS = 86_400_000;
 
   // Build an item lookup from the seeded catalog for prices/quantities
-  const itemLookup: Record<
-    string,
-    { categoryId: number; category: string; quantity: string; price: string }
-  > = {};
+  const itemLookup: Record<string, { category: string; quantity: string; price: string }> = {};
   for (const cat of catalog) {
     for (const it of cat.items) {
       itemLookup[it.name] = {
-        categoryId: 0, // filled below
         category: cat.name,
         quantity: it.quantity,
         price: it.price,
