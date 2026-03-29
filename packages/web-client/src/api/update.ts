@@ -1,20 +1,68 @@
 import type { DeviceUpdateInfo, UpdateStatus } from "@kioskkit/shared";
-import { trpc } from "../trpc.js";
+
+/**
+ * Calls tRPC procedures on the admin router (/api/admin/trpc/).
+ *
+ * The web-client's tRPC client is typed against AppRouter (/api/trpc/),
+ * which intentionally does not include admin-only procedures like device
+ * updates. Rather than widening AppRouter or creating a second typed client,
+ * we call the admin endpoints via fetch — the same pattern the old OTA API
+ * layer used for device-proxy and admin calls.
+ */
+
+async function adminQuery<T>(procedure: string, input: Record<string, unknown>): Promise<T> {
+  const encoded = encodeURIComponent(JSON.stringify(input));
+  const res = await fetch(`/api/admin/trpc/${procedure}?input=${encoded}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const msg = (body as { error?: { message?: string } }).error?.message;
+    throw new Error(msg ?? `${procedure} failed`);
+  }
+  const json = (await res.json()) as { result: { data: T } };
+  return json.result.data;
+}
+
+async function adminMutate<T>(procedure: string, input: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`/api/admin/trpc/${procedure}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const msg = (body as { error?: { message?: string } }).error?.message;
+    throw new Error(msg ?? `${procedure} failed`);
+  }
+  const json = (await res.json()) as { result: { data: T } };
+  return json.result.data;
+}
 
 export async function fetchUpdateInfo(deviceId: string): Promise<DeviceUpdateInfo> {
-  return trpc["devices.updateInfo"].query({ id: deviceId });
+  return adminQuery<DeviceUpdateInfo>("devices.updateInfo", { id: deviceId });
 }
 
 export async function triggerUpdateInstall(deviceId: string) {
-  return trpc["devices.updateInstall"].mutate({ id: deviceId });
+  return adminMutate<{ ok: boolean }>("devices.updateInstall", { id: deviceId });
 }
 
 export async function triggerUpdateCancel(deviceId: string) {
-  return trpc["devices.updateCancel"].mutate({ id: deviceId });
+  return adminMutate<{ ok: boolean }>("devices.updateCancel", { id: deviceId });
+}
+
+export interface ServerUpdateOp {
+  id: string;
+  deviceId: string;
+  updateType: string;
+  action: string;
+  version: string;
+  result: string;
+  error: string | null;
+  startedAt: string;
+  finishedAt: string | null;
 }
 
 export async function fetchServerUpdateStatus(deviceId: string) {
-  return trpc["devices.updateStatus"].query({ id: deviceId });
+  return adminQuery<{ operation: ServerUpdateOp | null }>("devices.updateStatus", { id: deviceId });
 }
 
 export async function triggerUpdatePush(deviceId: string): Promise<void> {
