@@ -1,4 +1,4 @@
-import { DeviceUpdateInfoSchema } from "@kioskkit/shared";
+import { DeviceUpdateInfoSchema, UpdateOpSchema } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -8,18 +8,6 @@ import { fetchDeviceProxy } from "../../services/device-network.js";
 import { getAccessibleDevice } from "../../services/update-helpers.js";
 import { getDeviceUpdateInfo } from "../../services/update-info.js";
 import { adminProcedure, router } from "../trpc.js";
-
-const UpdateOpSchema = z.object({
-  id: z.string(),
-  deviceId: z.string(),
-  updateType: z.string(),
-  action: z.string(),
-  version: z.string(),
-  result: z.string(),
-  error: z.string().nullable(),
-  startedAt: z.string(),
-  finishedAt: z.string().nullable(),
-});
 
 type UpdateOp = typeof deviceUpdateOps.$inferSelect;
 
@@ -72,7 +60,7 @@ async function markFailed(db: import("../../db/index.js").Db, opId: string, erro
     .where(eq(deviceUpdateOps.id, opId));
 }
 
-export { formatOp, getActiveOp, markFailed, markSuccess, UpdateOpSchema };
+export { formatOp, getActiveOp, markFailed, markSuccess };
 
 export const deviceUpdateRouter = router({
   "devices.updateInfo": adminProcedure

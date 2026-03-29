@@ -6,6 +6,7 @@ import {
   fetchDevices,
   renameDevice,
 } from "../api/devices.js";
+import { PollInterval } from "../constants.js";
 import { queryClient } from "../queryClient.js";
 import { queryKeys } from "./query-keys.js";
 
@@ -52,6 +53,6 @@ export function useDeviceStatus(
     queryFn: () => fetchDeviceStatus(id!),
     enabled: !!id,
     staleTime: 0,
-    refetchInterval: options?.refetchInterval ?? 5_000,
+    refetchInterval: options?.refetchInterval ?? PollInterval.DeviceStatus,
   });
 }
