@@ -18,10 +18,11 @@ export function LocalizationSection({ draft, onChange }: LocalizationSectionProp
 
       <Field>
         <FieldLabel htmlFor={localeId}>Locale</FieldLabel>
-        <FieldDescription>Language code used by the kiosk (e.g. "cs", "en")</FieldDescription>
+        <FieldDescription>Language code for the kiosk interface (e.g. "cs", "en")</FieldDescription>
         <Input
           id={localeId}
           type="text"
+          placeholder="cs"
           value={draft.locale}
           onChange={(e) => onChange("locale", e.target.value)}
           className="w-24"
@@ -30,10 +31,11 @@ export function LocalizationSection({ draft, onChange }: LocalizationSectionProp
 
       <Field>
         <FieldLabel htmlFor={currencyId}>Currency</FieldLabel>
-        <FieldDescription>Currency code for prices (e.g. "CZK", "EUR")</FieldDescription>
+        <FieldDescription>Currency code shown on prices (e.g. "CZK", "EUR")</FieldDescription>
         <Input
           id={currencyId}
           type="text"
+          placeholder="CZK"
           value={draft.currency}
           onChange={(e) => onChange("currency", e.target.value)}
           className="w-24"
@@ -42,13 +44,16 @@ export function LocalizationSection({ draft, onChange }: LocalizationSectionProp
 
       <Field>
         <FieldLabel htmlFor={buyerNounId}>Buyer noun</FieldLabel>
-        <FieldDescription>Label used for buyers in the kiosk UI (e.g. "apartmán")</FieldDescription>
+        <FieldDescription>
+          The label used instead of "buyer" in the kiosk UI (e.g. "apartmán", "room")
+        </FieldDescription>
         <Input
           id={buyerNounId}
           type="text"
+          placeholder="apartmán"
           value={draft.buyerNoun}
           onChange={(e) => onChange("buyerNoun", e.target.value)}
-          className="max-w-[300px]"
+          className="w-48"
         />
       </Field>
     </FieldSet>

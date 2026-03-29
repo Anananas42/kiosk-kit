@@ -7,6 +7,15 @@ interface DisplaySectionProps {
   onChange: <K extends keyof KioskSettings>(key: K, value: KioskSettings[K]) => void;
 }
 
+function msToSeconds(ms: number): string {
+  return String(Math.round(ms / 1000));
+}
+
+function secondsToMs(seconds: string): number {
+  const n = Number(seconds);
+  return Number.isNaN(n) ? 0 : Math.round(n * 1000);
+}
+
 export function DisplaySection({ draft, onChange }: DisplaySectionProps) {
   const idleDimId = useId();
   const inactivityId = useId();
@@ -17,30 +26,36 @@ export function DisplaySection({ draft, onChange }: DisplaySectionProps) {
 
       <Field>
         <FieldLabel htmlFor={idleDimId}>Idle dim timeout</FieldLabel>
-        <FieldDescription>Time in milliseconds before the screen dims when idle</FieldDescription>
-        <Input
-          id={idleDimId}
-          type="number"
-          min={0}
-          value={draft.idleDimMs}
-          onChange={(e) => onChange("idleDimMs", Number(e.target.value))}
-          className="max-w-[300px]"
-        />
+        <FieldDescription>Time before the screen dims when idle</FieldDescription>
+        <div className="flex items-center gap-2">
+          <Input
+            id={idleDimId}
+            type="number"
+            min={0}
+            step={1}
+            value={msToSeconds(draft.idleDimMs)}
+            onChange={(e) => onChange("idleDimMs", secondsToMs(e.target.value))}
+            className="w-24"
+          />
+          <span className="text-sm text-muted-foreground">seconds</span>
+        </div>
       </Field>
 
       <Field>
         <FieldLabel htmlFor={inactivityId}>Inactivity timeout</FieldLabel>
-        <FieldDescription>
-          Time in milliseconds before the session resets due to inactivity
-        </FieldDescription>
-        <Input
-          id={inactivityId}
-          type="number"
-          min={0}
-          value={draft.inactivityTimeoutMs}
-          onChange={(e) => onChange("inactivityTimeoutMs", Number(e.target.value))}
-          className="max-w-[300px]"
-        />
+        <FieldDescription>Time before the session resets due to inactivity</FieldDescription>
+        <div className="flex items-center gap-2">
+          <Input
+            id={inactivityId}
+            type="number"
+            min={0}
+            step={1}
+            value={msToSeconds(draft.inactivityTimeoutMs)}
+            onChange={(e) => onChange("inactivityTimeoutMs", secondsToMs(e.target.value))}
+            className="w-24"
+          />
+          <span className="text-sm text-muted-foreground">seconds</span>
+        </div>
       </Field>
     </FieldSet>
   );
