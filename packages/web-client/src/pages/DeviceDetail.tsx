@@ -5,8 +5,8 @@ import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
 import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
-import { OtaUpdateCard } from "../components/OtaUpdateCard.js";
 import { StatusCard } from "../components/StatusCard.js";
+import { UpdateCard } from "../components/UpdateCard.js";
 import { useBackups } from "../hooks/backups.js";
 import { useDevice, useDeviceStatus, useRenameDevice } from "../hooks/devices.js";
 import { useTranslate } from "../hooks/useTranslate.js";
@@ -174,9 +174,7 @@ export function DeviceDetail() {
       )}
 
       {/* OTA update card — only when device is online */}
-      {!isLoading && !error && status === DeviceStatus.Online && id && (
-        <OtaUpdateCard deviceId={id} />
-      )}
+      {!isLoading && !error && status === DeviceStatus.Online && id && <UpdateCard deviceId={id} />}
 
       {/* Backups section */}
       {!isLoading &&
