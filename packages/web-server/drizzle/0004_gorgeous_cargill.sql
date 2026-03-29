@@ -1,0 +1,1 @@
+ALTER TABLE "releases" ADD COLUMN "release_type" text DEFAULT 'ota' NOT NULL;

@@ -18,6 +18,12 @@ export const OTA_FETCH_TIMEOUT_MS = 120_000;
 /** Timeout for pushing an OTA update to a device. */
 export const OTA_PUSH_TIMEOUT_MS = 300_000;
 
+/** Timeout for fetching app bundle release assets from GitHub. */
+export const APP_FETCH_TIMEOUT_MS = 120_000;
+
+/** Timeout for pushing an app bundle update to a device. */
+export const APP_PUSH_TIMEOUT_MS = 300_000;
+
 /** Timeout for proxying OTA manifest/binary requests from devices. */
 export const OTA_PROXY_TIMEOUT_MS = 60_000;
 

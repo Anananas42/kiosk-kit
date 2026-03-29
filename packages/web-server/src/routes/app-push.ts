@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { OTA_FETCH_TIMEOUT_MS, OTA_PUSH_TIMEOUT_MS, UPDATE_STALE_OP_MS } from "../config.js";
+import { APP_FETCH_TIMEOUT_MS, APP_PUSH_TIMEOUT_MS, UPDATE_STALE_OP_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import {
@@ -11,18 +11,10 @@ import {
 } from "../services/device-operations.js";
 import { fetchAndStreamToDevice, getAccessibleDevice } from "../services/update-helpers.js";
 
-/**
- * POST /api/devices/:id/ota/push — trigger OTA image push to a device.
- *
- * Body: { version: string }
- *
- * Fetches the image from GitHub and streams it to the device's upload endpoint.
- * Only admins and device owners can trigger this.
- */
-export function otaPushRoutes(db: Db) {
+export function appPushRoutes(db: Db) {
   const app = new Hono<AuthEnv>();
 
-  app.post("/:id/ota/push", async (c) => {
+  app.post("/:id/app/push", async (c) => {
     const user = c.get("user");
     const deviceId = c.req.param("id");
 
@@ -39,7 +31,7 @@ export function otaPushRoutes(db: Db) {
     // Start operation — returns existing if one is already in progress
     const { operation, isNew } = await startOperation(db, {
       deviceId: device.id,
-      type: OperationType.OtaPush,
+      type: OperationType.AppPush,
       staleThresholdMs: UPDATE_STALE_OP_MS,
       metadata: { version: body.version },
     });
@@ -55,14 +47,14 @@ export function otaPushRoutes(db: Db) {
       db,
       device,
       version: body.version,
-      releaseType: "ota",
-      deviceEndpoint: "/api/ota/upload",
+      releaseType: "app",
+      deviceEndpoint: "/api/app/upload",
       headers: {
-        "X-OTA-Version": body.version,
-        "X-OTA-SHA256": "__SHA256__",
+        "X-App-Version": body.version,
+        "X-SHA256": "__SHA256__",
       },
-      fetchTimeout: OTA_FETCH_TIMEOUT_MS,
-      pushTimeout: OTA_PUSH_TIMEOUT_MS,
+      fetchTimeout: APP_FETCH_TIMEOUT_MS,
+      pushTimeout: APP_PUSH_TIMEOUT_MS,
     });
 
     if (!result.ok) {

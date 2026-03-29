@@ -75,6 +75,7 @@ export const deviceOperations = pgTable(
 export const releases = pgTable("releases", {
   id: uuid("id").primaryKey().defaultRandom(),
   version: text("version").notNull().unique(),
+  releaseType: text("release_type").notNull().default("ota"),
   githubAssetUrl: text("github_asset_url").notNull(),
   sha256: text("sha256").notNull(),
   releaseNotes: text("release_notes"),

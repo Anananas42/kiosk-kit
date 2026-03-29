@@ -33,6 +33,7 @@ const customerUser: User = {
 const releaseRow = {
   id: "a0000000-0000-4000-a000-000000000001",
   version: "v1.0.0",
+  releaseType: "ota",
   githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
   sha256: "abc123",
   releaseNotes: "First release",
@@ -80,12 +81,14 @@ describe("releases procedures", () => {
       const caller = callerFor(adminUser, db);
       const result = await caller["releases.publish"]({
         version: "v1.0.0",
+        releaseType: "ota",
         githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
         sha256: "abc123",
         releaseNotes: "First release",
       });
 
       expect(result.version).toBe("v1.0.0");
+      expect(result.releaseType).toBe("ota");
       expect(result.sha256).toBe("abc123");
       expect(result.publishedAt).toBeDefined();
     });
@@ -97,6 +100,7 @@ describe("releases procedures", () => {
       await expect(
         caller["releases.publish"]({
           version: "v1.0.0",
+          releaseType: "ota",
           githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
           sha256: "abc123",
         }),
@@ -108,6 +112,7 @@ describe("releases procedures", () => {
       await expect(
         caller["releases.publish"]({
           version: "v1.0.0",
+          releaseType: "ota",
           githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
           sha256: "abc123",
         }),
