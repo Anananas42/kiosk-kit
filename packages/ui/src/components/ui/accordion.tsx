@@ -59,4 +59,36 @@ function AccordionContent({
   );
 }
 
-export { Accordion, AccordionContent, AccordionItem, AccordionTrigger };
+function AccordionHeader({
+  className,
+  ...props
+}: React.ComponentProps<typeof AccordionPrimitive.Header>) {
+  return <AccordionPrimitive.Header className={cn("flex", className)} {...props} />;
+}
+
+function AccordionChevron({
+  className,
+  ...props
+}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
+  return (
+    <AccordionPrimitive.Trigger
+      data-slot="accordion-trigger"
+      className={cn(
+        "shrink-0 rounded-md outline-none transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]>svg]:rotate-180",
+        className,
+      )}
+      {...props}
+    >
+      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform duration-200" />
+    </AccordionPrimitive.Trigger>
+  );
+}
+
+export {
+  Accordion,
+  AccordionChevron,
+  AccordionContent,
+  AccordionHeader,
+  AccordionItem,
+  AccordionTrigger,
+};

@@ -1,5 +1,5 @@
 import type { CatalogCategory } from "@kioskkit/shared";
-import { AccordionTrigger, Badge, InlineEdit } from "@kioskkit/ui";
+import { AccordionChevron, AccordionHeader, Badge, InlineEdit } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "../../lib/query.js";
@@ -42,10 +42,8 @@ export function CategoryTrigger({ category }: CategoryTriggerProps) {
   }
 
   return (
-    <AccordionTrigger className="hover:no-underline">
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation prevents accordion toggle when interacting with controls */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: container prevents event bubbling */}
-      <div className="flex flex-1 items-center gap-2" onClick={(e) => e.stopPropagation()}>
+    <AccordionHeader className="flex items-center gap-2 py-4">
+      <div className="flex flex-1 items-center gap-2">
         <InlineEdit
           value={category.name}
           onSave={handleRename}
@@ -60,6 +58,8 @@ export function CategoryTrigger({ category }: CategoryTriggerProps) {
           preorder
         </Badge>
       </div>
-    </AccordionTrigger>
+
+      <AccordionChevron />
+    </AccordionHeader>
   );
 }
