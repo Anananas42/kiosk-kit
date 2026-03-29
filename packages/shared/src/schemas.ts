@@ -78,7 +78,7 @@ export const DeviceSchema = z.object({
   name: z.string(),
   tailscaleIp: z.string().nullable().optional(),
   online: z.boolean(),
-  hashVerifyEnabled: z.boolean(),
+  validateProxyHash: z.boolean(),
   lastSeen: z.string().nullable(),
   lastBackupAt: z.string().nullable().optional(),
   hostname: z.string().nullable(),
@@ -97,7 +97,7 @@ export type DeviceAssignInput = z.infer<typeof DeviceAssignInputSchema>;
 export const DeviceUpdateInputSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1, "name is required"),
-  hashVerifyEnabled: z.boolean().optional(),
+  validateProxyHash: z.boolean().optional(),
 });
 
 export type DeviceUpdateInput = z.infer<typeof DeviceUpdateInputSchema>;

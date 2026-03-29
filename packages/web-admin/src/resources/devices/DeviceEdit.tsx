@@ -20,7 +20,7 @@ export function DeviceEdit() {
             label="Assigned User"
           />
         </ReferenceInput>
-        <BooleanInput source="hashVerifyEnabled" label="Proxy hash verification" />
+        <BooleanInput source="validateProxyHash" label="Proxy hash verification" />
       </SimpleForm>
     </Edit>
   );

@@ -63,7 +63,7 @@ export function deviceProxyRoutes(db: Db) {
 
       // Only verify static admin assets — API/tRPC calls are validated separately.
       // Per-device toggle allows disabling verification for testing.
-      if (isAdminAssetPath(kioskPath) && res.ok && device.hashVerifyEnabled) {
+      if (isAdminAssetPath(kioskPath) && res.ok && device.validateProxyHash) {
         const body = Buffer.from(await res.arrayBuffer());
 
         // Attempt hash verification against the release manifest

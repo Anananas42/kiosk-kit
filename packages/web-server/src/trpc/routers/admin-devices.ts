@@ -85,7 +85,7 @@ export const adminDevicesRouter = router({
         name: device.name,
         tailscaleIp: device.tailscaleIp,
         online: false,
-        hashVerifyEnabled: device.hashVerifyEnabled,
+        validateProxyHash: device.validateProxyHash,
         lastSeen: null,
         hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),
@@ -100,8 +100,8 @@ export const adminDevicesRouter = router({
         .update(devices)
         .set({
           name: input.name,
-          ...(input.hashVerifyEnabled !== undefined && {
-            hashVerifyEnabled: input.hashVerifyEnabled,
+          ...(input.validateProxyHash !== undefined && {
+            validateProxyHash: input.validateProxyHash,
           }),
         })
         .where(eq(devices.id, input.id))
@@ -118,7 +118,7 @@ export const adminDevicesRouter = router({
         name: device.name,
         tailscaleIp: device.tailscaleIp,
         online: false,
-        hashVerifyEnabled: device.hashVerifyEnabled,
+        validateProxyHash: device.validateProxyHash,
         lastSeen: null,
         hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),

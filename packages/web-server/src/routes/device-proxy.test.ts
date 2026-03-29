@@ -14,7 +14,7 @@ const DEVICE = {
   userId: "user-1",
   name: "Test Kiosk",
   tailscaleIp: "100.64.1.5",
-  hashVerifyEnabled: true,
+  validateProxyHash: true,
   createdAt: new Date(),
 };
 

@@ -31,7 +31,7 @@ export function DeviceShow() {
         <ReferenceField source="userId" reference="users" link="show" emptyText="Unassigned">
           <TextField source="name" />
         </ReferenceField>
-        <BooleanField source="hashVerifyEnabled" label="Proxy hash verification" />
+        <BooleanField source="validateProxyHash" label="Proxy hash verification" />
         <DateField source="createdAt" label="Created" />
       </SimpleShowLayout>
     </Show>

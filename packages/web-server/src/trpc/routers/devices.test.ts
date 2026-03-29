@@ -80,7 +80,7 @@ const deviceRow = {
   pairingCode: null,
   backupIntervalHours: 2,
   maxRetainedBackups: 30,
-  hashVerifyEnabled: true,
+  validateProxyHash: true,
   lastSeen: null,
   createdAt: new Date("2025-01-01T00:00:00Z"),
 };
