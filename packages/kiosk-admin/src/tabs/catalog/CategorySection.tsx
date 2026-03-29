@@ -25,7 +25,7 @@ export function CategorySection({
   return (
     <AccordionItem
       value={category.id}
-      className="rounded-md border border-transparent data-[state=open]:border-border"
+      className="rounded-md border border-transparent last:border-b data-[state=open]:border-border"
     >
       <CategoryTrigger category={category} isFirst={isFirst} isLast={isLast} />
       <AccordionContent className="px-3 pb-3">
