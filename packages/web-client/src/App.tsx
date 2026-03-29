@@ -20,10 +20,10 @@ export function App() {
 
   if (!user) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-8 p-4">
-        <h1 className="text-4xl font-bold tracking-tight">{t("app.title")}</h1>
-        {error && <p className="text-base text-destructive">{error}</p>}
-        <Button variant="outline" size="lg" asChild>
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
+        <h1 className="text-7xl font-bold tracking-tight">{t("app.title")}</h1>
+        {error && <p className="text-xl text-destructive">{error}</p>}
+        <Button variant="outline" className="text-xl px-10 py-7" asChild>
           <a href="/api/auth/google">{t("app.signInWithGoogle")}</a>
         </Button>
       </div>
