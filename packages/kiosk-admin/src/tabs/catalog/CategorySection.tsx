@@ -23,9 +23,12 @@ export function CategorySection({
   const items = category.items;
 
   return (
-    <AccordionItem value={category.id}>
+    <AccordionItem
+      value={category.id}
+      className="rounded-md border border-transparent data-[state=open]:border-border"
+    >
       <CategoryTrigger category={category} isFirst={isFirst} isLast={isLast} />
-      <AccordionContent>
+      <AccordionContent className="px-3 pb-3">
         {items.length === 0 && (
           <p className="py-2 italic text-muted-foreground">No items in this category.</p>
         )}
