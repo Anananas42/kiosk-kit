@@ -9,10 +9,9 @@ interface ItemRowProps {
   currency: string;
   isFirst: boolean;
   isLast: boolean;
-  adjacentItem: { prev?: CatalogItem; next?: CatalogItem };
 }
 
-export function ItemRow({ item, locale, currency, isFirst, isLast, adjacentItem }: ItemRowProps) {
+export function ItemRow({ item, locale, currency, isFirst, isLast }: ItemRowProps) {
   const [open, setOpen] = useState(false);
 
   const formattedPrice = item.price
@@ -34,7 +33,6 @@ export function ItemRow({ item, locale, currency, isFirst, isLast, adjacentItem 
           item={item}
           isFirst={isFirst}
           isLast={isLast}
-          adjacentItem={adjacentItem}
           onClose={() => setOpen(false)}
         />
       </CollapsibleContent>

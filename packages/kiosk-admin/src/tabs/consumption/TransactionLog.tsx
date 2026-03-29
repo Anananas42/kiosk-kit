@@ -1,15 +1,8 @@
 import type { Buyer } from "@kioskkit/shared";
 import { parsePrice } from "@kioskkit/shared";
-import {
-  ExportCsvButton,
-  Spinner,
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@kioskkit/ui";
+import { Spinner, Table, TableBody, TableHead, TableHeader, TableRow } from "@kioskkit/ui";
 import { useQuery } from "@tanstack/react-query";
+import type { MutableRefObject } from "react";
 import { useCallback, useMemo } from "react";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
@@ -22,6 +15,7 @@ interface TransactionLogProps {
   buyers: Buyer[];
   locale: string;
   currency: string;
+  csvRef: MutableRefObject<(() => string[][]) | null>;
 }
 
 export function TransactionLog({
@@ -31,6 +25,7 @@ export function TransactionLog({
   buyers,
   locale,
   currency,
+  csvRef,
 }: TransactionLogProps) {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.consumption.logs(from, to || undefined, selectedBuyer),
@@ -65,7 +60,7 @@ export function TransactionLog({
     return rows;
   }, [records, buyerMap]);
 
-  const csvFilename = `consumption-logs_${from}_${to || new Date().toISOString().slice(0, 10)}.csv`;
+  csvRef.current = getCsvData;
 
   if (isLoading) {
     return (
@@ -81,9 +76,6 @@ export function TransactionLog({
 
   return (
     <div className="overflow-x-auto">
-      <div className="mb-2 flex justify-end">
-        <ExportCsvButton getData={getCsvData} filename={csvFilename} />
-      </div>
       <Table>
         <TableHeader>
           <TableRow>

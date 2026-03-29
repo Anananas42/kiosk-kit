@@ -1,7 +1,7 @@
 import type { CatalogCategory } from "@kioskkit/shared";
 import { Button } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
@@ -12,24 +12,32 @@ interface CategoryActionsProps {
   category: CatalogCategory;
   isFirst: boolean;
   isLast: boolean;
-  adjacentCategory: { prev?: CatalogCategory; next?: CatalogCategory };
 }
 
-export function CategoryActions({
-  category,
-  isFirst,
-  isLast,
-  adjacentCategory,
-}: CategoryActionsProps) {
+export function CategoryActions({ category, isFirst, isLast }: CategoryActionsProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const updateMutation = useMutation({
-    mutationFn: (input: { id: number; name: string; preorder: boolean; sortOrder: number }) =>
-      trpc["admin.catalog.updateCategory"].mutate(input),
+  const moveMutation = useMutation({
+    mutationFn: (input: { id: number; direction: "up" | "down" }) =>
+      trpc["admin.catalog.moveCategory"].mutate(input),
+    onSuccess: () => {
+      invalidateCatalog();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const togglePreorderMutation = useMutation({
+    mutationFn: () =>
+      trpc["admin.catalog.updateCategory"].mutate({
+        id: Number(category.id),
+        name: category.name,
+        preorder: !category.preorder,
+        sortOrder: category.sortOrder,
+      }),
     onSuccess: () => {
       invalidateCatalog();
     },
@@ -45,38 +53,8 @@ export function CategoryActions({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function handleMoveUp() {
-    const prev = adjacentCategory.prev;
-    if (!prev) return;
-    updateMutation.mutate({
-      id: Number(category.id),
-      name: category.name,
-      preorder: category.preorder,
-      sortOrder: prev.sortOrder,
-    });
-    updateMutation.mutate({
-      id: Number(prev.id),
-      name: prev.name,
-      preorder: prev.preorder,
-      sortOrder: category.sortOrder,
-    });
-  }
-
-  function handleMoveDown() {
-    const next = adjacentCategory.next;
-    if (!next) return;
-    updateMutation.mutate({
-      id: Number(category.id),
-      name: category.name,
-      preorder: category.preorder,
-      sortOrder: next.sortOrder,
-    });
-    updateMutation.mutate({
-      id: Number(next.id),
-      name: next.name,
-      preorder: next.preorder,
-      sortOrder: category.sortOrder,
-    });
+  function handleMove(direction: "up" | "down") {
+    moveMutation.mutate({ id: Number(category.id), direction });
   }
 
   return (
@@ -85,8 +63,8 @@ export function CategoryActions({
         type="button"
         variant="outline"
         size="sm"
-        onClick={handleMoveUp}
-        disabled={isFirst || updateMutation.isPending}
+        onClick={() => handleMove("up")}
+        disabled={isFirst || moveMutation.isPending}
         className="h-7 gap-1 text-xs"
       >
         <ArrowUp className="size-3" />
@@ -96,8 +74,8 @@ export function CategoryActions({
         type="button"
         variant="outline"
         size="sm"
-        onClick={handleMoveDown}
-        disabled={isLast || updateMutation.isPending}
+        onClick={() => handleMove("down")}
+        disabled={isLast || moveMutation.isPending}
         className="h-7 gap-1 text-xs"
       >
         <ArrowDown className="size-3" />
@@ -105,6 +83,18 @@ export function CategoryActions({
       </Button>
 
       <div className="flex-1" />
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 gap-1 text-xs"
+        onClick={() => togglePreorderMutation.mutate()}
+        disabled={togglePreorderMutation.isPending}
+      >
+        <RefreshCw className="size-3" />
+        {category.preorder ? "Switch to standard" : "Switch to preorder"}
+      </Button>
 
       <Button
         type="button"

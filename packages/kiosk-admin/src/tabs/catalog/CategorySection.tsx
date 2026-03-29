@@ -1,4 +1,4 @@
-import type { CatalogCategory, CatalogItem } from "@kioskkit/shared";
+import type { CatalogCategory } from "@kioskkit/shared";
 import { AccordionContent, AccordionItem } from "@kioskkit/ui";
 import { AddItemDialog } from "./AddItemDialog.js";
 import { CategoryActions } from "./CategoryActions.js";
@@ -11,7 +11,6 @@ interface CategorySectionProps {
   currency: string;
   isFirst: boolean;
   isLast: boolean;
-  adjacentCategory: { prev?: CatalogCategory; next?: CatalogCategory };
 }
 
 export function CategorySection({
@@ -20,7 +19,6 @@ export function CategorySection({
   currency,
   isFirst,
   isLast,
-  adjacentCategory,
 }: CategorySectionProps) {
   const items = category.items;
 
@@ -48,7 +46,6 @@ export function CategorySection({
                 currency={currency}
                 isFirst={index === 0}
                 isLast={index === items.length - 1}
-                adjacentItem={getAdjacentItem(items, index)}
               />
             ))}
           </div>
@@ -61,28 +58,13 @@ export function CategorySection({
           />
         </div>
 
-        <CategoryActions
-          category={category}
-          isFirst={isFirst}
-          isLast={isLast}
-          adjacentCategory={adjacentCategory}
-        />
+        <CategoryActions category={category} isFirst={isFirst} isLast={isLast} />
       </AccordionContent>
     </AccordionItem>
   );
 }
 
-function getAdjacentItem(
-  items: CatalogItem[],
-  index: number,
-): { prev?: CatalogItem; next?: CatalogItem } {
-  return {
-    prev: index > 0 ? items[index - 1] : undefined,
-    next: index < items.length - 1 ? items[index + 1] : undefined,
-  };
-}
-
-function getNextItemSortOrder(items: CatalogItem[]): number {
+function getNextItemSortOrder(items: CatalogCategory["items"]): number {
   if (items.length === 0) return 0;
   return Math.max(...items.map((i) => i.sortOrder)) + 1;
 }

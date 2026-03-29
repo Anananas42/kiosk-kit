@@ -1,6 +1,7 @@
 import type { Buyer, ConsumptionSummaryRow } from "@kioskkit/shared";
-import { ExportCsvButton, Spinner, Table, TableBody } from "@kioskkit/ui";
+import { Spinner, Table, TableBody } from "@kioskkit/ui";
 import { useQuery } from "@tanstack/react-query";
+import type { MutableRefObject } from "react";
 import { useCallback, useMemo } from "react";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
@@ -15,6 +16,7 @@ interface SummaryTableProps {
   buyers: Buyer[];
   locale: string;
   currency: string;
+  csvRef: MutableRefObject<(() => string[][]) | null>;
 }
 
 export function SummaryTable({
@@ -24,6 +26,7 @@ export function SummaryTable({
   buyers,
   locale,
   currency,
+  csvRef,
 }: SummaryTableProps) {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.consumption.summary(from, to || undefined),
@@ -112,7 +115,7 @@ export function SummaryTable({
     return rows;
   }, [summary, activeBuyers, buyerGrandTotals]);
 
-  const csvFilename = `consumption-summary_${from}_${to || new Date().toISOString().slice(0, 10)}.csv`;
+  csvRef.current = getCsvData;
 
   if (isLoading) {
     return (
@@ -130,9 +133,6 @@ export function SummaryTable({
 
   return (
     <div className="overflow-x-auto">
-      <div className="mb-2 flex justify-end">
-        <ExportCsvButton getData={getCsvData} filename={csvFilename} />
-      </div>
       <Table>
         <SummaryHeaderRow buyers={activeBuyers} />
         <TableBody>

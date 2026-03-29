@@ -23,11 +23,10 @@ interface ItemEditFormProps {
   item: CatalogItem;
   isFirst: boolean;
   isLast: boolean;
-  adjacentItem: { prev?: CatalogItem; next?: CatalogItem };
   onClose: () => void;
 }
 
-export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: ItemEditFormProps) {
+export function ItemEditForm({ item, isFirst, isLast, onClose }: ItemEditFormProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
@@ -65,8 +64,9 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const reorderMutation = useMutation({
-    mutationFn: (input: ItemUpdateInput) => trpc["admin.catalog.updateItem"].mutate(input),
+  const moveMutation = useMutation({
+    mutationFn: (input: { id: number; direction: "up" | "down" }) =>
+      trpc["admin.catalog.moveItem"].mutate(input),
     onSuccess: () => {
       invalidateCatalog();
     },
@@ -74,24 +74,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
   });
 
   function handleMove(direction: "up" | "down") {
-    const adjacent = direction === "up" ? adjacentItem.prev : adjacentItem.next;
-    if (!adjacent) return;
-    reorderMutation.mutate({
-      id: Number(item.id),
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      taxRate: item.taxRate,
-      sortOrder: adjacent.sortOrder,
-    });
-    reorderMutation.mutate({
-      id: Number(adjacent.id),
-      name: adjacent.name,
-      quantity: adjacent.quantity,
-      price: adjacent.price,
-      taxRate: adjacent.taxRate,
-      sortOrder: item.sortOrder,
-    });
+    moveMutation.mutate({ id: Number(item.id), direction });
   }
 
   return (
@@ -150,7 +133,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
             className="h-7 gap-1 text-xs"
             aria-label="Move up"
             onClick={() => handleMove("up")}
-            disabled={isFirst || reorderMutation.isPending}
+            disabled={isFirst || moveMutation.isPending}
           >
             <ArrowUp className="size-3" />
           </Button>
@@ -161,7 +144,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
             className="h-7 gap-1 text-xs"
             aria-label="Move down"
             onClick={() => handleMove("down")}
-            disabled={isLast || reorderMutation.isPending}
+            disabled={isLast || moveMutation.isPending}
           >
             <ArrowDown className="size-3" />
           </Button>

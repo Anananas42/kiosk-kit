@@ -32,15 +32,6 @@ export function CategoryTrigger({ category }: CategoryTriggerProps) {
     });
   }
 
-  function handleTogglePreorder() {
-    updateMutation.mutate({
-      id: Number(category.id),
-      name: category.name,
-      preorder: !category.preorder,
-      sortOrder: category.sortOrder,
-    });
-  }
-
   return (
     <AccordionHeader className="flex items-center gap-2 py-4">
       <div className="flex flex-1 items-center gap-2">
@@ -50,13 +41,7 @@ export function CategoryTrigger({ category }: CategoryTriggerProps) {
           disabled={updateMutation.isPending}
         />
 
-        <Badge
-          className="cursor-pointer select-none"
-          variant={category.preorder ? "default" : "outline"}
-          onClick={handleTogglePreorder}
-        >
-          preorder
-        </Badge>
+        {category.preorder && <Badge variant="secondary">preorder</Badge>}
       </div>
 
       <AccordionChevron />

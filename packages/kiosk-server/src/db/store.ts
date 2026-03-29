@@ -92,6 +92,59 @@ export class Store {
       .run();
   }
 
+  moveCategory(id: number, direction: "up" | "down"): void {
+    const current = this.db
+      .select({ id: catalogCategories.id, sortOrder: catalogCategories.sortOrder })
+      .from(catalogCategories)
+      .where(eq(catalogCategories.id, id))
+      .get();
+    if (!current) throw new Error("Category not found");
+
+    const adjacent = this.db
+      .select({ id: catalogCategories.id, sortOrder: catalogCategories.sortOrder })
+      .from(catalogCategories)
+      .where(
+        direction === "up"
+          ? sql`(${catalogCategories.sortOrder} < ${current.sortOrder}) OR (${catalogCategories.sortOrder} = ${current.sortOrder} AND ${catalogCategories.id} < ${current.id})`
+          : sql`(${catalogCategories.sortOrder} > ${current.sortOrder}) OR (${catalogCategories.sortOrder} = ${current.sortOrder} AND ${catalogCategories.id} > ${current.id})`,
+      )
+      .orderBy(
+        direction === "up"
+          ? sql`${catalogCategories.sortOrder} DESC, ${catalogCategories.id} DESC`
+          : sql`${catalogCategories.sortOrder} ASC, ${catalogCategories.id} ASC`,
+      )
+      .limit(1)
+      .get();
+    if (!adjacent) return;
+
+    if (current.sortOrder === adjacent.sortOrder) {
+      // Equal sort orders — assign distinct values so the move is visible
+      const lo = direction === "up" ? current.id : adjacent.id;
+      const hi = direction === "up" ? adjacent.id : current.id;
+      this.db
+        .update(catalogCategories)
+        .set({ sortOrder: current.sortOrder })
+        .where(eq(catalogCategories.id, lo))
+        .run();
+      this.db
+        .update(catalogCategories)
+        .set({ sortOrder: current.sortOrder + 1 })
+        .where(eq(catalogCategories.id, hi))
+        .run();
+    } else {
+      this.db
+        .update(catalogCategories)
+        .set({ sortOrder: adjacent.sortOrder })
+        .where(eq(catalogCategories.id, current.id))
+        .run();
+      this.db
+        .update(catalogCategories)
+        .set({ sortOrder: current.sortOrder })
+        .where(eq(catalogCategories.id, adjacent.id))
+        .run();
+    }
+  }
+
   deleteCategory(id: number): void {
     this.db.delete(catalogCategories).where(eq(catalogCategories.id, id)).run();
   }
@@ -125,6 +178,62 @@ export class Store {
       .set({ name, quantity, price, taxRate, sortOrder })
       .where(eq(catalogItems.id, id))
       .run();
+  }
+
+  moveItem(id: number, direction: "up" | "down"): void {
+    const current = this.db
+      .select({
+        id: catalogItems.id,
+        categoryId: catalogItems.categoryId,
+        sortOrder: catalogItems.sortOrder,
+      })
+      .from(catalogItems)
+      .where(eq(catalogItems.id, id))
+      .get();
+    if (!current) throw new Error("Item not found");
+
+    const adjacent = this.db
+      .select({ id: catalogItems.id, sortOrder: catalogItems.sortOrder })
+      .from(catalogItems)
+      .where(
+        direction === "up"
+          ? sql`${catalogItems.categoryId} = ${current.categoryId} AND ((${catalogItems.sortOrder} < ${current.sortOrder}) OR (${catalogItems.sortOrder} = ${current.sortOrder} AND ${catalogItems.id} < ${current.id}))`
+          : sql`${catalogItems.categoryId} = ${current.categoryId} AND ((${catalogItems.sortOrder} > ${current.sortOrder}) OR (${catalogItems.sortOrder} = ${current.sortOrder} AND ${catalogItems.id} > ${current.id}))`,
+      )
+      .orderBy(
+        direction === "up"
+          ? sql`${catalogItems.sortOrder} DESC, ${catalogItems.id} DESC`
+          : sql`${catalogItems.sortOrder} ASC, ${catalogItems.id} ASC`,
+      )
+      .limit(1)
+      .get();
+    if (!adjacent) return;
+
+    if (current.sortOrder === adjacent.sortOrder) {
+      const lo = direction === "up" ? current.id : adjacent.id;
+      const hi = direction === "up" ? adjacent.id : current.id;
+      this.db
+        .update(catalogItems)
+        .set({ sortOrder: current.sortOrder })
+        .where(eq(catalogItems.id, lo))
+        .run();
+      this.db
+        .update(catalogItems)
+        .set({ sortOrder: current.sortOrder + 1 })
+        .where(eq(catalogItems.id, hi))
+        .run();
+    } else {
+      this.db
+        .update(catalogItems)
+        .set({ sortOrder: adjacent.sortOrder })
+        .where(eq(catalogItems.id, current.id))
+        .run();
+      this.db
+        .update(catalogItems)
+        .set({ sortOrder: current.sortOrder })
+        .where(eq(catalogItems.id, adjacent.id))
+        .run();
+    }
   }
 
   deleteItem(id: number): void {
