@@ -57,7 +57,9 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
         </TableCell>
         <TableCell />
         <TableCell className="w-12 text-right">
-          <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
+          {isOutOfRange && (
+            <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
+          )}
         </TableCell>
       </TableRow>
       {expanded && !isOutOfRange && (
@@ -75,6 +77,13 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
                 {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
                 Reconnect
               </Button>
+              <div className="ml-auto">
+                <ForgetButton
+                  ssid={network.ssid}
+                  forgettingSsid={forgettingSsid}
+                  onForget={onForget}
+                />
+              </div>
             </form>
           </TableCell>
         </TableRow>
