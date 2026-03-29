@@ -9,6 +9,7 @@ import { appPushRoutes } from "./routes/app-push.js";
 import { appUpdateRoutes } from "./routes/app-update.js";
 import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
+import { deviceUpdateRoutes } from "./routes/device-update.js";
 import { githubWebhookRoute } from "./routes/github-webhook.js";
 import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";
@@ -62,6 +63,8 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
   // Auth middleware for protected API routes (exclude health + auth + trpc)
   app.use("/api/*", authMiddleware(db));
 
+  app.route("/api/devices", deviceUpdateRoutes(db));
+  // Legacy routes — kept for backward compatibility until clients migrate
   app.route("/api/devices", otaPushRoutes(db));
   app.route("/api/devices", otaUpdateRoutes(db));
   app.route("/api/devices", appPushRoutes(db));

@@ -512,6 +512,7 @@ export type UpdateType = z.infer<typeof UpdateTypeSchema>;
 
 export const DeviceUpdateInfoSchema = z.object({
   type: z.enum(["full", "live", "up_to_date"]),
+  currentVersion: z.string().nullable(),
   targetVersion: z.string().optional(),
   releaseNotes: z.string().nullable().optional(),
   publishedAt: z.string().optional(),

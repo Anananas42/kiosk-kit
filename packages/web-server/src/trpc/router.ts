@@ -3,6 +3,7 @@ import { adminDevicesRouter } from "./routers/admin-devices.js";
 import { adminReleasesRouter } from "./routers/admin-releases.js";
 import { adminUsersRouter } from "./routers/admin-users.js";
 import { backupsRouter } from "./routers/backups.js";
+import { deviceUpdateRouter } from "./routers/device-update.js";
 import { devicesRouter } from "./routers/devices.js";
 import { meRouter } from "./routers/me.js";
 import { releasesRouter } from "./routers/releases.js";
@@ -24,6 +25,7 @@ export const adminRouter = router({
   ...backupsRouter._def.procedures,
   ...adminReleasesRouter._def.procedures,
   ...releasesRouter._def.procedures,
+  ...deviceUpdateRouter._def.procedures,
 });
 
 export type AppRouter = typeof appRouter;

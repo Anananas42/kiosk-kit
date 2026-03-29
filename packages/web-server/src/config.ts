@@ -59,6 +59,9 @@ export const RESTORE_STALE_OP_MS = 5 * 60 * 1000;
 /** How long an OTA/app update operation can be in_progress before it's considered stale. */
 export const UPDATE_STALE_OP_MS = 15 * 60 * 1000;
 
+/** How long an update operation in device_update_ops can run before it's considered stale. */
+export const UPDATE_ACTIVE_OP_MS = 60 * 60 * 1000;
+
 // ── Device network ───────────────────────────────────────────────────
 
 /** Port kiosk-server listens on. */
