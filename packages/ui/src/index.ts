@@ -5,6 +5,7 @@ export {
   AccordionHeader,
   AccordionItem,
   AccordionTrigger,
+  AccordionTriggerPrimitive,
 } from "./components/ui/accordion";
 export { Badge, badgeVariants } from "./components/ui/badge";
 export type { ButtonProps } from "./components/ui/button";

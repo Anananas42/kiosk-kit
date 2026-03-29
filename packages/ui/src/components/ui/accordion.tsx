@@ -84,6 +84,8 @@ function AccordionChevron({
   );
 }
 
+const AccordionTriggerPrimitive = AccordionPrimitive.Trigger;
+
 export {
   Accordion,
   AccordionChevron,
@@ -91,4 +93,5 @@ export {
   AccordionHeader,
   AccordionItem,
   AccordionTrigger,
+  AccordionTriggerPrimitive,
 };
