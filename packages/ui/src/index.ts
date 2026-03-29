@@ -34,6 +34,8 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./components/ui/dialog";
+export type { ExportCsvButtonProps } from "./components/ui/export-csv-button";
+export { ExportCsvButton } from "./components/ui/export-csv-button";
 export {
   Field,
   FieldContent,

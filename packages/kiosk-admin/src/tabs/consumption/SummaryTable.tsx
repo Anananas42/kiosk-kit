@@ -1,7 +1,7 @@
 import type { Buyer, ConsumptionSummaryRow } from "@kioskkit/shared";
-import { Spinner, Table, TableBody } from "@kioskkit/ui";
+import { ExportCsvButton, Spinner, Table, TableBody } from "@kioskkit/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
 import { SummaryFooter } from "./SummaryFooter.js";
@@ -52,6 +52,63 @@ export function SummaryTable({
     return { summary: filtered, buyerTotals: filteredBuyerTotals, activeBuyers: active };
   }, [data, selectedBuyer, buyers]);
 
+  const getCsvData = useCallback((): string[][] => {
+    const headers = [
+      "Item",
+      "Quantity",
+      "Unit Price",
+      "Tax Rate",
+      ...activeBuyers.map((b) => b.label),
+      "Grand Total",
+    ];
+    const rows: string[][] = [headers];
+
+    for (const row of summary) {
+      const cells = [
+        row.item,
+        row.quantity || "",
+        row.unitPrice != null ? String(row.unitPrice) : "",
+        row.taxRate ? `${row.taxRate}%` : "",
+        ...activeBuyers.map((b) => {
+          const agg = row.byBuyer[String(b.id)];
+          return agg ? `${agg.total} (${agg.count})` : "";
+        }),
+        `${row.grandTotal} (${row.totalCount})`,
+      ];
+      rows.push(cells);
+    }
+
+    // Totals row
+    const grandTotal = summary.reduce((sum, r) => sum + r.grandTotal, 0);
+    const grandCount = summary.reduce((sum, r) => sum + r.totalCount, 0);
+    const buyerGrandTotals = new Map<number, { total: number; count: number }>();
+    for (const row of summary) {
+      for (const [buyerId, agg] of Object.entries(row.byBuyer)) {
+        const id = Number(buyerId);
+        const existing = buyerGrandTotals.get(id) ?? { total: 0, count: 0 };
+        buyerGrandTotals.set(id, {
+          total: existing.total + agg.total,
+          count: existing.count + agg.count,
+        });
+      }
+    }
+    rows.push([
+      "Grand Total",
+      "",
+      "",
+      "",
+      ...activeBuyers.map((b) => {
+        const agg = buyerGrandTotals.get(b.id);
+        return agg ? `${agg.total} (${agg.count})` : "";
+      }),
+      `${grandTotal} (${grandCount})`,
+    ]);
+
+    return rows;
+  }, [summary, activeBuyers]);
+
+  const csvFilename = `consumption-summary_${from}_${to || new Date().toISOString().slice(0, 10)}.csv`;
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 py-4 text-muted-foreground">
@@ -68,6 +125,9 @@ export function SummaryTable({
 
   return (
     <div className="overflow-x-auto">
+      <div className="mb-2 flex justify-end">
+        <ExportCsvButton getData={getCsvData} filename={csvFilename} />
+      </div>
       <Table>
         <SummaryHeaderRow buyers={activeBuyers} />
         <TableBody>
