@@ -25,7 +25,10 @@ export const releasesRouter = router({
       return {
         version: release.version,
         releaseType: release.releaseType,
-        sha256: release.sha256,
+        otaAssetUrl: release.otaAssetUrl,
+        otaSha256: release.otaSha256,
+        appAssetUrl: release.appAssetUrl,
+        appSha256: release.appSha256,
         releaseNotes: release.releaseNotes,
         publishedAt: release.publishedAt.toISOString(),
       };

@@ -27,8 +27,8 @@ export async function getAccessibleDevice(db: Db, deviceId: string, userId: stri
         await db.update(devices).set({ tailscaleIp: ip }).where(eq(devices.id, device.id));
         return { ...device, tailscaleIp: ip };
       }
-    } catch {
-      // Tailscale API unavailable
+    } catch (err) {
+      console.warn("Failed to fetch Tailscale IP for device %s: %s", device.id, err);
     }
   }
 
@@ -50,7 +50,7 @@ export type FetchAndStreamOptions = {
  * Fetch a release asset from GitHub and stream it to a device endpoint.
  *
  * 1. Looks up the release by version and type
- * 2. Fetches the asset from GitHub (githubAssetUrl)
+ * 2. Fetches the asset from the release URL (otaAssetUrl or appAssetUrl)
  * 3. Streams it to the device at the given endpoint path
  */
 export async function fetchAndStreamToDevice(
@@ -69,7 +69,12 @@ export async function fetchAndStreamToDevice(
   // Fetch asset from GitHub
   let upstream: Response;
   try {
-    upstream = await fetch(release.githubAssetUrl, {
+    const assetUrl = opts.releaseType === "app" ? release.appAssetUrl : release.otaAssetUrl;
+    if (!assetUrl) {
+      return { ok: false, error: `Release has no ${opts.releaseType} asset`, status: 404 };
+    }
+
+    upstream = await fetch(assetUrl, {
       signal: AbortSignal.timeout(opts.fetchTimeout),
       headers: { Accept: "application/octet-stream" },
     });
@@ -96,7 +101,8 @@ export async function fetchAndStreamToDevice(
   // Populate sha256 from release
   for (const [key, value] of Object.entries(deviceHeaders)) {
     if (value === "__SHA256__") {
-      deviceHeaders[key] = release.sha256;
+      const sha256 = opts.releaseType === "app" ? release.appSha256 : release.otaSha256;
+      deviceHeaders[key] = sha256 ?? "";
     }
   }
 

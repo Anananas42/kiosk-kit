@@ -130,9 +130,9 @@ async function main() {
       id: RELEASE_IDS[0],
       version: "1.0.0",
       releaseType: ReleaseType.Ota,
-      githubAssetUrl:
+      otaAssetUrl:
         "https://github.com/Anananas42/kiosk-kit/releases/download/v1.0.0/kioskkit-1.0.0.img.gz",
-      sha256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      otaSha256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
       releaseNotes: "Initial stable release with kiosk mode and basic POS.",
       isPublished: true,
       isArchived: false,
@@ -143,9 +143,9 @@ async function main() {
       id: RELEASE_IDS[1],
       version: "1.1.0",
       releaseType: ReleaseType.Ota,
-      githubAssetUrl:
+      otaAssetUrl:
         "https://github.com/Anananas42/kiosk-kit/releases/download/v1.1.0/kioskkit-1.1.0.img.gz",
-      sha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+      otaSha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
       releaseNotes: "Added remote backup support and improved device pairing flow.",
       isPublished: true,
       isArchived: false,
@@ -156,9 +156,9 @@ async function main() {
       id: RELEASE_IDS[2],
       version: "1.2.0-rc.1",
       releaseType: ReleaseType.Ota,
-      githubAssetUrl:
+      otaAssetUrl:
         "https://github.com/Anananas42/kiosk-kit/releases/download/v1.2.0-rc.1/kioskkit-1.2.0-rc.1.img.gz",
-      sha256: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+      otaSha256: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
       releaseNotes: "Release candidate — new dashboard and OTA update engine.",
       isPublished: false,
       isArchived: false,

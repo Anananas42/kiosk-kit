@@ -6,8 +6,10 @@ import { otaProxyRoutes } from "./ota-proxy.js";
 const RELEASE = {
   id: "r-1",
   version: "v1.0.0",
-  githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
-  sha256: "abc123def456",
+  otaAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
+  otaSha256: "abc123def456",
+  appAssetUrl: null,
+  appSha256: null,
   releaseNotes: "First release",
   publishedBy: "admin-1",
   publishedAt: new Date("2025-06-01T00:00:00Z"),

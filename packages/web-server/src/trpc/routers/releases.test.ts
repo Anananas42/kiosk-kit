@@ -35,8 +35,10 @@ const releaseRow = {
   id: "a0000000-0000-4000-a000-000000000001",
   version: "v1.0.0",
   releaseType: ReleaseType.Ota,
-  githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
-  sha256: "abc123",
+  otaAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
+  otaSha256: "abc123",
+  appAssetUrl: null,
+  appSha256: null,
   releaseNotes: "First release",
   isPublished: false,
   isArchived: false,
@@ -49,7 +51,7 @@ function createMockDb(returnValue: unknown[] = [], insertReturnValue?: unknown[]
   const terminal = Object.assign(Promise.resolve(returnValue), {
     returning: vi.fn().mockResolvedValue(returnValue),
   });
-  const chainable = {
+  const chainable = Object.assign(Promise.resolve(returnValue), {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -60,9 +62,7 @@ function createMockDb(returnValue: unknown[] = [], insertReturnValue?: unknown[]
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(insertResult),
-    // biome-ignore lint/suspicious/noThenProperty: mock db needs thenable for drizzle query chain
-    then: (resolve: (v: unknown) => void) => Promise.resolve(returnValue).then(resolve),
-  };
+  });
   return chainable as unknown as Db;
 }
 
@@ -83,14 +83,14 @@ describe("releases procedures", () => {
       const result = await caller["releases.publish"]({
         version: "v1.0.0",
         releaseType: ReleaseType.Ota,
-        githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
-        sha256: "abc123",
+        otaAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
+        otaSha256: "abc123",
         releaseNotes: "First release",
       });
 
       expect(result.version).toBe("v1.0.0");
       expect(result.releaseType).toBe("ota");
-      expect(result.sha256).toBe("abc123");
+      expect(result.otaSha256).toBe("abc123");
       expect(result.publishedAt).toBeDefined();
     });
 
@@ -102,8 +102,8 @@ describe("releases procedures", () => {
         caller["releases.publish"]({
           version: "v1.0.0",
           releaseType: ReleaseType.Ota,
-          githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
-          sha256: "abc123",
+          otaAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
+          otaSha256: "abc123",
         }),
       ).rejects.toThrow(TRPCError);
     });
@@ -114,8 +114,8 @@ describe("releases procedures", () => {
         caller["releases.publish"]({
           version: "v1.0.0",
           releaseType: ReleaseType.Ota,
-          githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
-          sha256: "abc123",
+          otaAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
+          otaSha256: "abc123",
         }),
       ).rejects.toThrow(TRPCError);
     });
@@ -171,7 +171,7 @@ describe("releases procedures", () => {
 
       expect(result).not.toBeNull();
       expect(result!.version).toBe("v1.0.0");
-      expect(result!.sha256).toBe("abc123");
+      expect(result!.otaSha256).toBe("abc123");
       expect(result!.releaseNotes).toBe("First release");
     });
 

@@ -66,7 +66,7 @@ describe("admin.appUpdate.status", () => {
         lastUpdate: "2026-03-01T00:00:00Z",
         lastResult: AppUpdateResult.Success,
       }),
-      "/etc/kioskkit/app-version": "1.0.0",
+      "/etc/kioskkit/version": "1.0.0",
     });
     mockReleaseCount(2);
 
@@ -150,7 +150,7 @@ describe("admin.appUpdate.status", () => {
     };
     mockFiles({
       "/data/app-update/state.json": JSON.stringify({ status: AppUpdateStep.Uploading }),
-      "/etc/kioskkit/app-version": "1.0.0",
+      "/etc/kioskkit/version": "1.0.0",
       "/data/app-update/pending/progress.json": JSON.stringify(progress),
     });
 

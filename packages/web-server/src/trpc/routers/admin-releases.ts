@@ -8,27 +8,31 @@ import { adminProcedure, router } from "../trpc.js";
 export const adminReleasesRouter = router({
   "releases.publish": adminProcedure
     .input(
-      z.object({
-        version: z.string().min(1),
-        releaseType: ReleaseTypeSchema,
-        githubAssetUrl: z.string().url(),
-        sha256: z.string().min(1),
-        releaseNotes: z.string().optional(),
-      }),
+      z
+        .object({
+          version: z.string().min(1),
+          releaseType: ReleaseTypeSchema,
+          otaAssetUrl: z.string().url().optional(),
+          otaSha256: z.string().min(1).optional(),
+          appAssetUrl: z.string().url().optional(),
+          appSha256: z.string().min(1).optional(),
+          releaseNotes: z.string().optional(),
+        })
+        .refine((v) => v.otaAssetUrl || v.appAssetUrl, {
+          message: "At least one asset (OTA or app) is required",
+        }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check for duplicate version + type combination
+      // Check for duplicate version
       const [existing] = await ctx.db
         .select({ id: releases.id })
         .from(releases)
-        .where(
-          and(eq(releases.version, input.version), eq(releases.releaseType, input.releaseType)),
-        );
+        .where(eq(releases.version, input.version));
 
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: `Version ${input.version} (${input.releaseType}) already exists`,
+          message: `Version ${input.version} already exists`,
         });
       }
 
@@ -37,8 +41,10 @@ export const adminReleasesRouter = router({
         .values({
           version: input.version,
           releaseType: input.releaseType,
-          githubAssetUrl: input.githubAssetUrl,
-          sha256: input.sha256,
+          otaAssetUrl: input.otaAssetUrl ?? null,
+          otaSha256: input.otaSha256 ?? null,
+          appAssetUrl: input.appAssetUrl ?? null,
+          appSha256: input.appSha256 ?? null,
           releaseNotes: input.releaseNotes ?? null,
           publishedBy: ctx.user.id,
         })
@@ -48,7 +54,10 @@ export const adminReleasesRouter = router({
         id: release!.id,
         version: release!.version,
         releaseType: release!.releaseType,
-        sha256: release!.sha256,
+        otaAssetUrl: release!.otaAssetUrl,
+        otaSha256: release!.otaSha256,
+        appAssetUrl: release!.appAssetUrl,
+        appSha256: release!.appSha256,
         releaseNotes: release!.releaseNotes,
         isPublished: release!.isPublished,
         isArchived: release!.isArchived,
@@ -63,6 +72,10 @@ export const adminReleasesRouter = router({
         releaseNotes: z.string().optional(),
         isPublished: z.boolean().optional(),
         isArchived: z.boolean().optional(),
+        otaAssetUrl: z.string().url().optional(),
+        otaSha256: z.string().min(1).optional(),
+        appAssetUrl: z.string().url().optional(),
+        appSha256: z.string().min(1).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -81,6 +94,10 @@ export const adminReleasesRouter = router({
       if (fields.releaseNotes !== undefined) updates.releaseNotes = fields.releaseNotes;
       if (fields.isPublished !== undefined) updates.isPublished = fields.isPublished;
       if (fields.isArchived !== undefined) updates.isArchived = fields.isArchived;
+      if (fields.otaAssetUrl !== undefined) updates.otaAssetUrl = fields.otaAssetUrl;
+      if (fields.otaSha256 !== undefined) updates.otaSha256 = fields.otaSha256;
+      if (fields.appAssetUrl !== undefined) updates.appAssetUrl = fields.appAssetUrl;
+      if (fields.appSha256 !== undefined) updates.appSha256 = fields.appSha256;
 
       if (Object.keys(updates).length === 0) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "No fields to update" });
@@ -95,8 +112,11 @@ export const adminReleasesRouter = router({
       return {
         id: release!.id,
         version: release!.version,
-        githubAssetUrl: release!.githubAssetUrl,
-        sha256: release!.sha256,
+        releaseType: release!.releaseType,
+        otaAssetUrl: release!.otaAssetUrl,
+        otaSha256: release!.otaSha256,
+        appAssetUrl: release!.appAssetUrl,
+        appSha256: release!.appSha256,
         releaseNotes: release!.releaseNotes,
         isPublished: release!.isPublished,
         isArchived: release!.isArchived,
@@ -126,8 +146,10 @@ export const adminReleasesRouter = router({
         id: r.id,
         version: r.version,
         releaseType: r.releaseType,
-        githubAssetUrl: r.githubAssetUrl,
-        sha256: r.sha256,
+        otaAssetUrl: r.otaAssetUrl,
+        otaSha256: r.otaSha256,
+        appAssetUrl: r.appAssetUrl,
+        appSha256: r.appSha256,
         releaseNotes: r.releaseNotes,
         isPublished: r.isPublished,
         isArchived: r.isArchived,

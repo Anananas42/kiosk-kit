@@ -43,18 +43,23 @@ export const releasesDataProvider: DataProvider = {
   },
 
   create: async (_resource, params) => {
-    const { version, releaseType, githubAssetUrl, sha256, releaseNotes } = params.data as {
-      version: string;
-      releaseType: ReleaseType;
-      githubAssetUrl: string;
-      sha256: string;
-      releaseNotes?: string;
-    };
+    const { version, releaseType, otaAssetUrl, otaSha256, appAssetUrl, appSha256, releaseNotes } =
+      params.data as {
+        version: string;
+        releaseType: ReleaseType;
+        otaAssetUrl?: string;
+        otaSha256?: string;
+        appAssetUrl?: string;
+        appSha256?: string;
+        releaseNotes?: string;
+      };
     const result = await trpc["releases.publish"].mutate({
       version,
       releaseType,
-      githubAssetUrl,
-      sha256,
+      otaAssetUrl,
+      otaSha256,
+      appAssetUrl,
+      appSha256,
       releaseNotes,
     });
     return { data: result };
