@@ -121,8 +121,6 @@ export function NetworkTab() {
                     current={status.current}
                     forgettingSsid={forgettingSsid}
                     onForget={handleForget}
-                    expanded={expandedNetwork === status.current.ssid}
-                    onToggle={() => handleToggle(status.current!.ssid)}
                   />
                 )}
                 {savedNotConnected.length > 0 && (
