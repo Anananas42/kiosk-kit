@@ -53,7 +53,11 @@ export function AvailableRow({ network, expanded, onToggle }: AvailableRowProps)
       {expanded && (
         <TableRow>
           <TableCell colSpan={4}>
-            <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
+            <form
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              className="flex flex-wrap items-center gap-2 py-1"
+            >
               {network.security === "wpa" && (
                 <PasswordInput
                   value={password}

@@ -65,7 +65,11 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
       {expanded && !isOutOfRange && (
         <TableRow>
           <TableCell colSpan={4}>
-            <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
+            <form
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              className="flex flex-wrap items-center gap-2 py-1"
+            >
               <PasswordInput
                 value={password}
                 onChange={setPassword}

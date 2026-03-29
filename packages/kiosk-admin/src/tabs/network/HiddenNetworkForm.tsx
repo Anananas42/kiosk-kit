@@ -35,7 +35,11 @@ export function HiddenNetworkForm() {
         <CardTitle>Hidden Network</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          className="flex flex-wrap items-center gap-2"
+        >
           <Input
             type="text"
             placeholder="Network name (SSID)"
