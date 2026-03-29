@@ -1,8 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@kioskkit/ui";
 import "./index.css";
 import { BuyersTab } from "./tabs/BuyersTab.js";
-import { CatalogTab } from "./tabs/CatalogTab.js";
 import { ConsumptionTab } from "./tabs/ConsumptionTab.js";
+import { CatalogTab } from "./tabs/catalog/CatalogTab.js";
 import { NetworkTab } from "./tabs/network/NetworkTab.js";
 import { PreorderTab } from "./tabs/PreorderTab.js";
 import { SettingsTab } from "./tabs/SettingsTab.js";

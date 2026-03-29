@@ -60,6 +60,7 @@ export class Store {
         id: String(cat.id),
         name: cat.name,
         preorder: cat.preorder === 1,
+        sortOrder: cat.sortOrder,
         items: items.map(
           (it): CatalogItem => ({
             id: String(it.id),
@@ -67,6 +68,7 @@ export class Store {
             quantity: it.quantity,
             price: it.price,
             dphRate: it.dphRate,
+            sortOrder: it.sortOrder,
           }),
         ),
       };
