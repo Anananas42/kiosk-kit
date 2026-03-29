@@ -1,10 +1,22 @@
-import { Create, SimpleForm, TextInput } from "react-admin";
+import { Create, SelectInput, SimpleForm, TextInput } from "react-admin";
+
+const releaseTypeChoices = [
+  { id: "ota", name: "OTA" },
+  { id: "app", name: "App" },
+];
 
 export function ReleaseCreate() {
   return (
     <Create redirect="show">
       <SimpleForm>
         <TextInput source="version" isRequired helperText="e.g. 1.3.0" />
+        <SelectInput
+          source="releaseType"
+          choices={releaseTypeChoices}
+          isRequired
+          defaultValue="ota"
+          helperText="OTA for full system updates, App for live app bundle updates"
+        />
         <TextInput
           source="otaAssetUrl"
           label="OTA Asset URL"
