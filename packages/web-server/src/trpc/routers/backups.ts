@@ -14,6 +14,8 @@ import {
   completeOperation,
   failOperation,
   formatOperationResponse,
+  OP_TYPE_BACKUP,
+  OP_TYPE_RESTORE,
   startOperation,
 } from "../../services/device-operations.js";
 import { downloadFile, getSignedDownloadUrl } from "../../services/s3.js";
@@ -21,7 +23,7 @@ import { authedProcedure, router } from "../trpc.js";
 
 export const backupsRouter = router({
   "backups.list": authedProcedure
-    .input(z.object({ deviceId: z.string().uuid() }))
+    .input(z.object({ deviceId: z.uuid() }))
     .query(async ({ ctx, input }) => {
       // Verify device exists and user owns it
       const [device] = await ctx.db
@@ -53,7 +55,7 @@ export const backupsRouter = router({
     }),
 
   "backups.getDownloadUrl": authedProcedure
-    .input(z.object({ backupId: z.string().uuid() }))
+    .input(z.object({ backupId: z.uuid() }))
     .query(async ({ ctx, input }) => {
       const [backup] = await ctx.db
         .select({
@@ -83,7 +85,7 @@ export const backupsRouter = router({
     }),
 
   "backups.restore": authedProcedure
-    .input(z.object({ backupId: z.string().uuid() }))
+    .input(z.object({ backupId: z.uuid() }))
     .mutation(async ({ ctx, input }) => {
       // Look up the backup
       const [backup] = await ctx.db
@@ -112,7 +114,7 @@ export const backupsRouter = router({
       // Track the restore operation
       const { operation: op } = await startOperation(ctx.db, {
         deviceId: device.id,
-        type: "restore",
+        type: OP_TYPE_RESTORE,
         metadata: { backupId: backup.id },
         staleThresholdMs: RESTORE_STALE_OP_MS,
       });
@@ -167,7 +169,7 @@ export const backupsRouter = router({
     }),
 
   "backups.operationStatus": authedProcedure
-    .input(z.object({ deviceId: z.string().uuid() }))
+    .input(z.object({ deviceId: z.uuid() }))
     .query(async ({ ctx, input }) => {
       // Verify device exists and user owns it
       const [device] = await ctx.db
@@ -186,7 +188,7 @@ export const backupsRouter = router({
         .where(
           and(
             eq(deviceOperations.deviceId, input.deviceId),
-            inArray(deviceOperations.type, ["backup", "restore"]),
+            inArray(deviceOperations.type, [OP_TYPE_BACKUP, OP_TYPE_RESTORE]),
           ),
         )
         .orderBy(desc(deviceOperations.startedAt))
@@ -198,7 +200,7 @@ export const backupsRouter = router({
     }),
 
   "backups.trigger": authedProcedure
-    .input(z.object({ deviceId: z.string().uuid() }))
+    .input(z.object({ deviceId: z.uuid() }))
     .mutation(async ({ ctx, input }) => {
       // Verify device exists and user owns it
       const [device] = await ctx.db
@@ -219,7 +221,7 @@ export const backupsRouter = router({
 
       const { operation: op, isNew } = await startOperation(ctx.db, {
         deviceId: device.id,
-        type: "backup",
+        type: OP_TYPE_BACKUP,
         staleThresholdMs: BACKUP_STALE_OP_MS,
       });
 

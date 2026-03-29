@@ -8,6 +8,7 @@ import {
   completeOperation,
   failOperation,
   formatOperationResponse,
+  OP_TYPE_BACKUP,
   startOperation,
 } from "../../services/device-operations.js";
 import { adminProcedure, router } from "../trpc.js";
@@ -31,7 +32,7 @@ export const adminBackupsRouter = router({
 
       const { operation: op, isNew } = await startOperation(ctx.db, {
         deviceId: device.id,
-        type: "backup",
+        type: OP_TYPE_BACKUP,
         staleThresholdMs: BACKUP_STALE_OP_MS,
       });
 

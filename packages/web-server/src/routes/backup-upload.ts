@@ -3,7 +3,12 @@ import { BACKUP_FETCH_TIMEOUT_MS, BACKUP_STALE_OP_MS, MAX_RETAINED_BACKUPS } fro
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
-import { completeOperation, failOperation, startOperation } from "../services/device-operations.js";
+import {
+  completeOperation,
+  failOperation,
+  OP_TYPE_BACKUP,
+  startOperation,
+} from "../services/device-operations.js";
 import { deleteFile, uploadFile } from "../services/s3.js";
 
 /**
@@ -80,7 +85,7 @@ export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
   for (const device of reachable) {
     const { operation: op } = await startOperation(db, {
       deviceId: device.id,
-      type: "backup",
+      type: OP_TYPE_BACKUP,
       staleThresholdMs: BACKUP_STALE_OP_MS,
     });
 
