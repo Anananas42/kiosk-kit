@@ -194,6 +194,14 @@ On container start, the entrypoint automatically:
 2. Seeds a test admin user via `pnpm --filter @kioskkit/web-server db:seed-test-user`:
    - Email: `test@kioskkit.local`, role: `admin`
    - Session token exported as `TEST_SESSION_TOKEN` env var (valid 1 year)
+3. Seeds test data via `pnpm --filter @kioskkit/web-server db:seed-test-data`:
+   - **Customer user**: `customer@kioskkit.local`, role: `customer`, ID: `test-customer-user-id`
+   - **3 devices** (owned by admin user):
+     - `Lobby Kiosk` (ID: `a0000000-0000-4000-8000-000000000001`, pairing: `PAIR-001`, last seen 2026-03-28)
+     - `Cafe Kiosk` (ID: `a0000000-0000-4000-8000-000000000002`, pairing: `PAIR-002`, last seen 2026-03-29)
+     - `Warehouse Kiosk` (ID: `a0000000-0000-4000-8000-000000000003`, pairing: `PAIR-003`, never seen)
+   - **4 backups**: 2 for Lobby Kiosk, 2 for Cafe Kiosk (50 MB each, spread over several days)
+   - **3 releases**: v1.0.0 (published), v1.1.0 (published), v1.2.0-rc.1 (draft)
 
 To reset Postgres to a clean state (drop all tables, re-push schema, re-seed):
 
@@ -201,7 +209,7 @@ To reset Postgres to a clean state (drop all tables, re-push schema, re-seed):
 ./dev/agents/scripts/db-reset.sh
 ```
 
-To add new Postgres seed data, edit `packages/web-server/src/seed-test-user.ts`.
+To add new Postgres seed data, edit `packages/web-server/src/seed-test-data.ts` (or `seed-test-user.ts` for auth-related seeds).
 
 ### SQLite (kiosk-server)
 
