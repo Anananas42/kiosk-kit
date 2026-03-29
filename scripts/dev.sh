@@ -60,6 +60,10 @@ if needs_postgres; then
     exit 1
   }
   echo " pushed"
+
+  printf "  Test user ..."
+  pnpm --filter @kioskkit/web-server run --silent db:seed-test-user > /dev/null 2>&1 || true
+  echo " seeded"
 fi
 
 export TURBO_NO_UPDATE_NOTIFIER=1
