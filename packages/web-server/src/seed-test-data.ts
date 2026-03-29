@@ -1,3 +1,4 @@
+import { ReleaseType } from "@kioskkit/shared";
 import { createDb } from "./db/index.js";
 import { backups, devices, releases, users } from "./db/schema.js";
 
@@ -124,7 +125,7 @@ async function main() {
     {
       id: RELEASE_IDS[0],
       version: "1.0.0",
-      releaseType: "ota",
+      releaseType: ReleaseType.Ota,
       githubAssetUrl:
         "https://github.com/Anananas42/kiosk-kit/releases/download/v1.0.0/kioskkit-1.0.0.img.gz",
       sha256: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
@@ -137,7 +138,7 @@ async function main() {
     {
       id: RELEASE_IDS[1],
       version: "1.1.0",
-      releaseType: "ota",
+      releaseType: ReleaseType.Ota,
       githubAssetUrl:
         "https://github.com/Anananas42/kiosk-kit/releases/download/v1.1.0/kioskkit-1.1.0.img.gz",
       sha256: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
@@ -150,7 +151,7 @@ async function main() {
     {
       id: RELEASE_IDS[2],
       version: "1.2.0-rc.1",
-      releaseType: "ota",
+      releaseType: ReleaseType.Ota,
       githubAssetUrl:
         "https://github.com/Anananas42/kiosk-kit/releases/download/v1.2.0-rc.1/kioskkit-1.2.0-rc.1.img.gz",
       sha256: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",

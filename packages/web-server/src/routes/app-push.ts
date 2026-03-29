@@ -1,3 +1,4 @@
+import { ReleaseType } from "@kioskkit/shared";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { APP_FETCH_TIMEOUT_MS, APP_PUSH_TIMEOUT_MS, UPDATE_STALE_OP_MS } from "../config.js";
@@ -49,7 +50,7 @@ export function appPushRoutes(db: Db) {
       db,
       device,
       version: body.version,
-      releaseType: "app",
+      releaseType: ReleaseType.App,
       deviceEndpoint: "/api/app/upload",
       headers: {
         "X-App-Version": body.version,

@@ -1,3 +1,4 @@
+import { ReleaseType } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "../../db/index.js";
@@ -33,7 +34,7 @@ const customerUser: User = {
 const releaseRow = {
   id: "a0000000-0000-4000-a000-000000000001",
   version: "v1.0.0",
-  releaseType: "ota",
+  releaseType: ReleaseType.Ota,
   githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
   sha256: "abc123",
   releaseNotes: "First release",
@@ -81,7 +82,7 @@ describe("releases procedures", () => {
       const caller = callerFor(adminUser, db);
       const result = await caller["releases.publish"]({
         version: "v1.0.0",
-        releaseType: "ota",
+        releaseType: ReleaseType.Ota,
         githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
         sha256: "abc123",
         releaseNotes: "First release",
@@ -100,7 +101,7 @@ describe("releases procedures", () => {
       await expect(
         caller["releases.publish"]({
           version: "v1.0.0",
-          releaseType: "ota",
+          releaseType: ReleaseType.Ota,
           githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
           sha256: "abc123",
         }),
@@ -112,7 +113,7 @@ describe("releases procedures", () => {
       await expect(
         caller["releases.publish"]({
           version: "v1.0.0",
-          releaseType: "ota",
+          releaseType: ReleaseType.Ota,
           githubAssetUrl: "https://github.com/org/repo/releases/download/v1.0.0/rootfs.img.zst",
           sha256: "abc123",
         }),

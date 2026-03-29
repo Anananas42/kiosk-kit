@@ -1,3 +1,4 @@
+import { ReleaseType } from "@kioskkit/shared";
 import {
   boolean,
   index,
@@ -78,7 +79,7 @@ export const releases = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     version: text("version").notNull(),
-    releaseType: text("release_type").notNull().default("ota"),
+    releaseType: text("release_type").notNull().default(ReleaseType.Ota),
     githubAssetUrl: text("github_asset_url").notNull(),
     sha256: text("sha256").notNull(),
     releaseNotes: text("release_notes"),

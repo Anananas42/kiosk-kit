@@ -1,3 +1,4 @@
+import { ReleaseType } from "@kioskkit/shared";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { OTA_FETCH_TIMEOUT_MS, OTA_PUSH_TIMEOUT_MS, UPDATE_STALE_OP_MS } from "../config.js";
@@ -57,7 +58,7 @@ export function otaPushRoutes(db: Db) {
       db,
       device,
       version: body.version,
-      releaseType: "ota",
+      releaseType: ReleaseType.Ota,
       deviceEndpoint: "/api/ota/upload",
       headers: {
         "X-OTA-Version": body.version,

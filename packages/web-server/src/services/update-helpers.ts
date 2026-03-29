@@ -1,3 +1,4 @@
+import type { ReleaseType } from "@kioskkit/shared";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../db/index.js";
 import { devices, releases } from "../db/schema.js";
@@ -38,7 +39,7 @@ export type FetchAndStreamOptions = {
   db: Db;
   device: { id: string; tailscaleIp: string | null };
   version: string;
-  releaseType: "ota" | "app";
+  releaseType: ReleaseType;
   deviceEndpoint: string;
   headers: Record<string, string>;
   fetchTimeout: number;

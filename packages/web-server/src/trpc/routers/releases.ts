@@ -1,3 +1,4 @@
+import { ReleaseTypeSchema } from "@kioskkit/shared";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { releases } from "../../db/schema.js";
@@ -5,7 +6,7 @@ import { authedProcedure, router } from "../trpc.js";
 
 export const releasesRouter = router({
   "releases.latest": authedProcedure
-    .input(z.object({ type: z.enum(["ota", "app"]) }).optional())
+    .input(z.object({ type: ReleaseTypeSchema }).optional())
     .query(async ({ ctx, input }) => {
       const conditions = [eq(releases.isPublished, true), eq(releases.isArchived, false)];
       if (input?.type) {

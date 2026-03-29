@@ -1,3 +1,4 @@
+import { ReleaseTypeSchema } from "@kioskkit/shared";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -9,7 +10,7 @@ export const adminReleasesRouter = router({
     .input(
       z.object({
         version: z.string().min(1),
-        releaseType: z.enum(["ota", "app"]),
+        releaseType: ReleaseTypeSchema,
         githubAssetUrl: z.string().url(),
         sha256: z.string().min(1),
         releaseNotes: z.string().optional(),
@@ -105,7 +106,7 @@ export const adminReleasesRouter = router({
     }),
 
   "releases.list": adminProcedure
-    .input(z.object({ type: z.enum(["ota", "app"]) }).optional())
+    .input(z.object({ type: ReleaseTypeSchema }).optional())
     .query(async ({ ctx, input }) => {
       const conditions = [];
       if (input?.type) {
