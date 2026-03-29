@@ -173,8 +173,11 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* Update card — only when device is online */}
-      {!isLoading && !error && status === DeviceStatus.Online && id && <UpdateCard deviceId={id} />}
+      {/* Update card — visible when online, or when device was online this session
+          (keeps card visible during full system update reboots via server fallback) */}
+      {!isLoading && !error && (status === DeviceStatus.Online || hasBeenOnline) && id && (
+        <UpdateCard deviceId={id} />
+      )}
 
       {/* Backups section */}
       {!isLoading &&
