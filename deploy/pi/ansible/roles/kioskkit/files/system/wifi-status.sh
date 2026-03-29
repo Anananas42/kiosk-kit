@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
 # Managed by Ansible — do not edit manually.
-# Reports WiFi connection status as JSON.
-# No sudo required.
+# Reports WiFi connection status as JSON via NetworkManager.
 set -euo pipefail
-
-CONF="/etc/wpa_supplicant/wpa_supplicant-wlan0.conf"
 
 # Current connection
 CURRENT="null"
-WPA_STATUS=$(/sbin/wpa_cli -i wlan0 status 2>/dev/null) || true
+ACTIVE_SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2- || true)
 
-CONNECTED_SSID=$(echo "$WPA_STATUS" | grep -oP '^ssid=\K.*' || true)
-WPA_STATE=$(echo "$WPA_STATUS" | grep -oP '^wpa_state=\K.*' || true)
+if [ -n "$ACTIVE_SSID" ]; then
+    # Get signal strength (0-100 from NM, convert to approximate dBm)
+    SIGNAL=$(nmcli -t -f active,signal dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2 || echo "0")
+    # NM reports 0-100 percentage; approximate dBm = (signal/2) - 100
+    RSSI=$(( (SIGNAL / 2) - 100 ))
 
-if [ "$WPA_STATE" = "COMPLETED" ] && [ -n "$CONNECTED_SSID" ]; then
-    # Get signal strength
-    SIGNAL_POLL=$(/sbin/wpa_cli -i wlan0 signal_poll 2>/dev/null) || true
-    RSSI=$(echo "$SIGNAL_POLL" | grep -oP '^RSSI=\K-?[0-9]+' || echo "0")
+    # Determine security from nmcli active connection security field
+    SECURITY_FIELD=$(nmcli -t -f active,security dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2- || true)
+    if [ -z "$SECURITY_FIELD" ] || [ "$SECURITY_FIELD" = "--" ]; then
+        CURRENT_SECURITY="open"
+    else
+        CURRENT_SECURITY="wpa"
+    fi
 
     # Escape SSID for JSON
-    SAFE_SSID=$(printf '%s' "$CONNECTED_SSID" | sed 's/\\/\\\\/g; s/"/\\"/g')
-    CURRENT="{\"ssid\":\"$SAFE_SSID\",\"signal\":$RSSI}"
+    SAFE_SSID=$(printf '%s' "$ACTIVE_SSID" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    CURRENT="{\"ssid\":\"$SAFE_SSID\",\"signal\":$RSSI,\"security\":\"$CURRENT_SECURITY\"}"
 fi
 
 # Ethernet status
@@ -29,20 +32,25 @@ if [ -f /sys/class/net/eth0/carrier ] && [ "$(cat /sys/class/net/eth0/carrier 2>
     ETHERNET="true"
 fi
 
-# Saved networks
-SAVED="[]"
-if [ -f "$CONF" ]; then
-    SAVED=$( (grep -oP 'ssid="\K[^"]+' "$CONF" 2>/dev/null || true) | awk '
-        BEGIN { printf "[" }
-        NR > 1 { printf "," }
-        {
-            ssid = $0
-            gsub(/\\/, "\\\\", ssid)
-            gsub(/"/, "\\\"", ssid)
-            printf "{\"ssid\":\"%s\"}", ssid
-        }
-        END { printf "]" }
-    ')
-fi
+# Saved networks (wifi connection profiles managed by NM, with security info)
+SAVED=$(nmcli -t -f NAME,TYPE connection show 2>/dev/null | { grep ':802-11-wireless$' || true; } | cut -d: -f1 | while IFS= read -r name; do
+    # Check if connection has WPA security configured
+    KEY_MGMT=$(nmcli -t -f 802-11-wireless-security.key-mgmt connection show "$name" 2>/dev/null | cut -d: -f2 || true)
+    if [ -n "$KEY_MGMT" ] && [ "$KEY_MGMT" != "--" ]; then
+        sec="wpa"
+    else
+        sec="open"
+    fi
+    # Escape for JSON
+    safe=$(printf '%s' "$name" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    printf '%s\t%s\n' "$safe" "$sec"
+done | awk -F'\t' '
+    BEGIN { printf "[" }
+    NR > 1 { printf "," }
+    {
+        printf "{\"ssid\":\"%s\",\"security\":\"%s\"}", $1, $2
+    }
+    END { printf "]" }
+')
 
 echo "{\"current\":$CURRENT,\"ethernet\":$ETHERNET,\"saved\":$SAVED}"

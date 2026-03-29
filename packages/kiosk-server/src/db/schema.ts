@@ -20,7 +20,7 @@ export const catalogItems = sqliteTable("catalog_items", {
   name: text("name").notNull(),
   quantity: text("quantity").notNull().default(""),
   price: text("price").notNull().default(""),
-  dphRate: text("dph_rate").notNull().default(""),
+  taxRate: text("tax_rate").notNull().default(""),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
@@ -36,6 +36,7 @@ export const records = sqliteTable("records", {
   itemId: text("item_id").notNull().default(""),
   quantity: text("quantity").notNull().default(""),
   price: text("price").notNull().default(""),
+  taxRate: text("tax_rate").notNull().default(""),
 });
 
 export const settings = sqliteTable("settings", {

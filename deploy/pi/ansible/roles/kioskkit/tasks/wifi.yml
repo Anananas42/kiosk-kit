@@ -22,8 +22,7 @@
     - wifi-enable.sh
     - wifi-disable.sh
 
-- name: Disable wpa_supplicant for wlan0 (enabled on demand via wifi-enable.sh)
-  ansible.builtin.systemd:
-    name: "wpa_supplicant@wlan0.service"
-    enabled: false
-    masked: false
+- name: Disable WiFi radio by default (enabled on demand via wifi-enable.sh)
+  ansible.builtin.command:
+    cmd: nmcli radio wifi off
+  changed_when: false

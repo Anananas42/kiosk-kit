@@ -1,5 +1,8 @@
 import {
+  ConsumptionReportInputSchema,
   ConsumptionReportSchema,
+  ConsumptionReportV2Schema,
+  type ConsumptionSummaryRow,
   getDeliveryDate,
   noDeliveryDaysSet,
   PreorderReportSchema,
@@ -50,6 +53,19 @@ export const reportsRouter = router({
 
     return { rows };
   }),
+
+  "reports.consumptionV2": baseProcedure
+    .input(ConsumptionReportInputSchema)
+    .output(ConsumptionReportV2Schema)
+    .query(({ ctx, input }) => {
+      const rawSummary = ctx.store.getConsumptionSummary(input.from, input.to);
+      const summary: ConsumptionSummaryRow[] = rawSummary.map((row) => ({
+        ...row,
+        byBuyer: JSON.parse(row.byBuyer) as Record<string, { count: number; total: number }>,
+      }));
+      const buyerTotals = ctx.store.getTotalsByBuyerAndTaxRate(input.from, input.to);
+      return { summary, buyerTotals };
+    }),
 
   "reports.preorders": baseProcedure.output(PreorderReportSchema).query(({ ctx }) => {
     const config = ctx.store.getPreorderConfig();

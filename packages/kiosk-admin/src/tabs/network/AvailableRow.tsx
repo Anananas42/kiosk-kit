@@ -1,5 +1,6 @@
 import type { WifiNetwork } from "@kioskkit/shared";
-import { Badge, Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Lock } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { PasswordInput } from "./PasswordInput.js";
@@ -40,14 +41,23 @@ export function AvailableRow({ network, expanded, onToggle }: AvailableRowProps)
         <TableCell className="w-8">
           <SignalIcon dBm={network.signal} />
         </TableCell>
-        <TableCell className="font-medium">{network.ssid}</TableCell>
-        <TableCell>{network.security === "wpa" && <Badge variant="outline">WPA</Badge>}</TableCell>
+        <TableCell className="font-medium">
+          <span className="inline-flex items-center gap-1.5">
+            {network.ssid}
+            {network.security === "wpa" && <Lock className="h-3 w-3 text-muted-foreground" />}
+          </span>
+        </TableCell>
+        <TableCell />
         <TableCell className="w-12" />
       </TableRow>
       {expanded && (
         <TableRow>
           <TableCell colSpan={4}>
-            <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
+            <form
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              className="flex flex-wrap items-center gap-2 py-1"
+            >
               {network.security === "wpa" && (
                 <PasswordInput
                   value={password}

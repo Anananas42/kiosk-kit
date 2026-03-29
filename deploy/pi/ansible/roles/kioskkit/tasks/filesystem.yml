@@ -21,7 +21,7 @@
   loop:
     - kioskkit
     - tailscale
-    - wpa
+    - nm
     - kioskkit-config
     - journal
     - ssh
@@ -44,7 +44,7 @@
   loop:
     - /opt/kioskkit/data
     - /var/lib/tailscale
-    - /etc/wpa_supplicant
+    - /etc/NetworkManager/system-connections
     - /etc/kioskkit
     - /var/log/journal
 
@@ -58,7 +58,7 @@
   loop:
     - { src: /data/kioskkit, path: /opt/kioskkit/data }
     - { src: /data/tailscale, path: /var/lib/tailscale }
-    - { src: /data/wpa, path: /etc/wpa_supplicant }
+    - { src: /data/nm, path: /etc/NetworkManager/system-connections }
     - { src: /data/kioskkit-config, path: /etc/kioskkit }
     - { src: /data/journal, path: /var/log/journal }
 

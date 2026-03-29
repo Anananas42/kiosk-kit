@@ -21,7 +21,19 @@ export function DeviceDetail() {
   const [iframeLoading, setIframeLoading] = useState(true);
   const [hasBeenOnline, setHasBeenOnline] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [modalOverlay, setModalOverlay] = useState(false);
   const renameMutation = useRenameDevice();
+
+  // Listen for modal overlay messages from kiosk-admin iframe
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === "kiosk-admin:modal-overlay") {
+        setModalOverlay(!!event.data.visible);
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   // When status transitions to Online: mark as been-online and remount iframe
   useEffect(() => {
@@ -29,6 +41,7 @@ export function DeviceDetail() {
     setHasBeenOnline(true);
     setIframeKey((k) => k + 1);
     setIframeLoading(true);
+    setModalOverlay(false);
   }, [status]);
 
   if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
@@ -37,6 +50,9 @@ export function DeviceDetail() {
 
   return (
     <div className="flex flex-1 flex-col gap-3" style={{ minHeight: 0 }}>
+      {/* Overlay when kiosk-admin has a modal open */}
+      {modalOverlay && <div className="fixed inset-0 z-40 bg-black/50" aria-hidden="true" />}
+
       {/* Breadcrumb + device info bar */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-sm">

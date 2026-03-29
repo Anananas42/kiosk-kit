@@ -1,0 +1,1 @@
+ALTER TABLE `records` ADD `dph_rate` text DEFAULT '' NOT NULL;

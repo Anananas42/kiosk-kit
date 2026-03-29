@@ -1,5 +1,6 @@
 import type { WifiStatus } from "@kioskkit/shared";
 import { Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Lock } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { ForgetButton } from "./ForgetButton.js";
@@ -17,6 +18,7 @@ interface SavedRowProps {
 
 export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle }: SavedRowProps) {
   const [password, setPassword] = useState("");
+  const isOutOfRange = !(network.inRange && network.signal != null);
 
   const connectMutation = useConnectMutation(() => {
     onToggle();
@@ -31,34 +33,43 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
   return (
     <>
       <TableRow
-        className="cursor-pointer hover:bg-secondary"
-        onClick={() => {
-          onToggle();
-          setPassword("");
-        }}
+        className={isOutOfRange ? "opacity-50" : "cursor-pointer hover:bg-secondary"}
+        onClick={
+          isOutOfRange
+            ? undefined
+            : () => {
+                onToggle();
+                setPassword("");
+              }
+        }
       >
         <TableCell className="w-8">
-          {network.inRange && network.signal != null ? (
-            <SignalIcon dBm={network.signal} />
-          ) : (
-            <SignalIcon dBm={-100} />
-          )}
+          {isOutOfRange ? <SignalIcon dBm={-100} offline /> : <SignalIcon dBm={network.signal!} />}
         </TableCell>
         <TableCell className="font-medium">
-          {network.ssid}
-          {!(network.inRange && network.signal != null) && (
-            <span className="ml-2 text-xs italic text-muted-foreground">out of range</span>
-          )}
+          <span className="inline-flex items-center gap-1.5">
+            {network.ssid}
+            {network.security === "wpa" && <Lock className="h-3 w-3 text-muted-foreground" />}
+            {isOutOfRange && (
+              <span className="text-xs italic text-muted-foreground">out of range</span>
+            )}
+          </span>
         </TableCell>
         <TableCell />
         <TableCell className="w-12 text-right">
-          <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
+          {isOutOfRange && (
+            <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
+          )}
         </TableCell>
       </TableRow>
-      {expanded && (
+      {expanded && !isOutOfRange && (
         <TableRow>
           <TableCell colSpan={4}>
-            <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
+            <form
+              onSubmit={handleSubmit}
+              autoComplete="off"
+              className="flex flex-wrap items-center gap-2 py-1"
+            >
               <PasswordInput
                 value={password}
                 onChange={setPassword}
@@ -70,6 +81,13 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
                 {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
                 Reconnect
               </Button>
+              <div className="ml-auto">
+                <ForgetButton
+                  ssid={network.ssid}
+                  forgettingSsid={forgettingSsid}
+                  onForget={onForget}
+                />
+              </div>
             </form>
           </TableCell>
         </TableRow>

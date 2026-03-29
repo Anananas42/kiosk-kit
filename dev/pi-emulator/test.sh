@@ -172,9 +172,9 @@ test_kiosk_app() {
 
 test_wifi() {
   assert_remote \
-    "wpa_supplicant installed" \
-    "dpkg -l wpasupplicant | grep -q ^ii" \
-    "wpa_supplicant not found"
+    "NetworkManager running" \
+    "systemctl is-active --quiet NetworkManager" \
+    "NetworkManager not running"
 
   log_test "WiFi management scripts deployed"
   local scripts_ok=1

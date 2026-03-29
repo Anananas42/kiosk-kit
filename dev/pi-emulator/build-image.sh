@@ -165,10 +165,8 @@ setup_wifi_simulation() {
 
   ssh_pi "echo 'mac80211_hwsim' | sudo tee /etc/modules-load.d/hwsim.conf >/dev/null; echo 'options mac80211_hwsim radios=2' | sudo tee /etc/modprobe.d/hwsim.conf >/dev/null"
 
-  # Disable wpa_supplicant@wlan0 to prevent boot stalls when mac80211_hwsim
-  # can't load (e.g. inside Docker where the kernel module isn't available).
-  # WiFi scripts still work when the module IS available.
-  ssh_pi "sudo systemctl disable wpa_supplicant@wlan0.service 2>/dev/null || true"
+  # Disable WiFi radio by default in emulator — enabled on demand via wifi-enable.sh.
+  ssh_pi "sudo nmcli radio wifi off 2>/dev/null || true"
 }
 
 initialize_ota_state() {

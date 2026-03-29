@@ -74,6 +74,7 @@ describe("Store", () => {
       itemId: "item-1",
       quantity: "",
       price: "",
+      taxRate: "",
     });
     store.insertRecord({
       id: "r2",
@@ -85,6 +86,7 @@ describe("Store", () => {
       itemId: "item-1",
       quantity: "",
       price: "",
+      taxRate: "",
     });
     expect(store.getItemBalance(1, "Beer", "item-1")).toBe(3);
   });
@@ -101,6 +103,7 @@ describe("Store", () => {
       itemId: "",
       quantity: "",
       price: "",
+      taxRate: "",
     });
     store.insertRecord({
       id: "r2",
@@ -112,6 +115,7 @@ describe("Store", () => {
       itemId: "item-1",
       quantity: "",
       price: "",
+      taxRate: "",
     });
     // Should sum both legacy (itemId='') and new (itemId='item-1')
     expect(store.getItemBalance(1, "Beer", "item-1")).toBe(15);
@@ -129,6 +133,7 @@ describe("Store", () => {
       itemId: "",
       quantity: "",
       price: "",
+      taxRate: "",
     });
     expect(store.getItemBalance(1, "Beer")).toBe(7);
   });
@@ -193,5 +198,151 @@ describe("Store", () => {
     const config = store.getPreorderConfig()!;
     expect(config.orderingDays[0]).toBe(false);
     expect(config.deliveryDays[0]).toBe(false);
+  });
+
+  // ── Consumption Report Queries ──────────────────────────────────────
+
+  it("getConsumptionSummary aggregates by item with by_buyer JSON", () => {
+    store.createBuyer(1, "101");
+    store.createBuyer(2, "102");
+    store.insertRecord({
+      id: "r1",
+      timestamp: "2024-01-15T10:00:00Z",
+      buyer: 1,
+      count: 3,
+      category: "Drinks",
+      item: "Coffee",
+      itemId: "10",
+      quantity: "1 cup",
+      price: "150",
+      taxRate: "21",
+    });
+    store.insertRecord({
+      id: "r2",
+      timestamp: "2024-01-15T11:00:00Z",
+      buyer: 2,
+      count: 2,
+      category: "Drinks",
+      item: "Coffee",
+      itemId: "10",
+      quantity: "1 cup",
+      price: "100",
+      taxRate: "21",
+    });
+    store.insertRecord({
+      id: "r3",
+      timestamp: "2024-01-15T12:00:00Z",
+      buyer: 1,
+      count: -1,
+      category: "Drinks",
+      item: "Coffee",
+      itemId: "10",
+      quantity: "1 cup",
+      price: "-50",
+      taxRate: "21",
+    });
+
+    const rows = store.getConsumptionSummary("2024-01-01T00:00:00Z", "2024-02-01T00:00:00Z");
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    expect(row.itemKey).toBe("10");
+    expect(row.item).toBe("Coffee");
+    expect(row.taxRate).toBe("21");
+    expect(row.totalCount).toBe(4); // 3 + 2 - 1
+    expect(row.grandTotal).toBe(200); // 150 + 100 - 50
+
+    const byBuyer = JSON.parse(row.byBuyer);
+    expect(byBuyer["1"].count).toBe(2); // 3 - 1
+    expect(byBuyer["1"].total).toBe(100); // 150 - 50
+    expect(byBuyer["2"].count).toBe(2);
+    expect(byBuyer["2"].total).toBe(100);
+  });
+
+  it("getConsumptionSummary filters by date range", () => {
+    store.createBuyer(1, "101");
+    store.insertRecord({
+      id: "r1",
+      timestamp: "2024-01-10T10:00:00Z",
+      buyer: 1,
+      count: 1,
+      category: "Snacks",
+      item: "Cookie",
+      itemId: "20",
+      quantity: "1ks",
+      price: "30",
+      taxRate: "15",
+    });
+    store.insertRecord({
+      id: "r2",
+      timestamp: "2024-02-10T10:00:00Z",
+      buyer: 1,
+      count: 1,
+      category: "Snacks",
+      item: "Cookie",
+      itemId: "20",
+      quantity: "1ks",
+      price: "30",
+      taxRate: "15",
+    });
+
+    const rows = store.getConsumptionSummary("2024-02-01T00:00:00Z");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].totalCount).toBe(1);
+  });
+
+  it("getTotalsByBuyerAndTaxRate groups by buyer and taxRate", () => {
+    store.createBuyer(1, "101");
+    store.createBuyer(2, "102");
+    store.insertRecord({
+      id: "r1",
+      timestamp: "2024-01-15T10:00:00Z",
+      buyer: 1,
+      count: 2,
+      category: "Drinks",
+      item: "Coffee",
+      itemId: "10",
+      quantity: "",
+      price: "100",
+      taxRate: "21",
+    });
+    store.insertRecord({
+      id: "r2",
+      timestamp: "2024-01-15T11:00:00Z",
+      buyer: 1,
+      count: 1,
+      category: "Snacks",
+      item: "Cookie",
+      itemId: "20",
+      quantity: "",
+      price: "30",
+      taxRate: "15",
+    });
+    store.insertRecord({
+      id: "r3",
+      timestamp: "2024-01-15T12:00:00Z",
+      buyer: 2,
+      count: 3,
+      category: "Drinks",
+      item: "Coffee",
+      itemId: "10",
+      quantity: "",
+      price: "150",
+      taxRate: "21",
+    });
+
+    const totals = store.getTotalsByBuyerAndTaxRate("2024-01-01T00:00:00Z");
+    expect(totals).toHaveLength(3);
+
+    const b1r21 = totals.find((t) => t.buyer === 1 && t.taxRate === "21");
+    expect(b1r21?.netCount).toBe(2);
+    expect(b1r21?.netTotal).toBe(100);
+
+    const b1r15 = totals.find((t) => t.buyer === 1 && t.taxRate === "15");
+    expect(b1r15?.netCount).toBe(1);
+    expect(b1r15?.netTotal).toBe(30);
+
+    const b2r21 = totals.find((t) => t.buyer === 2 && t.taxRate === "21");
+    expect(b2r21?.netCount).toBe(3);
+    expect(b2r21?.netTotal).toBe(150);
   });
 });

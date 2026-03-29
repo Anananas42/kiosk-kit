@@ -27,7 +27,7 @@ export function PasswordInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        autoComplete="off"
+        autoComplete="one-time-code"
         name={`wifi-password-${ssid}`}
         className="w-full pr-9"
       />

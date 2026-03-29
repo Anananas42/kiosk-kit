@@ -123,7 +123,7 @@ Boots a fresh overlay and runs smoke tests covering:
 - Node.js and pnpm
 - kioskkit.service enabled and healthy on port 3001
 - Kiosk UI serves HTML
-- wpa_supplicant installed, WiFi scripts deployed
+- NetworkManager running, WiFi scripts deployed
 - mac80211_hwsim WiFi simulation (skips if unavailable)
 - nftables firewall active
 - SSH password authentication disabled
