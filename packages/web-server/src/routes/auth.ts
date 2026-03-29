@@ -75,7 +75,10 @@ export function authRoutes(db: Db, google: Google, cookieDomain?: string) {
     const codeVerifier = getCookie(c, "oauth_code_verifier");
 
     if (!code || !rawState || !storedState || !codeVerifier) {
-      return c.json({ error: "Invalid OAuth callback" }, 400);
+      // OAuth cookies expired or were already cleared (e.g. user pressed
+      // the browser back button after completing sign-in and picked a
+      // different Google account). Restart the flow instead of erroring.
+      return c.redirect("/api/auth/google");
     }
 
     // Split combined state into oauth state and origin host
@@ -84,7 +87,8 @@ export function authRoutes(db: Db, google: Google, cookieDomain?: string) {
     const originHost = colonIdx >= 0 ? rawState.slice(colonIdx + 1) : "";
 
     if (state !== storedState) {
-      return c.json({ error: "Invalid OAuth callback" }, 400);
+      // State mismatch — stale cookies from a previous flow. Restart.
+      return c.redirect("/api/auth/google");
     }
 
     const tokens = await google.validateAuthorizationCode(code, codeVerifier);
