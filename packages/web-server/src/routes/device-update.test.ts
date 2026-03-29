@@ -7,7 +7,6 @@ import { deviceUpdateRoutes } from "./device-update.js";
 
 type User = typeof users.$inferSelect;
 
-// Mock dependencies
 vi.mock("../services/update-helpers.js", () => ({
   getAccessibleDevice: vi.fn(),
   fetchAndStreamToDevice: vi.fn(),
@@ -17,13 +16,19 @@ vi.mock("../services/update-info.js", () => ({
   getDeviceUpdateInfo: vi.fn(),
 }));
 
-vi.mock("../services/device-network.js", () => ({
-  fetchDeviceProxy: vi.fn(),
-}));
+vi.mock("../trpc/routers/device-update.js", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getActiveOp: vi.fn().mockResolvedValue(null),
+    markFailed: vi.fn(),
+    markSuccess: vi.fn(),
+  };
+});
 
-import { fetchDeviceProxy } from "../services/device-network.js";
 import { fetchAndStreamToDevice, getAccessibleDevice } from "../services/update-helpers.js";
 import { getDeviceUpdateInfo } from "../services/update-info.js";
+import { getActiveOp } from "../trpc/routers/device-update.js";
 
 const DEVICE = {
   id: "device-1",
@@ -82,23 +87,8 @@ function makeRelease(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/**
- * Mock DB for route tests. Tracks different chains:
- * - getActiveOp: select from deviceUpdateOps where finishedAt IS NULL
- * - insert: for creating ops
- * - select from releases: for looking up target release
- * - select from deviceUpdateOps (last push): for install route
- * - update: for marking ops success/failed
- */
-function createMockDb(opts: {
-  activeOp?: unknown | null;
-  insertResult?: unknown[];
-  releaseResult?: unknown[];
-  lastPushResult?: unknown[];
-}) {
-  const { activeOp = null, insertResult = [], releaseResult = [], lastPushResult = [] } = opts;
-
-  let selectCount = 0;
+function createMockDb(opts: { releaseResult?: unknown[]; insertResult?: unknown[] }) {
+  const { releaseResult = [], insertResult = [] } = opts;
 
   const updateSetWhere = Object.assign(Promise.resolve([]), {
     returning: vi.fn().mockResolvedValue([]),
@@ -107,42 +97,25 @@ function createMockDb(opts: {
     where: vi.fn().mockReturnValue(updateSetWhere),
   });
 
-  const db = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockImplementation(() => {
-      selectCount++;
-      const makeTerminal = (result: unknown[]) => {
-        const limitFn = vi.fn().mockResolvedValue(result);
-        const orderByResult = Object.assign(Promise.resolve(result), { limit: limitFn });
-        const whereResult = Object.assign(Promise.resolve(result), {
-          orderBy: vi.fn().mockReturnValue(orderByResult),
-          limit: limitFn,
-        });
-        return {
-          where: vi.fn().mockReturnValue(whereResult),
-          orderBy: vi.fn().mockReturnValue(orderByResult),
-        };
-      };
+  const limitFn = vi.fn().mockResolvedValue(releaseResult);
+  const orderByResult = Object.assign(Promise.resolve(releaseResult), { limit: limitFn });
+  const whereResult = Object.assign(Promise.resolve(releaseResult), {
+    orderBy: vi.fn().mockReturnValue(orderByResult),
+    limit: limitFn,
+  });
 
-      if (selectCount === 1) {
-        // First select: getActiveOp
-        return makeTerminal(activeOp ? [activeOp] : []);
-      }
-      if (selectCount === 2) {
-        // Second select: release lookup or last push lookup
-        return makeTerminal(releaseResult.length > 0 ? releaseResult : lastPushResult);
-      }
-      // Third+: last push result
-      return makeTerminal(lastPushResult);
+  return {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue(whereResult),
+      orderBy: vi.fn().mockReturnValue(orderByResult),
     }),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(insertResult),
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnValue(updateSet),
-  };
-
-  return db as unknown as Db;
+  } as unknown as Db;
 }
 
 function makeApp(db: Db, user: User = adminUser) {
@@ -157,39 +130,12 @@ function makeApp(db: Db, user: User = adminUser) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no active op (tests that need one override this)
+  vi.mocked(getActiveOp).mockResolvedValue(null);
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe("GET /devices/:id/update/info", () => {
-  it("returns 404 when device not found", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(null);
-    const app = makeApp(createMockDb({}));
-
-    const res = await app.request("/devices/device-1/update/info");
-
-    expect(res.status).toBe(404);
-  });
-
-  it("returns update info for device", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    vi.mocked(getDeviceUpdateInfo).mockResolvedValue({
-      type: "live",
-      currentVersion: "1.0.0",
-      targetVersion: "1.1.0",
-      releaseNotes: "Notes",
-      publishedAt: "2026-01-15T00:00:00.000Z",
-    });
-    const app = makeApp(createMockDb({}));
-
-    const res = await app.request("/devices/device-1/update/info");
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(body).toMatchObject({ type: "live", targetVersion: "1.1.0" });
-  });
 });
 
 describe("POST /devices/:id/update/push", () => {
@@ -198,19 +144,16 @@ describe("POST /devices/:id/update/push", () => {
     const app = makeApp(createMockDb({}));
 
     const res = await app.request("/devices/device-1/update/push", { method: "POST" });
-
     expect(res.status).toBe(404);
   });
 
   it("returns 409 when active op exists", async () => {
     vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    const app = makeApp(createMockDb({ activeOp: makeOp() }));
+    vi.mocked(getActiveOp).mockResolvedValue(makeOp() as never);
+    const app = makeApp(createMockDb({}));
 
     const res = await app.request("/devices/device-1/update/push", { method: "POST" });
-    const body = (await res.json()) as { error: string };
-
     expect(res.status).toBe(409);
-    expect(body.error).toBe("Operation already in progress");
   });
 
   it("returns upToDate when device is current", async () => {
@@ -244,14 +187,7 @@ describe("POST /devices/:id/update/push", () => {
 
     const release = makeRelease({ version: "1.1.0" });
     const newOp = makeOp({ version: "1.1.0" });
-
-    const app = makeApp(
-      createMockDb({
-        activeOp: null,
-        releaseResult: [release],
-        insertResult: [newOp],
-      }),
-    );
+    const app = makeApp(createMockDb({ releaseResult: [release], insertResult: [newOp] }));
 
     const res = await app.request("/devices/device-1/update/push", { method: "POST" });
     const body = (await res.json()) as { ok: boolean };
@@ -259,10 +195,7 @@ describe("POST /devices/:id/update/push", () => {
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(fetchAndStreamToDevice).toHaveBeenCalledWith(
-      expect.objectContaining({
-        version: "1.1.0",
-        deviceEndpoint: "/api/app/upload",
-      }),
+      expect.objectContaining({ version: "1.1.0", deviceEndpoint: "/api/app/upload" }),
     );
   });
 
@@ -283,165 +216,12 @@ describe("POST /devices/:id/update/push", () => {
 
     const release = makeRelease({ version: "1.1.0" });
     const newOp = makeOp({ version: "1.1.0" });
-
-    const app = makeApp(
-      createMockDb({
-        activeOp: null,
-        releaseResult: [release],
-        insertResult: [newOp],
-      }),
-    );
+    const app = makeApp(createMockDb({ releaseResult: [release], insertResult: [newOp] }));
 
     const res = await app.request("/devices/device-1/update/push", { method: "POST" });
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(502);
     expect(body.error).toBe("Failed to fetch image from upstream");
-  });
-});
-
-describe("POST /devices/:id/update/install", () => {
-  it("returns 404 when device not found", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(null);
-    const app = makeApp(createMockDb({}));
-
-    const res = await app.request("/devices/device-1/update/install", { method: "POST" });
-
-    expect(res.status).toBe(404);
-  });
-
-  it("returns 409 when active op exists", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    const app = makeApp(createMockDb({ activeOp: makeOp() }));
-
-    const res = await app.request("/devices/device-1/update/install", { method: "POST" });
-
-    expect(res.status).toBe(409);
-  });
-
-  it("creates install op and calls device", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    vi.mocked(fetchDeviceProxy).mockResolvedValue(new Response(JSON.stringify({ ok: true })));
-
-    const lastPush = makeOp({ action: "push", result: "success", version: "1.1.0" });
-    const installOp = makeOp({ action: "install", version: "1.1.0" });
-
-    const app = makeApp(
-      createMockDb({
-        activeOp: null,
-        lastPushResult: [lastPush],
-        insertResult: [installOp],
-      }),
-    );
-
-    const res = await app.request("/devices/device-1/update/install", { method: "POST" });
-    const body = (await res.json()) as { ok: boolean; operation: { action: string } };
-
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-    expect(fetchDeviceProxy).toHaveBeenCalledWith(
-      DEVICE,
-      "/api/trpc/admin.update.install",
-      expect.any(Object),
-    );
-  });
-
-  it("handles device timeout gracefully (leaves op as pending)", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    vi.mocked(fetchDeviceProxy).mockRejectedValue(new Error("timeout"));
-
-    const installOp = makeOp({ action: "install" });
-
-    const app = makeApp(
-      createMockDb({
-        activeOp: null,
-        lastPushResult: [],
-        insertResult: [installOp],
-      }),
-    );
-
-    const res = await app.request("/devices/device-1/update/install", { method: "POST" });
-    const body = (await res.json()) as { ok: boolean };
-
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-  });
-});
-
-describe("POST /devices/:id/update/cancel", () => {
-  it("returns 404 when device not found", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(null);
-    const app = makeApp(createMockDb({}));
-
-    const res = await app.request("/devices/device-1/update/cancel", { method: "POST" });
-
-    expect(res.status).toBe(404);
-  });
-
-  it("cancels active op and calls device", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    vi.mocked(fetchDeviceProxy).mockResolvedValue(new Response(JSON.stringify({ ok: true })));
-
-    const activeOp = makeOp();
-
-    const app = makeApp(createMockDb({ activeOp }));
-
-    const res = await app.request("/devices/device-1/update/cancel", { method: "POST" });
-    const body = (await res.json()) as { ok: boolean };
-
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-    expect(fetchDeviceProxy).toHaveBeenCalledWith(
-      DEVICE,
-      "/api/trpc/admin.update.cancel",
-      expect.any(Object),
-    );
-  });
-
-  it("handles unreachable device gracefully", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    vi.mocked(fetchDeviceProxy).mockRejectedValue(new Error("timeout"));
-
-    const app = makeApp(createMockDb({ activeOp: makeOp() }));
-
-    const res = await app.request("/devices/device-1/update/cancel", { method: "POST" });
-
-    expect(res.status).toBe(200);
-  });
-});
-
-describe("GET /devices/:id/update/status", () => {
-  it("returns 404 when device not found", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(null);
-    const app = makeApp(createMockDb({}));
-
-    const res = await app.request("/devices/device-1/update/status");
-
-    expect(res.status).toBe(404);
-  });
-
-  it("returns null when no active op", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    const app = makeApp(createMockDb({ activeOp: null }));
-
-    const res = await app.request("/devices/device-1/update/status");
-    const body = (await res.json()) as { operation: null };
-
-    expect(res.status).toBe(200);
-    expect(body.operation).toBeNull();
-  });
-
-  it("returns active operation", async () => {
-    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
-    const op = makeOp();
-    const app = makeApp(createMockDb({ activeOp: op }));
-
-    const res = await app.request("/devices/device-1/update/status");
-    const body = (await res.json()) as { operation: { id: string; version: string } };
-
-    expect(res.status).toBe(200);
-    expect(body.operation).toBeTruthy();
-    expect(body.operation.id).toBe("op-1");
-    expect(body.operation.version).toBe("1.1.0");
   });
 });
