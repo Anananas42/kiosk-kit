@@ -5,6 +5,7 @@ import { TableCell, TableFooter, TableRow } from "@kioskkit/ui";
 interface SummaryFooterProps {
   summary: ConsumptionSummaryRow[];
   buyerTotals: BuyerTaxTotal[];
+  buyerGrandTotals: Map<number, { total: number; count: number }>;
   buyers: Buyer[];
   locale: string;
   currency: string;
@@ -13,24 +14,13 @@ interface SummaryFooterProps {
 export function SummaryFooter({
   summary,
   buyerTotals,
+  buyerGrandTotals,
   buyers,
   locale,
   currency,
 }: SummaryFooterProps) {
   const grandTotal = summary.reduce((sum, r) => sum + r.grandTotal, 0);
   const grandCount = summary.reduce((sum, r) => sum + r.totalCount, 0);
-
-  const buyerGrandTotals = new Map<number, { total: number; count: number }>();
-  for (const row of summary) {
-    for (const [buyerId, agg] of Object.entries(row.byBuyer)) {
-      const id = Number(buyerId);
-      const existing = buyerGrandTotals.get(id) ?? { total: 0, count: 0 };
-      buyerGrandTotals.set(id, {
-        total: existing.total + agg.total,
-        count: existing.count + agg.count,
-      });
-    }
-  }
 
   const taxRates = [...new Set(buyerTotals.map((bt) => bt.taxRate))].sort();
 

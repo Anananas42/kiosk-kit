@@ -58,7 +58,7 @@ export function TransactionLog({
         record.count < 0 ? String(record.count) : `+${record.count}`,
         record.category,
         record.item,
-        record.quantity || "",
+        record.quantity ?? "",
         String(price),
       ]);
     }

@@ -30,7 +30,7 @@ export function SummaryTable({
     queryFn: () => trpc["reports.consumption"].query({ from, to: to || undefined }),
   });
 
-  const { summary, buyerTotals, activeBuyers } = useMemo(() => {
+  const { summary, buyerTotals, activeBuyers, buyerGrandTotals } = useMemo(() => {
     const rawSummary = data?.summary ?? [];
     const rawBuyerTotals = data?.buyerTotals ?? [];
 
@@ -49,7 +49,24 @@ export function SummaryTable({
     }
     const active = buyers.filter((b) => activeBuyerIds.has(b.id));
 
-    return { summary: filtered, buyerTotals: filteredBuyerTotals, activeBuyers: active };
+    const grandTotals = new Map<number, { total: number; count: number }>();
+    for (const row of filtered) {
+      for (const [buyerId, agg] of Object.entries(row.byBuyer)) {
+        const id = Number(buyerId);
+        const existing = grandTotals.get(id) ?? { total: 0, count: 0 };
+        grandTotals.set(id, {
+          total: existing.total + agg.total,
+          count: existing.count + agg.count,
+        });
+      }
+    }
+
+    return {
+      summary: filtered,
+      buyerTotals: filteredBuyerTotals,
+      activeBuyers: active,
+      buyerGrandTotals: grandTotals,
+    };
   }, [data, selectedBuyer, buyers]);
 
   const getCsvData = useCallback((): string[][] => {
@@ -66,7 +83,7 @@ export function SummaryTable({
     for (const row of summary) {
       const cells = [
         row.item,
-        row.quantity || "",
+        row.quantity ?? "",
         row.unitPrice != null ? String(row.unitPrice) : "",
         row.taxRate ? `${row.taxRate}%` : "",
         ...activeBuyers.map((b) => {
@@ -78,20 +95,8 @@ export function SummaryTable({
       rows.push(cells);
     }
 
-    // Totals row
     const grandTotal = summary.reduce((sum, r) => sum + r.grandTotal, 0);
     const grandCount = summary.reduce((sum, r) => sum + r.totalCount, 0);
-    const buyerGrandTotals = new Map<number, { total: number; count: number }>();
-    for (const row of summary) {
-      for (const [buyerId, agg] of Object.entries(row.byBuyer)) {
-        const id = Number(buyerId);
-        const existing = buyerGrandTotals.get(id) ?? { total: 0, count: 0 };
-        buyerGrandTotals.set(id, {
-          total: existing.total + agg.total,
-          count: existing.count + agg.count,
-        });
-      }
-    }
     rows.push([
       "Grand Total",
       "",
@@ -105,7 +110,7 @@ export function SummaryTable({
     ]);
 
     return rows;
-  }, [summary, activeBuyers]);
+  }, [summary, activeBuyers, buyerGrandTotals]);
 
   const csvFilename = `consumption-summary_${from}_${to || new Date().toISOString().slice(0, 10)}.csv`;
 
@@ -144,6 +149,7 @@ export function SummaryTable({
         <SummaryFooter
           summary={summary}
           buyerTotals={buyerTotals}
+          buyerGrandTotals={buyerGrandTotals}
           buyers={activeBuyers}
           locale={locale}
           currency={currency}
