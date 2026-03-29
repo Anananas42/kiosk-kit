@@ -26,7 +26,7 @@ export function ItemRow({ item, locale, currency, isFirst, isLast, adjacentItem 
         <span className="w-20 text-right text-muted-foreground">{item.quantity || "—"}</span>
         <span className="w-24 text-right">{formattedPrice}</span>
         <span className="w-16 text-right text-muted-foreground">
-          {item.dphRate ? `${item.dphRate}%` : "—"}
+          {item.taxRate ? `${item.taxRate}%` : "—"}
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent>

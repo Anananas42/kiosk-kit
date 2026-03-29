@@ -1,5 +1,5 @@
 import type { WifiStatus } from "@kioskkit/shared";
-import { Button, Spinner, TableCell, TableRow } from "@kioskkit/ui";
+import { Button, TableCell, TableRow } from "@kioskkit/ui";
 import { Lock } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
@@ -57,9 +57,7 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
         </TableCell>
         <TableCell />
         <TableCell className="w-12 text-right">
-          {isOutOfRange && (
-            <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
-          )}
+          <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
         </TableCell>
       </TableRow>
       {expanded && !isOutOfRange && (
@@ -77,17 +75,9 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
                 placeholder="New password (optional)"
                 ssid={network.ssid}
               />
-              <Button type="submit" size="sm" disabled={connectMutation.isPending}>
-                {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
+              <Button type="submit" size="sm" loading={connectMutation.isPending}>
                 Reconnect
               </Button>
-              <div className="ml-auto">
-                <ForgetButton
-                  ssid={network.ssid}
-                  forgettingSsid={forgettingSsid}
-                  onForget={onForget}
-                />
-              </div>
             </form>
           </TableCell>
         </TableRow>

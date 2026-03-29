@@ -4,8 +4,8 @@ import { BuyersTab } from "./tabs/BuyersTab.js";
 import { ConsumptionTab } from "./tabs/ConsumptionTab.js";
 import { CatalogTab } from "./tabs/catalog/CatalogTab.js";
 import { NetworkTab } from "./tabs/network/NetworkTab.js";
-import { PreorderTab } from "./tabs/PreorderTab.js";
-import { SettingsTab } from "./tabs/SettingsTab.js";
+import { PreorderTab } from "./tabs/preorder/PreorderTab.js";
+import { SettingsTab } from "./tabs/settings/SettingsTab.js";
 
 const TABS = [
   { key: "buyers", label: "Buyers" },

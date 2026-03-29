@@ -15,7 +15,7 @@ type ItemUpdateInput = {
   name: string;
   quantity?: string;
   price?: string;
-  dphRate?: string;
+  taxRate?: string;
   sortOrder?: number;
 };
 
@@ -41,7 +41,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
       name: item.name,
       quantity: item.quantity,
       price: item.price,
-      dphRate: item.dphRate,
+      taxRate: item.taxRate,
       sortOrder: item.sortOrder,
     },
   });
@@ -81,7 +81,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
       name: item.name,
       quantity: item.quantity,
       price: item.price,
-      dphRate: item.dphRate,
+      taxRate: item.taxRate,
       sortOrder: adjacent.sortOrder,
     });
     reorderMutation.mutate({
@@ -89,7 +89,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
       name: adjacent.name,
       quantity: adjacent.quantity,
       price: adjacent.price,
-      dphRate: adjacent.dphRate,
+      taxRate: adjacent.taxRate,
       sortOrder: item.sortOrder,
     });
   }
@@ -128,7 +128,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
           </Field>
           <Field>
             <FieldLabel htmlFor={`item-dph-${item.id}`}>DPH rate (%)</FieldLabel>
-            <Input id={`item-dph-${item.id}`} placeholder="e.g. 21" {...form.register("dphRate")} />
+            <Input id={`item-dph-${item.id}`} placeholder="e.g. 21" {...form.register("taxRate")} />
           </Field>
         </div>
       </FieldGroup>
@@ -148,6 +148,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
             variant="outline"
             size="sm"
             className="h-7 gap-1 text-xs"
+            aria-label="Move up"
             onClick={() => handleMove("up")}
             disabled={isFirst || reorderMutation.isPending}
           >
@@ -158,6 +159,7 @@ export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: I
             variant="outline"
             size="sm"
             className="h-7 gap-1 text-xs"
+            aria-label="Move down"
             onClick={() => handleMove("down")}
             disabled={isLast || reorderMutation.isPending}
           >

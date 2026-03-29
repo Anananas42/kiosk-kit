@@ -76,14 +76,12 @@ function Field({
   className,
   orientation = "vertical",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+}: React.ComponentProps<"fieldset"> & VariantProps<typeof fieldVariants>) {
   return (
-    // biome-ignore lint/a11y/useSemanticElements: shadcn component uses role="group" intentionally
-    <div
-      role="group"
+    <fieldset
       data-slot="field"
       data-orientation={orientation}
-      className={cn(fieldVariants({ orientation }), className)}
+      className={cn("border-none p-0 m-0", fieldVariants({ orientation }), className)}
       {...props}
     />
   );

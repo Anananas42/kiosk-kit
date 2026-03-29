@@ -4,6 +4,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -28,7 +29,7 @@ type ItemCreateInput = {
   name: string;
   quantity?: string;
   price?: string;
-  dphRate?: string;
+  taxRate?: string;
   sortOrder?: number;
 };
 
@@ -50,7 +51,7 @@ export function AddItemDialog({ categoryId, nextSortOrder }: AddItemDialogProps)
       name: "",
       quantity: "",
       price: "",
-      dphRate: "",
+      taxRate: "",
       sortOrder: nextSortOrder,
     },
   });
@@ -60,7 +61,7 @@ export function AddItemDialog({ categoryId, nextSortOrder }: AddItemDialogProps)
     onSuccess: () => {
       toast.success("Item created");
       invalidateCatalog();
-      form.reset({ categoryId, name: "", quantity: "", price: "", dphRate: "", sortOrder: 0 });
+      form.reset({ categoryId, name: "", quantity: "", price: "", taxRate: "", sortOrder: 0 });
       setOpen(false);
     },
     onError: (err: Error) => toast.error(err.message),
@@ -82,6 +83,9 @@ export function AddItemDialog({ categoryId, nextSortOrder }: AddItemDialogProps)
         >
           <DialogHeader>
             <DialogTitle>Add item</DialogTitle>
+            <DialogDescription className="sr-only">
+              Add a new item to this category
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <FieldGroup className="gap-3">
@@ -118,7 +122,7 @@ export function AddItemDialog({ categoryId, nextSortOrder }: AddItemDialogProps)
                   <Input
                     id={`add-item-dph-${categoryId}`}
                     placeholder="e.g. 21"
-                    {...form.register("dphRate")}
+                    {...form.register("taxRate")}
                   />
                 </Field>
               </div>

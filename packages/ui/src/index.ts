@@ -69,6 +69,7 @@ export {
 export { Separator } from "./components/ui/separator";
 export { Skeleton } from "./components/ui/skeleton";
 export { Spinner } from "./components/ui/spinner";
+export { Switch } from "./components/ui/switch";
 export {
   Table,
   TableBody,

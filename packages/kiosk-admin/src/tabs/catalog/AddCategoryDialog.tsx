@@ -4,6 +4,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -76,6 +77,7 @@ export function AddCategoryDialog({ nextSortOrder }: AddCategoryDialogProps) {
         >
           <DialogHeader>
             <DialogTitle>Add category</DialogTitle>
+            <DialogDescription className="sr-only">Add a new catalog category</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <FieldGroup className="gap-3">
