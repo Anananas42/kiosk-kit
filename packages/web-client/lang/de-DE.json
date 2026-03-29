@@ -1,6 +1,8 @@
 {
   "deviceDetail.overlay.offline": "Gerät ist offline",
   "deviceDetail.overlay.appNotConnected": "App antwortet nicht",
+  "deviceDetail.overlay.integrityError": "Integritätsprüfung fehlgeschlagen",
+  "deviceDetail.overlay.integrityErrorDescription": "Erwarteter Hash stimmt nicht überein. Versuchen Sie, das Gerät zu aktualisieren.",
   "addDevice.button": "Gerät hinzufügen",
   "addDevice.title": "Gerät hinzufügen",
   "addDevice.description": "Geben Sie den 9-stelligen Kopplungscode ein, der auf dem Bildschirm Ihres Geräts angezeigt wird.",

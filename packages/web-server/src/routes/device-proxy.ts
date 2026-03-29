@@ -72,6 +72,22 @@ export function deviceProxyRoutes(db: Db) {
           console.error(
             `[device-proxy] Asset verification failed for device ${device.id}: ${verificationError}`,
           );
+
+          const contentType = res.headers.get("content-type") ?? "";
+          if (contentType.includes("text/html")) {
+            // Return an error page that notifies the parent frame
+            return new Response(
+              `<!DOCTYPE html><html><head><script>window.parent.postMessage({type:"kiosk-admin:integrity-error"},"*")</script></head><body></body></html>`,
+              {
+                status: 502,
+                headers: {
+                  "content-type": "text/html; charset=utf-8",
+                  "cache-control": "no-cache, no-store, must-revalidate",
+                },
+              },
+            );
+          }
+
           return c.json(
             {
               error: "Asset integrity check failed",

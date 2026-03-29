@@ -1,6 +1,8 @@
 {
   "deviceDetail.overlay.offline": "Zařízení je offline",
   "deviceDetail.overlay.appNotConnected": "Aplikace neodpovídá",
+  "deviceDetail.overlay.integrityError": "Kontrola integrity selhala",
+  "deviceDetail.overlay.integrityErrorDescription": "Očekávaný hash neodpovídá. Zkuste zařízení aktualizovat.",
   "addDevice.button": "Přidat zařízení",
   "addDevice.title": "Přidat zařízení",
   "addDevice.description": "Zadejte 9místný párovací kód zobrazený na obrazovce vašeho zařízení.",

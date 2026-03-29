@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router";
 import { BackupSection } from "../components/BackupSection.js";
 import { ConnectionOverlay, DisconnectedIcon } from "../components/ConnectionOverlay.js";
 import { DeviceStatusBadge } from "../components/DeviceStatusBadge.js";
+import { IntegrityOverlay } from "../components/IntegrityOverlay.js";
 import { StatusCard } from "../components/StatusCard.js";
 import { UpdateCard } from "../components/UpdateCard/UpdateCard.js";
 import { useBackups } from "../hooks/backups.js";
@@ -22,13 +23,16 @@ export function DeviceDetail() {
   const [hasBeenOnline, setHasBeenOnline] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [modalOverlay, setModalOverlay] = useState(false);
+  const [integrityError, setIntegrityError] = useState(false);
   const renameMutation = useRenameDevice();
 
-  // Listen for modal overlay messages from kiosk-admin iframe
+  // Listen for messages from kiosk-admin iframe
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (event.data?.type === "kiosk-admin:modal-overlay") {
         setModalOverlay(!!event.data.visible);
+      } else if (event.data?.type === "kiosk-admin:integrity-error") {
+        setIntegrityError(true);
       }
     }
     window.addEventListener("message", handleMessage);
@@ -42,6 +46,7 @@ export function DeviceDetail() {
     setIframeKey((k) => k + 1);
     setIframeLoading(true);
     setModalOverlay(false);
+    setIntegrityError(false);
   }, [status]);
 
   if (!id) return <p className="text-muted-foreground">{t("deviceDetail.missingId")}</p>;
@@ -164,7 +169,8 @@ export function DeviceDetail() {
               onLoad={() => setIframeLoading(false)}
               className={`h-full w-full border-0 ${iframeLoading ? "hidden" : "block"}`}
             />
-            {isDisconnected && (
+            {integrityError && <IntegrityOverlay />}
+            {!integrityError && isDisconnected && (
               <ConnectionOverlay
                 status={status as DeviceStatus.Offline | DeviceStatus.AppNotConnected}
               />
