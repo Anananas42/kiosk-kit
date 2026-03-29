@@ -1,4 +1,5 @@
 import {
+  BooleanField,
   DateField,
   EditButton,
   ReferenceField,
@@ -30,6 +31,7 @@ export function DeviceShow() {
         <ReferenceField source="userId" reference="users" link="show" emptyText="Unassigned">
           <TextField source="name" />
         </ReferenceField>
+        <BooleanField source="hashVerifyEnabled" label="Hash Verify" />
         <DateField source="createdAt" label="Created" />
       </SimpleShowLayout>
     </Show>

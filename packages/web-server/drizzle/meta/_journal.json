@@ -64,6 +64,13 @@
       "when": 1775088000000,
       "tag": "0008_add_admin_manifest",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775091600000,
+      "tag": "0009_add_hash_verify_enabled",
+      "breakpoints": true
     }
   ]
 }

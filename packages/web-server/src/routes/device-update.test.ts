@@ -40,6 +40,7 @@ const DEVICE = {
   pairingCode: null,
   backupIntervalHours: 2,
   maxRetainedBackups: 30,
+  hashVerifyEnabled: true,
   lastSeen: null,
   createdAt: new Date(),
 };

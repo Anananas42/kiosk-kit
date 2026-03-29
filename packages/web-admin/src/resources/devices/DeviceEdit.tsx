@@ -1,4 +1,11 @@
-import { AutocompleteInput, Edit, ReferenceInput, SimpleForm, TextInput } from "react-admin";
+import {
+  AutocompleteInput,
+  BooleanInput,
+  Edit,
+  ReferenceInput,
+  SimpleForm,
+  TextInput,
+} from "react-admin";
 
 export function DeviceEdit() {
   return (
@@ -13,6 +20,7 @@ export function DeviceEdit() {
             label="Assigned User"
           />
         </ReferenceInput>
+        <BooleanInput source="hashVerifyEnabled" label="Hash Verify Enabled" />
       </SimpleForm>
     </Edit>
   );
