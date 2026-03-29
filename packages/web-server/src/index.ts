@@ -1,8 +1,10 @@
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { createGoogleOAuth } from "./auth/google.js";
+import { BACKUP_STALE_OP_MS, STALE_CLEANUP_INTERVAL_MS } from "./config.js";
 import { createDb } from "./db/index.js";
 import { startBackupScheduler } from "./services/backup-scheduler.js";
+import { cleanupStale } from "./services/device-operations.js";
 
 const db = createDb(process.env.DATABASE_URL!);
 
@@ -24,6 +26,16 @@ const port = Number(process.env.PORT) || 3002;
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`[web-server] Listening on http://localhost:${info.port}`);
 });
+
+// Clean up stale device operations on startup, then periodically
+cleanupStale(db, BACKUP_STALE_OP_MS).then((count) => {
+  if (count > 0) console.log(`[device-ops] Cleaned up ${count} stale operations on startup`);
+});
+setInterval(() => {
+  cleanupStale(db, BACKUP_STALE_OP_MS).catch((err) => {
+    console.error("[device-ops] Stale cleanup error:", err instanceof Error ? err.message : err);
+  });
+}, STALE_CLEANUP_INTERVAL_MS);
 
 // Start daily backup scheduler when S3 and Tailscale are both configured
 if (

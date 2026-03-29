@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -42,9 +43,33 @@ export const backups = pgTable(
       .references(() => devices.id, { onDelete: "cascade" }),
     s3Key: text("s3_key").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    restoredAt: timestamp("restored_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("backups_device_id_created_at_idx").on(table.deviceId, table.createdAt.desc())],
+);
+
+export const deviceOperations = pgTable(
+  "device_operations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deviceId: uuid("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    status: text("status").notNull(),
+    error: text("error"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    metadata: jsonb("metadata"),
+  },
+  (table) => [
+    index("device_ops_device_type_started_idx").on(
+      table.deviceId,
+      table.type,
+      table.startedAt.desc(),
+    ),
+  ],
 );
 
 export const releases = pgTable("releases", {
