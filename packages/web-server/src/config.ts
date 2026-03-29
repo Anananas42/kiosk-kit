@@ -48,6 +48,9 @@ export const SESSION_EXTEND_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000;
 /** Maximum number of backups retained per device. */
 export const MAX_RETAINED_BACKUPS = 30;
 
+/** Maximum backup size in bytes (500 MB). */
+export const MAX_BACKUP_SIZE_BYTES = 500 * 1024 * 1024;
+
 // ── Stale operation thresholds ──────────────────────────────────────
 
 /** How long a backup operation can be in_progress before it's considered stale. */

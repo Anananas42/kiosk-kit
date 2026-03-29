@@ -153,12 +153,10 @@ export const backupsRouter = router({
           signal: AbortSignal.timeout(RESTORE_TIMEOUT_MS),
         });
 
-        const result = await restoreRes.json();
-
         if (!restoreRes.ok) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: result.error ?? "Restore failed on device",
+            message: "Restore failed on device",
           });
         }
 
@@ -170,7 +168,7 @@ export const backupsRouter = router({
           .set({ restoredAt: new Date() })
           .where(eq(backups.id, backup.id));
 
-        return result;
+        return { ok: true };
       } catch (err) {
         await failOperation(ctx.db, op.id, err instanceof Error ? err.message : "Restore failed");
         throw err;

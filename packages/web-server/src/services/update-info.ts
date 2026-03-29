@@ -1,10 +1,19 @@
-import type { DeviceUpdateInfo, UpdateStatus } from "@kioskkit/shared";
+import type { DeviceUpdateInfo } from "@kioskkit/shared";
 import { and, desc, eq } from "drizzle-orm";
 import semver from "semver";
+import { z } from "zod";
 import { DEVICE_TIMEOUT_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { deviceUpdateOps, releases } from "../db/schema.js";
 import { fetchDeviceProxy } from "./device-network.js";
+
+const DeviceVersionResponseSchema = z.object({
+  result: z.object({
+    data: z.object({
+      currentVersion: z.string().nullable(),
+    }),
+  }),
+});
 
 type DeviceLike = { id: string; tailscaleIp: string | null };
 
@@ -82,9 +91,10 @@ async function resolveCurrentVersion(db: Db, device: DeviceLike): Promise<string
       });
 
       if (res.ok) {
-        const data = (await res.json()) as { result?: { data?: UpdateStatus } };
-        const version = data?.result?.data?.currentVersion;
-        if (version) return version;
+        const parsed = DeviceVersionResponseSchema.safeParse(await res.json());
+        if (parsed.success && parsed.data.result.data.currentVersion) {
+          return parsed.data.result.data.currentVersion;
+        }
       }
     } catch (err) {
       console.debug("Device %s unreachable for version check: %s", device.id, err);
