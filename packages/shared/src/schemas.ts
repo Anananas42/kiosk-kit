@@ -325,6 +325,7 @@ export const WifiStatusSchema = z.object({
     .object({
       ssid: z.string(),
       signal: z.number(),
+      security: z.enum(["open", "wpa"]).optional(),
     })
     .nullable(),
   ethernet: z.boolean(),
@@ -333,6 +334,7 @@ export const WifiStatusSchema = z.object({
       ssid: z.string(),
       inRange: z.boolean(),
       signal: z.number().optional(),
+      security: z.enum(["open", "wpa"]).optional(),
     }),
   ),
   available: z.array(WifiNetworkSchema),

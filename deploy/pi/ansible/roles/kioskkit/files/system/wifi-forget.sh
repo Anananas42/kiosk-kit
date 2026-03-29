@@ -17,11 +17,6 @@ if [ "${#SSID}" -gt 32 ]; then
     exit 1
 fi
 
-if [[ "$SSID" =~ [^a-zA-Z0-9\ _\.\-] ]]; then
-    echo '{"error": "SSID contains invalid characters"}'
-    exit 1
-fi
-
 # Check the connection exists
 if ! nmcli -t -f NAME connection show | grep -qxF "$SSID"; then
     echo '{"error": "Network not found"}'

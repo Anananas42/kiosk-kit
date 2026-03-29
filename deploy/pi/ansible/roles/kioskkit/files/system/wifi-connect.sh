@@ -12,14 +12,9 @@ if [ -z "$SSID" ]; then
     exit 1
 fi
 
-# Validate SSID: max 32 chars, no shell metacharacters
+# Validate SSID: max 32 chars
 if [ "${#SSID}" -gt 32 ]; then
     echo '{"error": "SSID must be 32 characters or fewer"}'
-    exit 1
-fi
-
-if [[ "$SSID" =~ [^a-zA-Z0-9\ _\.\-] ]]; then
-    echo '{"error": "SSID contains invalid characters"}'
     exit 1
 fi
 
@@ -43,13 +38,20 @@ nmcli radio wifi on 2>/dev/null || true
 nmcli connection delete "$SSID" 2>/dev/null || true
 
 # Connect (creates a persistent connection profile automatically)
+# nmcli waits for the connection to complete (or fail) before returning
+NM_OUTPUT=""
 if [ -n "$PASSWORD" ]; then
-    nmcli device wifi connect "$SSID" password "$PASSWORD" ifname wlan0 2>&1 || {
-        echo '{"error": "Failed to connect to network"}'
+    NM_OUTPUT=$(nmcli device wifi connect "$SSID" password "$PASSWORD" ifname wlan0 2>&1) || {
+        # Check for authentication failure indicators
+        if echo "$NM_OUTPUT" | grep -qi "secret.*required\|no suitable.*found\|password.*wrong\|auth"; then
+            echo '{"error": "Authentication failed - check password"}'
+        else
+            echo '{"error": "Failed to connect to network"}'
+        fi
         exit 1
     }
 else
-    nmcli device wifi connect "$SSID" ifname wlan0 2>&1 || {
+    NM_OUTPUT=$(nmcli device wifi connect "$SSID" ifname wlan0 2>&1) || {
         echo '{"error": "Failed to connect to network"}'
         exit 1
     }
