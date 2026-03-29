@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@kioskkit/ui";
+import { useEffect } from "react";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -28,6 +29,12 @@ export function ConfirmDialog({
   variant = "default",
   onConfirm,
 }: ConfirmDialogProps) {
+  useEffect(() => {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: "kiosk-admin:modal-overlay", visible: open }, "*");
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
