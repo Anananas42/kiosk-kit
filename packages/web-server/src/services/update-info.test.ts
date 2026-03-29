@@ -35,7 +35,7 @@ function makeUpdateOp(overrides: Record<string, unknown> = {}) {
     id: "op-1",
     deviceId: DEVICE.id,
     updateType: "live",
-    action: "push",
+    action: "install",
     version: "1.0.0",
     startedAt: new Date(),
     finishedAt: new Date(),

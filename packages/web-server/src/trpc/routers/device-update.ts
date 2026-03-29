@@ -87,6 +87,7 @@ export const deviceUpdateRouter = router({
       const info = await getDeviceUpdateInfo(ctx.db, device);
       return {
         type: info.type,
+        currentVersion: info.currentVersion,
         targetVersion: info.targetVersion,
         releaseNotes: info.releaseNotes,
         publishedAt: info.publishedAt,
@@ -159,7 +160,12 @@ export const deviceUpdateRouter = router({
           signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
         });
         await markSuccess(ctx.db, op.id);
+        return {
+          ok: true,
+          operation: formatOp({ ...op, result: "success", finishedAt: new Date() }),
+        };
       } catch (err) {
+        // Timeout or unreachable — leave as pending, frontend will poll status
         console.warn("Install call failed for device %s: %s", device.id, err);
       }
 
@@ -182,8 +188,8 @@ export const deviceUpdateRouter = router({
           body: JSON.stringify({}),
           signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
         });
-      } catch {
-        // Device unreachable — still mark the op as failed below
+      } catch (err) {
+        console.warn("Cancel call failed for device %s: %s", device.id, err);
       }
 
       const activeOp = await getActiveOp(ctx.db, device.id);

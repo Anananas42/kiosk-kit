@@ -91,14 +91,14 @@ async function resolveCurrentVersion(db: Db, device: DeviceLike): Promise<string
     }
   }
 
-  // Fallback: last completed push op
+  // Fallback: last completed install op (reflects what's actually running)
   const [lastOp] = await db
     .select()
     .from(deviceUpdateOps)
     .where(
       and(
         eq(deviceUpdateOps.deviceId, device.id),
-        eq(deviceUpdateOps.action, "push"),
+        eq(deviceUpdateOps.action, "install"),
         eq(deviceUpdateOps.result, "success"),
       ),
     )
