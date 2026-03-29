@@ -37,7 +37,7 @@ export function CatalogTab() {
       )}
 
       {categories.length > 0 && (
-        <Accordion type="single" collapsible>
+        <Accordion type="single" collapsible className="flex flex-col gap-2">
           {categories.map((category, index) => (
             <CategorySection
               key={category.id}

@@ -53,7 +53,7 @@ export function CategoryTrigger({ category, isFirst, isLast }: CategoryTriggerPr
   return (
     <AccordionHeader className="flex">
       <AccordionTriggerPrimitive asChild>
-        <div className="group flex flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none transition-all hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]_.chevron-icon]:rotate-180">
+        <div className="group flex flex-1 cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]_.chevron-icon]:rotate-180">
           <fieldset
             className="contents"
             onClick={(e) => e.stopPropagation()}

@@ -25,7 +25,7 @@ export function CategorySection({
   return (
     <AccordionItem
       value={category.id}
-      className="rounded-md border border-transparent last:border-b data-[state=open]:border-border"
+      className="rounded-md border border-border last:border-b transition-colors hover:bg-muted/50"
     >
       <CategoryTrigger category={category} isFirst={isFirst} isLast={isLast} />
       <AccordionContent className="px-3 pb-3">
@@ -34,7 +34,7 @@ export function CategorySection({
         )}
 
         {items.length > 0 && (
-          <div className="rounded-md border">
+          <div className="rounded-md border bg-background">
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 border-b bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <span>Name</span>
               <span className="w-20 text-right">Qty</span>
