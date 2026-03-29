@@ -278,21 +278,6 @@ export const AdminBuyerDeleteSchema = z.object({
 
 // ── Report schemas ──────────────────────────────────────────────────
 
-export const ConsumptionRowSchema = z.object({
-  item: z.string(),
-  itemId: z.string(),
-  category: z.string(),
-  quantity: z.string(),
-  price: z.string(),
-  byBuyer: z.record(z.string(), z.number()),
-});
-
-export const ConsumptionReportSchema = z.object({
-  rows: z.array(ConsumptionRowSchema),
-});
-
-// ── Consumption report v2 schemas ──────────────────────────────────
-
 export const ConsumptionReportInputSchema = z.object({
   from: z.string(),
   to: z.string().optional(),
@@ -329,12 +314,12 @@ export const BuyerTaxTotalSchema = z.object({
 
 export type BuyerTaxTotal = z.infer<typeof BuyerTaxTotalSchema>;
 
-export const ConsumptionReportV2Schema = z.object({
+export const ConsumptionReportSchema = z.object({
   summary: z.array(ConsumptionSummaryRowSchema),
   buyerTotals: z.array(BuyerTaxTotalSchema),
 });
 
-export type ConsumptionReportV2 = z.infer<typeof ConsumptionReportV2Schema>;
+export type ConsumptionReport = z.infer<typeof ConsumptionReportSchema>;
 
 export const PreorderReportRowSchema = z.object({
   date: z.string(),

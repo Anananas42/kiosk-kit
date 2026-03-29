@@ -27,7 +27,7 @@ export function SummaryTable({
 }: SummaryTableProps) {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.consumption.summary(from, to || undefined),
-    queryFn: () => trpc["reports.consumptionV2"].query({ from, to: to || undefined }),
+    queryFn: () => trpc["reports.consumption"].query({ from, to: to || undefined }),
   });
 
   const { summary, buyerTotals, activeBuyers } = useMemo(() => {
