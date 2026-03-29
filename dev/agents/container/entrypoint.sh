@@ -388,18 +388,23 @@ Fix the failing checks, commit, and push."
   fi
 
   if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$PR_COMMENTS" -gt "$SEEN_PR_COMMENTS" ] || [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ]; then
-    # Only fetch comments newer than LAST_ACTION_TIMESTAMP to avoid re-processing old ones
+    # Fetch comments newer than LAST_ACTION_TIMESTAMP to avoid re-processing old ones
     REVIEW_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\"))]" 2>/dev/null || echo "[]")
     CONVERSATION_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\"))]" 2>/dev/null || echo "[]")
+    # Fetch review bodies (Changes Requested reviews have a body that doesn't appear in comments APIs)
+    REVIEW_BODIES=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/reviews" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and .state == \"CHANGES_REQUESTED\" and (.submitted_at > \"$LAST_ACTION_TIMESTAMP\") and (.body | length > 0))]" 2>/dev/null || echo "[]")
 
-    # Only add review action if there are actually new comments (not just stale CHANGES_REQUESTED)
     NEW_COMMENT_COUNT=$(echo "$REVIEW_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
     NEW_CONVO_COUNT=$(echo "$CONVERSATION_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+    NEW_REVIEW_COUNT=$(echo "$REVIEW_BODIES" | jq 'length' 2>/dev/null || echo "0")
 
-    if [ "$NEW_COMMENT_COUNT" -gt 0 ] || [ "$NEW_CONVO_COUNT" -gt 0 ]; then
+    if [ "$NEW_COMMENT_COUNT" -gt 0 ] || [ "$NEW_CONVO_COUNT" -gt 0 ] || [ "$NEW_REVIEW_COUNT" -gt 0 ]; then
       REVIEW_ACTION="Review feedback on PR #$PR_NUMBER (branch: $BRANCH).
 
 Review decision: $REVIEW_DECISION
+
+New review bodies (since last check):
+$REVIEW_BODIES
 
 New inline review comments (since last check):
 $REVIEW_COMMENTS
