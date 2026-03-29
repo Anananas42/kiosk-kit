@@ -16,16 +16,18 @@ export const adminReleasesRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check for duplicate version
+      // Check for duplicate version + type combination
       const [existing] = await ctx.db
         .select({ id: releases.id })
         .from(releases)
-        .where(eq(releases.version, input.version));
+        .where(
+          and(eq(releases.version, input.version), eq(releases.releaseType, input.releaseType)),
+        );
 
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: `Version ${input.version} already exists`,
+          message: `Version ${input.version} (${input.releaseType}) already exists`,
         });
       }
 

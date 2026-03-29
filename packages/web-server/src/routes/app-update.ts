@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { DEVICE_TIMEOUT_MS, UPDATE_STALE_OP_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -134,7 +135,10 @@ export function appUpdateRoutes(db: Db) {
           error?: string;
         };
         await failOperation(db, operation.id, err.error ?? "Rollback failed");
-        return c.json({ error: err.error ?? "Rollback failed" }, res.status as 400);
+        return c.json(
+          { error: err.error ?? "Rollback failed" },
+          res.status as ContentfulStatusCode,
+        );
       }
 
       await completeOperation(db, operation.id);

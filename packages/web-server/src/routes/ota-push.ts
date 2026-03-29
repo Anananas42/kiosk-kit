@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { OTA_FETCH_TIMEOUT_MS, OTA_PUSH_TIMEOUT_MS, UPDATE_STALE_OP_MS } from "../config.js";
 import type { Db } from "../db/index.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -6,6 +7,7 @@ import {
   completeOperation,
   failOperation,
   formatOperationResponse,
+  OperationStatus,
   OperationType,
   startOperation,
 } from "../services/device-operations.js";
@@ -67,7 +69,7 @@ export function otaPushRoutes(db: Db) {
 
     if (!result.ok) {
       await failOperation(db, operation.id, result.error);
-      return c.json({ error: result.error }, result.status as 400);
+      return c.json({ error: result.error }, result.status as ContentfulStatusCode);
     }
 
     if (!result.response.ok) {
@@ -76,13 +78,13 @@ export function otaPushRoutes(db: Db) {
       };
       const errorMsg = err.error ?? "Push failed";
       await failOperation(db, operation.id, errorMsg);
-      return c.json({ error: errorMsg }, result.response.status as 400);
+      return c.json({ error: errorMsg }, result.response.status as ContentfulStatusCode);
     }
 
     await completeOperation(db, operation.id);
     return c.json({
       ok: true,
-      operation: formatOperationResponse({ ...operation, status: "completed" }),
+      operation: formatOperationResponse({ ...operation, status: OperationStatus.Completed }),
     });
   });
 

@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -72,20 +73,24 @@ export const deviceOperations = pgTable(
   ],
 );
 
-export const releases = pgTable("releases", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  version: text("version").notNull().unique(),
-  releaseType: text("release_type").notNull().default("ota"),
-  githubAssetUrl: text("github_asset_url").notNull(),
-  sha256: text("sha256").notNull(),
-  releaseNotes: text("release_notes"),
-  isPublished: boolean("is_published").notNull().default(false),
-  isArchived: boolean("is_archived").notNull().default(false),
-  publishedBy: text("published_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const releases = pgTable(
+  "releases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    version: text("version").notNull(),
+    releaseType: text("release_type").notNull().default("ota"),
+    githubAssetUrl: text("github_asset_url").notNull(),
+    sha256: text("sha256").notNull(),
+    releaseNotes: text("release_notes"),
+    isPublished: boolean("is_published").notNull().default(false),
+    isArchived: boolean("is_archived").notNull().default(false),
+    publishedBy: text("published_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("releases_version_type_unique").on(table.version, table.releaseType)],
+);
 
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
