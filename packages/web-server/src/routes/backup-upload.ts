@@ -1,5 +1,10 @@
 import { and, desc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
-import { BACKUP_FETCH_TIMEOUT_MS, BACKUP_STALE_OP_MS, MAX_RETAINED_BACKUPS } from "../config.js";
+import {
+  BACKUP_FETCH_TIMEOUT_MS,
+  BACKUP_STALE_OP_MS,
+  MAX_BACKUP_SIZE_BYTES,
+  MAX_RETAINED_BACKUPS,
+} from "../config.js";
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
@@ -25,8 +30,14 @@ export async function pullBackupFromDevice(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Device ${device.id} backup fetch failed: ${res.status} ${text}`);
+    throw new Error(`Device ${device.id} backup fetch failed: ${res.status}`);
+  }
+
+  const contentLength = Number(res.headers.get("content-length") || "0");
+  if (contentLength > MAX_BACKUP_SIZE_BYTES) {
+    throw new Error(
+      `Device ${device.id} backup too large: ${contentLength} bytes (max ${MAX_BACKUP_SIZE_BYTES})`,
+    );
   }
 
   const body = Buffer.from(await res.arrayBuffer());
@@ -34,6 +45,12 @@ export async function pullBackupFromDevice(
 
   if (sizeBytes === 0) {
     throw new Error(`Device ${device.id} returned empty backup`);
+  }
+
+  if (sizeBytes > MAX_BACKUP_SIZE_BYTES) {
+    throw new Error(
+      `Device ${device.id} backup too large: ${sizeBytes} bytes (max ${MAX_BACKUP_SIZE_BYTES})`,
+    );
   }
 
   // Upload to S3
