@@ -26,6 +26,9 @@ export const OTA_PROXY_TIMEOUT_MS = 60_000;
 /** How often to pull backups from all devices. */
 export const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/** How often to clean up stale device operations. */
+export const STALE_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
 // ── Sessions ─────────────────────────────────────────────────────────
 
 /** How long a session token remains valid. */
@@ -38,6 +41,17 @@ export const SESSION_EXTEND_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000;
 
 /** Maximum number of backups retained per device. */
 export const MAX_RETAINED_BACKUPS = 30;
+
+// ── Stale operation thresholds ──────────────────────────────────────
+
+/** How long a backup operation can be in_progress before it's considered stale. */
+export const BACKUP_STALE_OP_MS = 5 * 60 * 1000;
+
+/** How long a restore operation can be in_progress before it's considered stale. */
+export const RESTORE_STALE_OP_MS = 5 * 60 * 1000;
+
+/** How long an OTA/app update operation can be in_progress before it's considered stale. */
+export const UPDATE_STALE_OP_MS = 15 * 60 * 1000;
 
 // ── Device network ───────────────────────────────────────────────────
 

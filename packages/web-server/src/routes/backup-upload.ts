@@ -1,8 +1,14 @@
 import { desc, eq } from "drizzle-orm";
-import { BACKUP_FETCH_TIMEOUT_MS, MAX_RETAINED_BACKUPS } from "../config.js";
+import { BACKUP_FETCH_TIMEOUT_MS, BACKUP_STALE_OP_MS, MAX_RETAINED_BACKUPS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
+import {
+  completeOperation,
+  failOperation,
+  OperationType,
+  startOperation,
+} from "../services/device-operations.js";
 import { deleteFile, uploadFile } from "../services/s3.js";
 
 /**
@@ -67,6 +73,7 @@ export async function pullBackupFromDevice(
 /**
  * Pull backups from all devices that have a known Tailscale IP.
  * Errors on individual devices are logged but do not stop the batch.
+ * Each device pull is tracked as a device operation.
  */
 export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
   const allDevices = await db
@@ -76,10 +83,18 @@ export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
   const reachable = allDevices.filter((d) => d.tailscaleIp);
 
   for (const device of reachable) {
+    const { operation: op } = await startOperation(db, {
+      deviceId: device.id,
+      type: OperationType.Backup,
+      staleThresholdMs: BACKUP_STALE_OP_MS,
+    });
+
     try {
       const result = await pullBackupFromDevice(db, device);
+      await completeOperation(db, op.id);
       console.log(`[backup] Pulled backup from device ${device.id} (${result.sizeBytes} bytes)`);
     } catch (err) {
+      await failOperation(db, op.id, err instanceof Error ? err.message : "Backup failed");
       console.error(
         `[backup] Failed to pull backup from device ${device.id}:`,
         err instanceof Error ? err.message : err,
