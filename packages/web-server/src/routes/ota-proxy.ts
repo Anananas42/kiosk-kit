@@ -49,9 +49,13 @@ export function otaProxyRoutes(db: Db) {
       return c.json({ error: "Release has no OTA asset" }, 404);
     }
 
+    const fetchHeaders: Record<string, string> = { Accept: "application/octet-stream" };
+    if (process.env.GITHUB_TOKEN) {
+      fetchHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+    }
     const upstream = await fetch(assetUrl, {
       signal: AbortSignal.timeout(OTA_PROXY_TIMEOUT_MS),
-      headers: { Accept: "application/octet-stream" },
+      headers: fetchHeaders,
     });
 
     if (!upstream.ok) {

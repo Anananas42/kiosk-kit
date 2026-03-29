@@ -9,6 +9,7 @@ import { appPushRoutes } from "./routes/app-push.js";
 import { appUpdateRoutes } from "./routes/app-update.js";
 import { authRoutes } from "./routes/auth.js";
 import { deviceProxyRoutes } from "./routes/device-proxy.js";
+import { githubWebhookRoute } from "./routes/github-webhook.js";
 import { healthRoute } from "./routes/health.js";
 import { otaProxyRoutes } from "./routes/ota-proxy.js";
 import { otaPushRoutes } from "./routes/ota-push.js";
@@ -54,6 +55,9 @@ export function createApp(db: Db, google?: Google, cookieDomain?: string) {
 
   // OTA image proxy uses Tailscale IP auth — mount before session auth middleware
   app.route("/api/ota/image", otaProxyRoutes(db));
+
+  // GitHub webhook — release asset registration, HMAC auth
+  app.route("/api/webhooks/github", githubWebhookRoute(db));
 
   // Auth middleware for protected API routes (exclude health + auth + trpc)
   app.use("/api/*", authMiddleware(db));
