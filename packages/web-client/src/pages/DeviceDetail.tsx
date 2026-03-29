@@ -173,10 +173,8 @@ export function DeviceDetail() {
         </Card>
       )}
 
-      {/* OTA update card — only when device is online */}
-      {!isLoading && !error && status === DeviceStatus.Online && id && (
-        <OtaUpdateCard deviceId={id} />
-      )}
+      {/* OTA update card — works online (live status) and offline (server-side fallback) */}
+      {!isLoading && !error && id && <OtaUpdateCard deviceId={id} />}
 
       {/* Backups section */}
       {!isLoading &&
