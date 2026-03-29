@@ -16,6 +16,7 @@ export function startBackupScheduler(db: Db): void {
     });
   };
 
+  setTimeout(run, 0);
   setInterval(run, BACKUP_POLL_INTERVAL_MS);
   console.log("[backup-scheduler] Polling for due backups every 30 minutes");
 }

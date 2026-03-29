@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { BACKUP_FETCH_TIMEOUT_MS, BACKUP_STALE_OP_MS, MAX_RETAINED_BACKUPS } from "../config.js";
 import type { Db } from "../db/index.js";
 import { backups, devices } from "../db/schema.js";
@@ -101,7 +101,13 @@ export async function pullBackupsFromDueDevices(db: Db): Promise<void> {
       and(
         isNotNull(devices.tailscaleIp),
         isNotNull(devices.userId),
-        sql`(${latestBackup.latestCreatedAt} IS NULL OR ${latestBackup.latestCreatedAt} < now() - make_interval(hours => ${devices.backupIntervalHours}))`,
+        or(
+          isNull(latestBackup.latestCreatedAt),
+          lt(
+            latestBackup.latestCreatedAt,
+            sql`now() - make_interval(hours => ${devices.backupIntervalHours})`,
+          ),
+        ),
       ),
     );
 

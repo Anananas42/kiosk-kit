@@ -20,13 +20,17 @@ import {
 import { downloadFile, getSignedDownloadUrl } from "../../services/s3.js";
 import { authedProcedure, router } from "../trpc.js";
 
-const backupConfigInput = z.object({
-  deviceId: z.uuid(),
-  backupIntervalHours: z
-    .union([z.literal(6), z.literal(12), z.literal(24), z.literal(168)])
-    .optional(),
-  maxRetainedBackups: z.number().int().min(1).max(100).optional(),
-});
+const backupConfigInput = z
+  .object({
+    deviceId: z.uuid(),
+    backupIntervalHours: z
+      .union([z.literal(6), z.literal(12), z.literal(24), z.literal(168)])
+      .optional(),
+    maxRetainedBackups: z.number().int().min(1).max(100).optional(),
+  })
+  .refine((d) => d.backupIntervalHours !== undefined || d.maxRetainedBackups !== undefined, {
+    message: "At least one config field must be provided",
+  });
 
 export const backupsRouter = router({
   "backups.list": authedProcedure
@@ -288,10 +292,6 @@ export const backupsRouter = router({
       if (input.maxRetainedBackups !== undefined)
         updates.maxRetainedBackups = input.maxRetainedBackups;
 
-      if (Object.keys(updates).length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No fields to update" });
-      }
-
       const [updated] = await ctx.db
         .update(devices)
         .set(updates)
@@ -301,6 +301,10 @@ export const backupsRouter = router({
           maxRetainedBackups: devices.maxRetainedBackups,
         });
 
-      return updated!;
+      if (!updated) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Update failed" });
+      }
+
+      return updated;
     }),
 });
