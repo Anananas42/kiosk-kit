@@ -21,6 +21,18 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./components/ui/dialog";
+export {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+  FieldTitle,
+} from "./components/ui/field";
 export type { InlineEditProps } from "./components/ui/inline-edit";
 export { InlineEdit } from "./components/ui/inline-edit";
 export { Input } from "./components/ui/input";
@@ -43,8 +55,10 @@ export {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
+export { Separator } from "./components/ui/separator";
 export { Skeleton } from "./components/ui/skeleton";
 export { Spinner } from "./components/ui/spinner";
+export { Switch } from "./components/ui/switch";
 export {
   Table,
   TableBody,
