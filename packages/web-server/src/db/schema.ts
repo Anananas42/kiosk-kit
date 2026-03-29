@@ -124,6 +124,7 @@ export const deviceUpdateOps = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     result: updateResultEnum("result").notNull().default("pending"),
+    error: text("error"),
     triggeredBy: text("triggered_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

@@ -16,6 +16,7 @@ const UpdateOpSchema = z.object({
   action: z.string(),
   version: z.string(),
   result: z.string(),
+  error: z.string().nullable(),
   startedAt: z.string(),
   finishedAt: z.string().nullable(),
 });
@@ -30,6 +31,7 @@ function formatOp(op: UpdateOp) {
     action: op.action,
     version: op.version,
     result: op.result,
+    error: op.error ?? null,
     startedAt: op.startedAt.toISOString(),
     finishedAt: op.finishedAt?.toISOString() ?? null,
   };
@@ -66,7 +68,7 @@ async function markFailed(db: import("../../db/index.js").Db, opId: string, erro
   console.warn("Update operation %s failed: %s", opId, error);
   await db
     .update(deviceUpdateOps)
-    .set({ finishedAt: new Date(), result: "failed" })
+    .set({ finishedAt: new Date(), result: "failed", error })
     .where(eq(deviceUpdateOps.id, opId));
 }
 
@@ -121,8 +123,15 @@ export const deviceUpdateRouter = router({
         .orderBy(desc(deviceUpdateOps.startedAt))
         .limit(1);
 
-      const version = lastPush?.version ?? "unknown";
-      const updateType = lastPush?.updateType ?? "live";
+      if (!lastPush) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No downloaded update to install",
+        });
+      }
+
+      const version = lastPush.version;
+      const updateType = lastPush.updateType;
 
       const [op] = await ctx.db
         .insert(deviceUpdateOps)

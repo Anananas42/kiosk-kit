@@ -177,13 +177,23 @@ describe("devices.updateInstall", () => {
     );
   });
 
+  it("throws BAD_REQUEST when no prior push exists", async () => {
+    vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
+
+    const caller = callerFor(createMockDb({ activeOp: null, lastPushResult: [] }));
+    await expect(caller["devices.updateInstall"]({ id: DEVICE.id })).rejects.toThrow(
+      "No downloaded update to install",
+    );
+  });
+
   it("handles device timeout gracefully", async () => {
     vi.mocked(getAccessibleDevice).mockResolvedValue(DEVICE);
     vi.mocked(fetchDeviceProxy).mockRejectedValue(new Error("timeout"));
 
+    const lastPush = makeOp({ action: "push", result: "success", version: "1.1.0" });
     const installOp = makeOp({ action: "install" });
     const caller = callerFor(
-      createMockDb({ activeOp: null, lastPushResult: [], insertResult: [installOp] }),
+      createMockDb({ activeOp: null, lastPushResult: [lastPush], insertResult: [installOp] }),
     );
     const result = await caller["devices.updateInstall"]({ id: DEVICE.id });
 

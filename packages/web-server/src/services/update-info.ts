@@ -34,29 +34,19 @@ export async function getDeviceUpdateInfo(
     .where(and(eq(releases.isPublished, true), eq(releases.isArchived, false)))
     .orderBy(desc(releases.publishedAt));
 
-  // Filter to releases newer than current version
-  const newerReleases = allReleases.filter(
-    (r) => semver.valid(r.version) && semver.gt(r.version, currentVersion),
-  );
+  // Filter to releases newer than current version, sorted by semver descending
+  const newerReleases = allReleases
+    .filter((r) => semver.valid(r.version) && semver.gt(r.version, currentVersion))
+    .sort((a, b) => semver.compare(b.version, a.version));
 
   if (newerReleases.length === 0) {
     return { type: "up_to_date", currentVersion };
   }
 
   // Check if any release in the newer range has an OTA asset → full update needed
-  const otaRelease = newerReleases.find((r) => r.otaAssetUrl != null);
+  const latestOta = newerReleases.find((r) => r.otaAssetUrl != null);
 
-  if (otaRelease) {
-    // Target = the latest release that has an OTA asset
-    const latestOta = newerReleases.reduce(
-      (best, r) => {
-        if (!r.otaAssetUrl) return best;
-        if (!best) return r;
-        return semver.gt(r.version, best.version) ? r : best;
-      },
-      null as (typeof newerReleases)[number] | null,
-    )!;
-
+  if (latestOta) {
     return {
       type: "full",
       currentVersion,
@@ -66,14 +56,8 @@ export async function getDeviceUpdateInfo(
     };
   }
 
-  // Live update — target = latest release overall
-  const latestRelease = newerReleases.reduce(
-    (best, r) => {
-      if (!best) return r;
-      return semver.gt(r.version, best.version) ? r : best;
-    },
-    null as (typeof newerReleases)[number] | null,
-  )!;
+  // Live update — target = latest release (already sorted, first element)
+  const latestRelease = newerReleases[0]!;
 
   return {
     type: "live",
@@ -102,8 +86,8 @@ async function resolveCurrentVersion(db: Db, device: DeviceLike): Promise<string
         const version = data?.result?.data?.currentVersion;
         if (version) return version;
       }
-    } catch {
-      // Device unreachable — fall through to DB lookup
+    } catch (err) {
+      console.debug("Device %s unreachable for version check: %s", device.id, err);
     }
   }
 
