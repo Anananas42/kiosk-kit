@@ -7,6 +7,7 @@ import { pullBackupFromDevice } from "../../routes/backup-upload.js";
 import {
   completeOperation,
   failOperation,
+  formatOperationResponse,
   startOperation,
 } from "../../services/device-operations.js";
 import { adminProcedure, router } from "../trpc.js";
@@ -28,36 +29,21 @@ export const adminBackupsRouter = router({
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Device has no known IP" });
       }
 
-      const op = await startOperation(ctx.db, {
+      const { operation: op, isNew } = await startOperation(ctx.db, {
         deviceId: device.id,
         type: "backup",
         staleThresholdMs: BACKUP_STALE_OP_MS,
       });
 
-      // If already in progress (idempotent), return immediately
-      if (op.status === "in_progress" && op.startedAt.getTime() < Date.now() - 1000) {
-        return {
-          id: op.id,
-          deviceId: op.deviceId,
-          type: op.type,
-          status: op.status,
-          startedAt: op.startedAt.toISOString(),
-        };
+      // Only kick off a new backup if this is a freshly created operation
+      if (isNew) {
+        pullBackupFromDevice(ctx.db, device)
+          .then(() => completeOperation(ctx.db, op.id))
+          .catch((err) =>
+            failOperation(ctx.db, op.id, err instanceof Error ? err.message : "Backup failed"),
+          );
       }
 
-      // Fire-and-forget
-      pullBackupFromDevice(ctx.db, device)
-        .then(() => completeOperation(ctx.db, op.id))
-        .catch((err) =>
-          failOperation(ctx.db, op.id, err instanceof Error ? err.message : "Backup failed"),
-        );
-
-      return {
-        id: op.id,
-        deviceId: op.deviceId,
-        type: op.type,
-        status: op.status,
-        startedAt: op.startedAt.toISOString(),
-      };
+      return formatOperationResponse(op);
     }),
 });

@@ -78,7 +78,7 @@ export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
   const reachable = allDevices.filter((d) => d.tailscaleIp);
 
   for (const device of reachable) {
-    const op = await startOperation(db, {
+    const { operation: op } = await startOperation(db, {
       deviceId: device.id,
       type: "backup",
       staleThresholdMs: BACKUP_STALE_OP_MS,

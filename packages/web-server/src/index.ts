@@ -1,7 +1,12 @@
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { createGoogleOAuth } from "./auth/google.js";
-import { BACKUP_STALE_OP_MS, STALE_CLEANUP_INTERVAL_MS } from "./config.js";
+import {
+  BACKUP_STALE_OP_MS,
+  RESTORE_STALE_OP_MS,
+  STALE_CLEANUP_INTERVAL_MS,
+  UPDATE_STALE_OP_MS,
+} from "./config.js";
 import { createDb } from "./db/index.js";
 import { startBackupScheduler } from "./services/backup-scheduler.js";
 import { cleanupStale } from "./services/device-operations.js";
@@ -27,12 +32,22 @@ serve({ fetch: app.fetch, port }, (info) => {
   console.log(`[web-server] Listening on http://localhost:${info.port}`);
 });
 
+// Per-type stale thresholds for cleanup
+const staleThresholds: Record<string, number> = {
+  backup: BACKUP_STALE_OP_MS,
+  restore: RESTORE_STALE_OP_MS,
+  ota_push: UPDATE_STALE_OP_MS,
+  ota_install: UPDATE_STALE_OP_MS,
+  app_push: UPDATE_STALE_OP_MS,
+  app_install: UPDATE_STALE_OP_MS,
+};
+
 // Clean up stale device operations on startup, then periodically
-cleanupStale(db, BACKUP_STALE_OP_MS).then((count) => {
+cleanupStale(db, staleThresholds).then((count) => {
   if (count > 0) console.log(`[device-ops] Cleaned up ${count} stale operations on startup`);
 });
 setInterval(() => {
-  cleanupStale(db, BACKUP_STALE_OP_MS).catch((err) => {
+  cleanupStale(db, staleThresholds).catch((err) => {
     console.error("[device-ops] Stale cleanup error:", err instanceof Error ? err.message : err);
   });
 }, STALE_CLEANUP_INTERVAL_MS);
