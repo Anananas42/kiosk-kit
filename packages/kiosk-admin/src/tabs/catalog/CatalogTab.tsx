@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
-import { AddCategoryForm } from "./AddCategoryForm.js";
+import { AddCategoryDialog } from "./AddCategoryDialog.js";
 import { CategorySection } from "./CategorySection.js";
 
 export function CatalogTab() {
@@ -55,7 +55,7 @@ export function CatalogTab() {
         </Accordion>
       )}
 
-      <AddCategoryForm nextSortOrder={getNextSortOrder(categories)} />
+      <AddCategoryDialog nextSortOrder={getNextSortOrder(categories)} />
     </div>
   );
 }

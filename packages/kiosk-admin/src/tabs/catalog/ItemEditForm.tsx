@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AdminItemUpdateSchema, type CatalogItem } from "@kioskkit/shared";
 import { Button, Field, FieldError, FieldGroup, FieldLabel, Input, Spinner } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -20,10 +21,13 @@ type ItemUpdateInput = {
 
 interface ItemEditFormProps {
   item: CatalogItem;
+  isFirst: boolean;
+  isLast: boolean;
+  adjacentItem: { prev?: CatalogItem; next?: CatalogItem };
   onClose: () => void;
 }
 
-export function ItemEditForm({ item, onClose }: ItemEditFormProps) {
+export function ItemEditForm({ item, isFirst, isLast, adjacentItem, onClose }: ItemEditFormProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
@@ -61,59 +65,117 @@ export function ItemEditForm({ item, onClose }: ItemEditFormProps) {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (input: ItemUpdateInput) => trpc["admin.catalog.updateItem"].mutate(input),
+    onSuccess: () => {
+      invalidateCatalog();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  function handleMove(direction: "up" | "down") {
+    const adjacent = direction === "up" ? adjacentItem.prev : adjacentItem.next;
+    if (!adjacent) return;
+    reorderMutation.mutate({
+      id: Number(item.id),
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      dphRate: item.dphRate,
+      sortOrder: adjacent.sortOrder,
+    });
+    reorderMutation.mutate({
+      id: Number(adjacent.id),
+      name: adjacent.name,
+      quantity: adjacent.quantity,
+      price: adjacent.price,
+      dphRate: adjacent.dphRate,
+      sortOrder: item.sortOrder,
+    });
+  }
+
   return (
     <form
       onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))}
-      className="space-y-4 py-3 pl-4"
+      className="border-b border-border/30 bg-muted/30 px-3 py-3"
     >
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor={`item-name-${item.id}`}>Name</FieldLabel>
-          <Input id={`item-name-${item.id}`} {...form.register("name")} />
-          {form.formState.errors.name && (
-            <FieldError>{form.formState.errors.name.message}</FieldError>
-          )}
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor={`item-quantity-${item.id}`}>Quantity</FieldLabel>
-          <Input
-            id={`item-quantity-${item.id}`}
-            placeholder="e.g. 100g"
-            {...form.register("quantity")}
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor={`item-price-${item.id}`}>Price</FieldLabel>
-          <Input
-            id={`item-price-${item.id}`}
-            placeholder="e.g. 12.50"
-            {...form.register("price")}
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor={`item-dph-${item.id}`}>DPH rate (%)</FieldLabel>
-          <Input id={`item-dph-${item.id}`} placeholder="e.g. 21" {...form.register("dphRate")} />
-        </Field>
+      <FieldGroup className="gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Field>
+            <FieldLabel htmlFor={`item-name-${item.id}`}>Name</FieldLabel>
+            <Input id={`item-name-${item.id}`} {...form.register("name")} />
+            {form.formState.errors.name && (
+              <FieldError>{form.formState.errors.name.message}</FieldError>
+            )}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`item-quantity-${item.id}`}>Quantity</FieldLabel>
+            <Input
+              id={`item-quantity-${item.id}`}
+              placeholder="e.g. 100g"
+              {...form.register("quantity")}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field>
+            <FieldLabel htmlFor={`item-price-${item.id}`}>Price</FieldLabel>
+            <Input
+              id={`item-price-${item.id}`}
+              placeholder="e.g. 12.50"
+              {...form.register("price")}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`item-dph-${item.id}`}>DPH rate (%)</FieldLabel>
+            <Input id={`item-dph-${item.id}`} placeholder="e.g. 21" {...form.register("dphRate")} />
+          </Field>
+        </div>
       </FieldGroup>
 
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={updateMutation.isPending}>
+      <div className="mt-3 flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={updateMutation.isPending}>
           {updateMutation.isPending && <Spinner className="mr-1" />}
           Save
         </Button>
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </Button>
+
+        <div className="flex items-center gap-1 ml-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={() => handleMove("up")}
+            disabled={isFirst || reorderMutation.isPending}
+          >
+            <ArrowUp className="size-3" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={() => handleMove("down")}
+            disabled={isLast || reorderMutation.isPending}
+          >
+            <ArrowDown className="size-3" />
+          </Button>
+        </div>
+
+        <div className="flex-1" />
+
         <Button
           type="button"
-          variant="destructive"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive"
           onClick={() => setConfirmDelete(true)}
           disabled={deleteMutation.isPending}
         >
-          {deleteMutation.isPending && <Spinner className="mr-1" />}
+          <Trash2 className="size-3" />
           Delete
         </Button>
       </div>
