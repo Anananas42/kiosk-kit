@@ -1,4 +1,4 @@
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner } from "@kioskkit/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@kioskkit/ui";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { PasswordInput } from "./PasswordInput.js";
@@ -57,8 +57,12 @@ export function HiddenNetworkForm() {
             placeholder="Password (optional)"
             ssid="hidden"
           />
-          <Button type="submit" size="sm" disabled={connectMutation.isPending || !ssid.trim()}>
-            {connectMutation.isPending ? <Spinner className="mr-1" /> : null}
+          <Button
+            type="submit"
+            size="sm"
+            loading={connectMutation.isPending}
+            disabled={!ssid.trim()}
+          >
             Connect
           </Button>
           <Button
