@@ -1,5 +1,5 @@
 import type { KioskSettings } from "@kioskkit/shared";
-import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet, Input } from "@kioskkit/ui";
+import { Input, Label } from "@kioskkit/ui";
 import { useId } from "react";
 
 interface DisplaySectionProps {
@@ -21,42 +21,42 @@ export function DisplaySection({ draft, onChange }: DisplaySectionProps) {
   const inactivityId = useId();
 
   return (
-    <FieldSet>
-      <FieldLegend>Display</FieldLegend>
+    <fieldset className="space-y-3">
+      <legend className="text-sm font-semibold">Display</legend>
 
-      <Field>
-        <FieldLabel htmlFor={idleDimId}>Idle dim timeout</FieldLabel>
-        <FieldDescription>Time before the screen dims when idle</FieldDescription>
-        <div className="flex items-center gap-2">
-          <Input
-            id={idleDimId}
-            type="number"
-            min={0}
-            step={1}
-            value={msToSeconds(draft.idleDimMs)}
-            onChange={(e) => onChange("idleDimMs", secondsToMs(e.target.value))}
-            className="w-24"
-          />
-          <span className="text-sm text-muted-foreground">seconds</span>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label htmlFor={idleDimId}>Idle dim timeout</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id={idleDimId}
+              type="number"
+              min={0}
+              step={1}
+              value={msToSeconds(draft.idleDimMs)}
+              onChange={(e) => onChange("idleDimMs", secondsToMs(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">seconds</span>
+          </div>
         </div>
-      </Field>
 
-      <Field>
-        <FieldLabel htmlFor={inactivityId}>Inactivity timeout</FieldLabel>
-        <FieldDescription>Time before the session resets due to inactivity</FieldDescription>
-        <div className="flex items-center gap-2">
-          <Input
-            id={inactivityId}
-            type="number"
-            min={0}
-            step={1}
-            value={msToSeconds(draft.inactivityTimeoutMs)}
-            onChange={(e) => onChange("inactivityTimeoutMs", secondsToMs(e.target.value))}
-            className="w-24"
-          />
-          <span className="text-sm text-muted-foreground">seconds</span>
+        <div className="space-y-1">
+          <Label htmlFor={inactivityId}>Inactivity timeout</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id={inactivityId}
+              type="number"
+              min={0}
+              step={1}
+              value={msToSeconds(draft.inactivityTimeoutMs)}
+              onChange={(e) => onChange("inactivityTimeoutMs", secondsToMs(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">seconds</span>
+          </div>
         </div>
-      </Field>
-    </FieldSet>
+      </div>
+    </fieldset>
   );
 }

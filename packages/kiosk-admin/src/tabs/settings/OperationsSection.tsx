@@ -1,13 +1,5 @@
 import type { KioskSettings } from "@kioskkit/shared";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-  Switch,
-} from "@kioskkit/ui";
+import { Label, Switch } from "@kioskkit/ui";
 import { useId } from "react";
 
 interface OperationsSectionProps {
@@ -19,22 +11,22 @@ export function OperationsSection({ draft, onChange }: OperationsSectionProps) {
   const maintenanceId = useId();
 
   return (
-    <FieldSet>
-      <FieldLegend>Operations</FieldLegend>
+    <fieldset className="space-y-3">
+      <legend className="text-sm font-semibold">Operations</legend>
 
-      <Field orientation="horizontal">
+      <div className="flex items-center gap-3">
         <Switch
           id={maintenanceId}
           checked={draft.maintenance}
           onCheckedChange={(checked) => onChange("maintenance", checked)}
         />
-        <FieldContent>
-          <FieldLabel htmlFor={maintenanceId}>Maintenance mode</FieldLabel>
-          <FieldDescription>
-            Displays a maintenance screen and blocks all transactions
-          </FieldDescription>
-        </FieldContent>
-      </Field>
-    </FieldSet>
+        <div>
+          <Label htmlFor={maintenanceId}>Maintenance mode</Label>
+          <p className="text-xs text-muted-foreground">
+            Blocks all transactions and shows a maintenance screen
+          </p>
+        </div>
+      </div>
+    </fieldset>
   );
 }

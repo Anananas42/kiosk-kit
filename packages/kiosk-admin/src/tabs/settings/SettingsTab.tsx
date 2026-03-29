@@ -59,7 +59,7 @@ export function SettingsTab() {
   if (!draft) return null;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <DisplaySection draft={draft} onChange={updateField} />
       <LocalizationSection draft={draft} onChange={updateField} />
       <OperationsSection draft={draft} onChange={updateField} />
