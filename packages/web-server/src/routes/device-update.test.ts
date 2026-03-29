@@ -10,6 +10,7 @@ type User = typeof users.$inferSelect;
 // Mock dependencies
 vi.mock("../services/update-helpers.js", () => ({
   getAccessibleDevice: vi.fn(),
+  fetchAndStreamToDevice: vi.fn(),
 }));
 
 vi.mock("../services/update-info.js", () => ({
@@ -21,7 +22,7 @@ vi.mock("../services/device-network.js", () => ({
 }));
 
 import { fetchDeviceProxy } from "../services/device-network.js";
-import { getAccessibleDevice } from "../services/update-helpers.js";
+import { fetchAndStreamToDevice, getAccessibleDevice } from "../services/update-helpers.js";
 import { getDeviceUpdateInfo } from "../services/update-info.js";
 
 const DEVICE = {
@@ -236,21 +237,13 @@ describe("POST /devices/:id/update/push", () => {
       releaseNotes: "Notes",
       publishedAt: "2026-01-15T00:00:00.000Z",
     });
-    vi.mocked(fetchDeviceProxy).mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    vi.mocked(fetchAndStreamToDevice).mockResolvedValue({
+      ok: true,
+      response: new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    });
 
     const release = makeRelease({ version: "1.1.0" });
     const newOp = makeOp({ version: "1.1.0" });
-
-    // Mock global fetch for upstream asset download
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response("binary-data", {
-          status: 200,
-          headers: { "content-length": "11" },
-        }),
-      ),
-    );
 
     const app = makeApp(
       createMockDb({
@@ -265,6 +258,12 @@ describe("POST /devices/:id/update/push", () => {
 
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
+    expect(fetchAndStreamToDevice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: "1.1.0",
+        deviceEndpoint: "/api/app/upload",
+      }),
+    );
   });
 
   it("returns 502 when upstream fetch fails", async () => {
@@ -276,11 +275,14 @@ describe("POST /devices/:id/update/push", () => {
       releaseNotes: null,
       publishedAt: "2026-01-15T00:00:00.000Z",
     });
+    vi.mocked(fetchAndStreamToDevice).mockResolvedValue({
+      ok: false,
+      error: "Failed to fetch image from upstream",
+      status: 502,
+    });
 
     const release = makeRelease({ version: "1.1.0" });
     const newOp = makeOp({ version: "1.1.0" });
-
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")));
 
     const app = makeApp(
       createMockDb({
@@ -294,7 +296,7 @@ describe("POST /devices/:id/update/push", () => {
     const body = (await res.json()) as { error: string };
 
     expect(res.status).toBe(502);
-    expect(body.error).toBe("Failed to fetch asset from upstream");
+    expect(body.error).toBe("Failed to fetch image from upstream");
   });
 });
 

@@ -48,36 +48,47 @@ export type FetchAndStreamOptions = {
   headers: Record<string, string>;
   fetchTimeout: number;
   pushTimeout: number;
+  /** Pre-resolved asset URL — skips release lookup when provided. */
+  assetUrl?: string;
+  /** Pre-resolved SHA256 — replaces __SHA256__ placeholders in headers. */
+  sha256?: string | null;
 };
 
 /**
- * Fetch a release asset from GitHub and stream it to a device endpoint.
+ * Fetch a release asset and stream it to a device endpoint.
  *
- * 1. Looks up the release by version and type
- * 2. Fetches the asset from the release URL (otaAssetUrl or appAssetUrl)
- * 3. Streams it to the device at the given endpoint path
+ * When `assetUrl` and `sha256` are provided, the release DB lookup is skipped.
+ * Otherwise, it looks up the release by version and type.
  */
 export async function fetchAndStreamToDevice(
   opts: FetchAndStreamOptions,
 ): Promise<{ ok: true; response: Response } | { ok: false; error: string; status: number }> {
-  // Look up release
-  const [release] = await opts.db
-    .select()
-    .from(releases)
-    .where(and(eq(releases.version, opts.version), eq(releases.releaseType, opts.releaseType)));
+  let assetUrl = opts.assetUrl;
+  let sha256 = opts.sha256 ?? null;
 
-  if (!release) {
-    return { ok: false, error: "Version not found", status: 404 };
-  }
+  // Look up release if asset URL not pre-resolved
+  if (!assetUrl) {
+    const [release] = await opts.db
+      .select()
+      .from(releases)
+      .where(and(eq(releases.version, opts.version), eq(releases.releaseType, opts.releaseType)));
 
-  // Fetch asset from GitHub
-  let upstream: Response;
-  try {
-    const assetUrl = opts.releaseType === "app" ? release.appAssetUrl : release.otaAssetUrl;
-    if (!assetUrl) {
-      return { ok: false, error: `Release has no ${opts.releaseType} asset`, status: 404 };
+    if (!release) {
+      return { ok: false, error: "Version not found", status: 404 };
     }
 
+    assetUrl =
+      (opts.releaseType === "app" ? release.appAssetUrl : release.otaAssetUrl) ?? undefined;
+    sha256 = opts.releaseType === "app" ? release.appSha256 : release.otaSha256;
+  }
+
+  if (!assetUrl) {
+    return { ok: false, error: `Release has no ${opts.releaseType} asset`, status: 404 };
+  }
+
+  // Fetch asset from upstream
+  let upstream: Response;
+  try {
     const fetchHeaders: Record<string, string> = { Accept: "application/octet-stream" };
     if (process.env.GITHUB_TOKEN) {
       fetchHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
@@ -106,10 +117,9 @@ export async function fetchAndStreamToDevice(
     ...opts.headers,
   };
 
-  // Populate sha256 from release
+  // Populate sha256 from release or pre-resolved value
   for (const [key, value] of Object.entries(deviceHeaders)) {
     if (value === "__SHA256__") {
-      const sha256 = opts.releaseType === "app" ? release.appSha256 : release.otaSha256;
       deviceHeaders[key] = sha256 ?? "";
     }
   }

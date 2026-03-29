@@ -1,3 +1,4 @@
+import { ReleaseType } from "@kioskkit/shared";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -12,7 +13,7 @@ import type { Db } from "../db/index.js";
 import { deviceUpdateOps, releases } from "../db/schema.js";
 import type { AuthEnv } from "../middleware/auth.js";
 import { fetchDeviceProxy } from "../services/device-network.js";
-import { getAccessibleDevice } from "../services/update-helpers.js";
+import { fetchAndStreamToDevice, getAccessibleDevice } from "../services/update-helpers.js";
 import { getDeviceUpdateInfo } from "../services/update-info.js";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -64,100 +65,69 @@ export function deviceUpdateRoutes(db: Db) {
       return c.json({ upToDate: true });
     }
 
-    // Look up the target release
-    const [release] = await db
-      .select()
-      .from(releases)
-      .where(eq(releases.version, info.targetVersion!));
+    const targetVersion = info.targetVersion!;
+
+    // Look up the target release to get asset URLs
+    const [release] = await db.select().from(releases).where(eq(releases.version, targetVersion));
     if (!release) {
       return c.json({ error: "Target release not found" }, 404);
     }
+
+    const isFull = info.type === "full";
+    const updateType = isFull ? ("full" as const) : ("live" as const);
 
     // Insert operation
     const [op] = await db
       .insert(deviceUpdateOps)
       .values({
         deviceId: device.id,
-        updateType: info.type as "full" | "live",
+        updateType,
         action: "push",
-        version: info.targetVersion!,
+        version: targetVersion,
         triggeredBy: user.id,
       })
       .returning();
 
-    // Determine asset details based on update type
-    const isFull = info.type === "full";
+    if (!op) {
+      return c.json({ error: "Failed to create operation" }, 500);
+    }
+
+    // Delegate to shared fetch-and-stream helper
     const assetUrl = isFull ? release.otaAssetUrl : release.appAssetUrl;
     const sha256 = isFull ? release.otaSha256 : release.appSha256;
-    const deviceEndpoint = isFull ? "/api/ota/upload" : "/api/app/upload";
-    const versionHeader: Record<string, string> = isFull
-      ? { "X-OTA-Version": info.targetVersion!, "X-OTA-SHA256": sha256 ?? "" }
-      : { "X-App-Version": info.targetVersion!, "X-SHA256": sha256 ?? "" };
-    const fetchTimeout = isFull ? OTA_FETCH_TIMEOUT_MS : APP_FETCH_TIMEOUT_MS;
-    const pushTimeout = isFull ? OTA_PUSH_TIMEOUT_MS : APP_PUSH_TIMEOUT_MS;
+    const result = await fetchAndStreamToDevice({
+      db,
+      device,
+      version: targetVersion,
+      releaseType: isFull ? ReleaseType.Ota : ReleaseType.App,
+      deviceEndpoint: isFull ? "/api/ota/upload" : "/api/app/upload",
+      headers: isFull
+        ? { "X-OTA-Version": targetVersion, "X-OTA-SHA256": "__SHA256__" }
+        : { "X-App-Version": targetVersion, "X-SHA256": "__SHA256__" },
+      fetchTimeout: isFull ? OTA_FETCH_TIMEOUT_MS : APP_FETCH_TIMEOUT_MS,
+      pushTimeout: isFull ? OTA_PUSH_TIMEOUT_MS : APP_PUSH_TIMEOUT_MS,
+      assetUrl: assetUrl ?? undefined,
+      sha256,
+    });
 
-    if (!assetUrl) {
-      await markFailed(db, op!.id, "Release has no asset URL");
-      return c.json({ error: "Release has no asset URL" }, 404);
+    if (!result.ok) {
+      await markFailed(db, op.id, result.error);
+      return c.json({ error: result.error }, result.status as ContentfulStatusCode);
     }
 
-    // Fetch asset from upstream
-    let upstream: Response;
-    try {
-      upstream = await fetch(assetUrl, {
-        signal: AbortSignal.timeout(fetchTimeout),
-        headers: { Accept: "application/octet-stream" },
-      });
-    } catch {
-      await markFailed(db, op!.id, "Failed to fetch asset from upstream");
-      return c.json({ error: "Failed to fetch asset from upstream" }, 502);
-    }
-
-    if (!upstream.ok) {
-      await markFailed(db, op!.id, "Failed to fetch asset from upstream");
-      return c.json({ error: "Failed to fetch asset from upstream" }, 502);
-    }
-
-    const contentLength = upstream.headers.get("content-length");
-    if (!contentLength) {
-      await markFailed(db, op!.id, "Upstream did not provide Content-Length");
-      return c.json({ error: "Upstream did not provide Content-Length" }, 502);
-    }
-
-    // Stream to device
-    try {
-      const deviceHeaders: Record<string, string> = {
-        "Content-Type": "application/octet-stream",
-        "Content-Length": contentLength,
-        ...versionHeader,
+    if (!result.response.ok) {
+      const err = (await result.response.json().catch(() => ({ error: "Push failed" }))) as {
+        error?: string;
       };
-
-      const pushRes = await fetchDeviceProxy(device, deviceEndpoint, {
-        method: "POST",
-        headers: deviceHeaders,
-        body: upstream.body,
-        signal: AbortSignal.timeout(pushTimeout),
-        // @ts-expect-error -- Node fetch supports duplex for streaming request bodies
-        duplex: "half",
-      });
-
-      if (!pushRes.ok) {
-        const err = (await pushRes.json().catch(() => ({ error: "Push failed" }))) as {
-          error?: string;
-        };
-        const errorMsg = err.error ?? "Push failed";
-        await markFailed(db, op!.id, errorMsg);
-        return c.json({ error: errorMsg }, pushRes.status as ContentfulStatusCode);
-      }
-    } catch {
-      await markFailed(db, op!.id, "Device unreachable during push");
-      return c.json({ error: "Device unreachable during push" }, 502);
+      const errorMsg = err.error ?? "Push failed";
+      await markFailed(db, op.id, errorMsg);
+      return c.json({ error: errorMsg }, result.response.status as ContentfulStatusCode);
     }
 
-    await markSuccess(db, op!.id);
+    await markSuccess(db, op.id);
     return c.json({
       ok: true,
-      operation: formatOp({ ...op!, result: "success", finishedAt: new Date() }),
+      operation: formatOp({ ...op, result: "success", finishedAt: new Date() }),
     });
   });
 
@@ -205,6 +175,10 @@ export function deviceUpdateRoutes(db: Db) {
       })
       .returning();
 
+    if (!op) {
+      return c.json({ error: "Failed to create operation" }, 500);
+    }
+
     // Call device install endpoint — may timeout for live updates (service restarts)
     try {
       await fetchDeviceProxy(device, "/api/trpc/admin.update.install", {
@@ -215,12 +189,13 @@ export function deviceUpdateRoutes(db: Db) {
       });
 
       // If we got a response, mark success
-      await markSuccess(db, op!.id);
-    } catch {
+      await markSuccess(db, op.id);
+    } catch (err) {
       // Timeout or unreachable — leave as pending, frontend will poll status
+      console.warn("Install call failed for device %s: %s", device.id, err);
     }
 
-    return c.json({ ok: true, operation: formatOp(op!) });
+    return c.json({ ok: true, operation: formatOp(op) });
   });
 
   // ── POST /:id/update/cancel ───────────────────────────────────────
@@ -242,7 +217,7 @@ export function deviceUpdateRoutes(db: Db) {
         signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
       });
     } catch {
-      // Device unreachable — still mark the op as failed
+      // Device unreachable — still mark the op as failed below
     }
 
     // Mark active op as failed
@@ -307,7 +282,8 @@ async function markSuccess(db: Db, opId: string) {
     .where(eq(deviceUpdateOps.id, opId));
 }
 
-async function markFailed(db: Db, opId: string, _error: string) {
+async function markFailed(db: Db, opId: string, error: string) {
+  console.warn("Update operation %s failed: %s", opId, error);
   await db
     .update(deviceUpdateOps)
     .set({ finishedAt: new Date(), result: "failed" })
