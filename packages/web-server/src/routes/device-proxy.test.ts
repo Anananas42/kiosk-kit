@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { Hono } from "hono";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "../db/index.js";
 import type { users } from "../db/schema.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { clearManifestCaches } from "../services/admin-manifest.js";
 import { deviceProxyRoutes } from "./device-proxy.js";
 
 type User = typeof users.$inferSelect;
@@ -12,6 +14,7 @@ const DEVICE = {
   userId: "user-1",
   name: "Test Kiosk",
   tailscaleIp: "100.64.1.5",
+  validateProxyHash: true,
   createdAt: new Date(),
 };
 
@@ -113,5 +116,110 @@ describe("device proxy", () => {
     expect(await res.json()).toEqual({ items: [] });
 
     vi.unstubAllGlobals();
+  });
+});
+
+describe("admin asset hash verification", () => {
+  const JS_BODY = 'console.log("hello")';
+  const JS_HASH = createHash("sha256").update(JS_BODY).digest("hex");
+  const MANIFEST = { "assets/index-abc.js": JS_HASH };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    clearManifestCaches();
+  });
+
+  function createChainedMockDb(queries: unknown[][]) {
+    let callIndex = 0;
+    function makeTerminal(result: unknown[]) {
+      const p = Object.assign(Promise.resolve(result), {
+        returning: vi.fn().mockResolvedValue(result),
+        limit: vi.fn().mockReturnValue(Promise.resolve(result)),
+      });
+      return p;
+    }
+    const mockWhere = vi.fn().mockImplementation(() => {
+      const result = queries[callIndex] ?? [];
+      callIndex++;
+      return makeTerminal(result);
+    });
+    return {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: mockWhere,
+    } as unknown as Db;
+  }
+
+  function stubFetchForAdmin(assetBody: string, appVersion: string | null = "1.0.0") {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url.includes("/api/health")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ status: "ok", appVersion }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(assetBody, {
+            status: 200,
+            headers: { "content-type": "application/javascript" },
+          }),
+        );
+      }),
+    );
+  }
+
+  it("serves admin asset when hash matches manifest", async () => {
+    const db = createChainedMockDb([[DEVICE], [{ adminManifest: MANIFEST }]]);
+    const app = makeApp(db);
+    stubFetchForAdmin(JS_BODY);
+
+    const res = await app.request(`/devices/${DEVICE.id}/kiosk/admin/assets/index-abc.js`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(JS_BODY);
+  });
+
+  it("blocks admin asset when hash does not match manifest", async () => {
+    const db = createChainedMockDb([[DEVICE], [{ adminManifest: MANIFEST }]]);
+    const app = makeApp(db);
+    stubFetchForAdmin("TAMPERED CONTENT");
+
+    const res = await app.request(`/devices/${DEVICE.id}/kiosk/admin/assets/index-abc.js`);
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error).toBe("Asset integrity check failed");
+    expect(body.detail).toContain("Hash mismatch");
+  });
+
+  it("passes through admin asset when device version is unknown", async () => {
+    const db = createChainedMockDb([[DEVICE]]);
+    const app = makeApp(db);
+    stubFetchForAdmin(JS_BODY, null);
+
+    const res = await app.request(`/devices/${DEVICE.id}/kiosk/admin/assets/index-abc.js`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(JS_BODY);
+  });
+
+  it("passes through admin asset when no manifest exists for version", async () => {
+    const db = createChainedMockDb([[DEVICE], [{ adminManifest: null }]]);
+    const app = makeApp(db);
+    stubFetchForAdmin(JS_BODY);
+
+    const res = await app.request(`/devices/${DEVICE.id}/kiosk/admin/assets/index-abc.js`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(JS_BODY);
+  });
+
+  it("passes through admin asset when file not in manifest (SPA fallback)", async () => {
+    const db = createChainedMockDb([[DEVICE], [{ adminManifest: MANIFEST }]]);
+    const app = makeApp(db);
+    stubFetchForAdmin(JS_BODY);
+
+    const res = await app.request(`/devices/${DEVICE.id}/kiosk/admin/some-unknown-route`);
+    expect(res.status).toBe(200);
   });
 });

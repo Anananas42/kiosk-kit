@@ -1,5 +1,5 @@
 {
-  "id": "39d3e03d-0e78-43bd-9ab2-0320bc04f153",
+  "id": "e4e7cc14-dcc9-48e7-bed1-e3390b4a5ecd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -32,6 +32,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "restored_at": {
+          "name": "restored_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -81,6 +87,227 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.device_operations": {
+      "name": "device_operations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "device_ops_device_type_started_idx": {
+          "name": "device_ops_device_type_started_idx",
+          "columns": [
+            {
+              "expression": "device_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "device_operations_device_id_devices_id_fk": {
+          "name": "device_operations_device_id_devices_id_fk",
+          "tableFrom": "device_operations",
+          "tableTo": "devices",
+          "columnsFrom": ["device_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.device_update_ops": {
+      "name": "device_update_ops",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "update_type": {
+          "name": "update_type",
+          "type": "update_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "update_action",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result": {
+          "name": "result",
+          "type": "update_result",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "triggered_by": {
+          "name": "triggered_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "device_update_ops_device_started_idx": {
+          "name": "device_update_ops_device_started_idx",
+          "columns": [
+            {
+              "expression": "device_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "device_update_ops_device_id_devices_id_fk": {
+          "name": "device_update_ops_device_id_devices_id_fk",
+          "tableFrom": "device_update_ops",
+          "tableTo": "devices",
+          "columnsFrom": ["device_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "device_update_ops_triggered_by_users_id_fk": {
+          "name": "device_update_ops_triggered_by_users_id_fk",
+          "tableFrom": "device_update_ops",
+          "tableTo": "users",
+          "columnsFrom": ["triggered_by"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.devices": {
       "name": "devices",
       "schema": "",
@@ -116,6 +343,39 @@
           "primaryKey": false,
           "notNull": true
         },
+        "hostname": {
+          "name": "hostname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pairing_code": {
+          "name": "pairing_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "backup_interval_hours": {
+          "name": "backup_interval_hours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2
+        },
+        "max_retained_backups": {
+          "name": "max_retained_backups",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 30
+        },
+        "validate_proxy_hash": {
+          "name": "validate_proxy_hash",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
         "last_seen": {
           "name": "last_seen",
           "type": "timestamp with time zone",
@@ -148,6 +408,11 @@
           "name": "devices_tailscale_node_id_unique",
           "nullsNotDistinct": false,
           "columns": ["tailscale_node_id"]
+        },
+        "devices_pairing_code_unique": {
+          "name": "devices_pairing_code_unique",
+          "nullsNotDistinct": false,
+          "columns": ["pairing_code"]
         }
       },
       "policies": {},
@@ -171,17 +436,42 @@
           "primaryKey": false,
           "notNull": true
         },
-        "github_asset_url": {
-          "name": "github_asset_url",
+        "release_type": {
+          "name": "release_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'ota'"
         },
-        "sha256": {
-          "name": "sha256",
+        "ota_asset_url": {
+          "name": "ota_asset_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "ota_sha256": {
+          "name": "ota_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "app_asset_url": {
+          "name": "app_asset_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "app_sha256": {
+          "name": "app_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admin_manifest": {
+          "name": "admin_manifest",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "release_notes": {
           "name": "release_notes",
@@ -235,10 +525,25 @@
           "name": "releases_version_unique",
           "nullsNotDistinct": false,
           "columns": ["version"]
+        },
+        "releases_ota_sha256_unique": {
+          "name": "releases_ota_sha256_unique",
+          "nullsNotDistinct": false,
+          "columns": ["ota_sha256"]
+        },
+        "releases_app_sha256_unique": {
+          "name": "releases_app_sha256_unique",
+          "nullsNotDistinct": false,
+          "columns": ["app_sha256"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "releases_at_least_one_asset": {
+          "name": "releases_at_least_one_asset",
+          "value": "\"releases\".\"ota_asset_url\" IS NOT NULL OR \"releases\".\"app_asset_url\" IS NOT NULL"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.sessions": {
@@ -353,6 +658,21 @@
     }
   },
   "enums": {
+    "public.update_action": {
+      "name": "update_action",
+      "schema": "public",
+      "values": ["push", "install"]
+    },
+    "public.update_result": {
+      "name": "update_result",
+      "schema": "public",
+      "values": ["pending", "success", "failed"]
+    },
+    "public.update_type": {
+      "name": "update_type",
+      "schema": "public",
+      "values": ["full", "live"]
+    },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",

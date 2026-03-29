@@ -36,6 +36,7 @@ const DEVICE = {
   pairingCode: null,
   backupIntervalHours: 2,
   maxRetainedBackups: 30,
+  validateProxyHash: true,
   lastSeen: null,
   createdAt: new Date(),
 };

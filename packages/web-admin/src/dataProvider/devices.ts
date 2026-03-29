@@ -47,13 +47,25 @@ export const devicesDataProvider: DataProvider = {
 
   update: async (_resource, params) => {
     const id = toStringId(params.id);
-    const { name, userId } = params.data as { name?: string; userId?: string | null };
+    const { name, userId, validateProxyHash } = params.data as {
+      name?: string;
+      userId?: string | null;
+      validateProxyHash?: boolean;
+    };
     const previousUserId = (params.previousData as { userId?: string | null })?.userId;
 
     const promises: Promise<unknown>[] = [];
 
     if (name !== undefined) {
-      promises.push(trpc["devices.update"].mutate({ id, name }));
+      promises.push(trpc["devices.update"].mutate({ id, name, validateProxyHash }));
+    } else if (validateProxyHash !== undefined) {
+      promises.push(
+        trpc["devices.update"].mutate({
+          id,
+          name: params.previousData?.name ?? "",
+          validateProxyHash,
+        }),
+      );
     }
 
     if (userId !== previousUserId) {

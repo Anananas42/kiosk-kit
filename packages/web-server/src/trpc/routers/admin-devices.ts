@@ -85,6 +85,7 @@ export const adminDevicesRouter = router({
         name: device.name,
         tailscaleIp: device.tailscaleIp,
         online: false,
+        validateProxyHash: device.validateProxyHash,
         lastSeen: null,
         hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),
@@ -97,7 +98,12 @@ export const adminDevicesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const [device] = await ctx.db
         .update(devices)
-        .set({ name: input.name })
+        .set({
+          name: input.name,
+          ...(input.validateProxyHash !== undefined && {
+            validateProxyHash: input.validateProxyHash,
+          }),
+        })
         .where(eq(devices.id, input.id))
         .returning();
 
@@ -112,6 +118,7 @@ export const adminDevicesRouter = router({
         name: device.name,
         tailscaleIp: device.tailscaleIp,
         online: false,
+        validateProxyHash: device.validateProxyHash,
         lastSeen: null,
         hostname: device.hostname,
         createdAt: device.createdAt.toISOString(),

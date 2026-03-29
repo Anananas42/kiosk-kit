@@ -36,6 +36,7 @@ export const devices = pgTable("devices", {
   pairingCode: text("pairing_code").unique(),
   backupIntervalHours: integer("backup_interval_hours").notNull().default(2),
   maxRetainedBackups: integer("max_retained_backups").notNull().default(30),
+  validateProxyHash: boolean("validate_proxy_hash").notNull().default(true),
   lastSeen: timestamp("last_seen", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -88,6 +89,7 @@ export const releases = pgTable(
     otaSha256: text("ota_sha256"),
     appAssetUrl: text("app_asset_url"),
     appSha256: text("app_sha256"),
+    adminManifest: jsonb("admin_manifest").$type<Record<string, string>>(),
     releaseNotes: text("release_notes"),
     isPublished: boolean("is_published").notNull().default(false),
     isArchived: boolean("is_archived").notNull().default(false),

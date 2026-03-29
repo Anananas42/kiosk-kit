@@ -116,6 +116,13 @@ jobs:
           VERSION="${TAG#v}"
           ./deploy/pi/build-app-bundle.sh "$VERSION"
 
+      - name: Generate admin manifest
+        if: steps.changes.outputs.should_build == 'true'
+        id: manifest
+        run: |
+          MANIFEST=$(./scripts/generate-admin-manifest.sh)
+          echo "json=$MANIFEST" >> "$GITHUB_OUTPUT"
+
       - name: Upload to GitHub release
         if: steps.changes.outputs.should_build == 'true'
         env:
@@ -128,7 +135,8 @@ jobs:
           gh release upload "$TAG" "$BUNDLE" --clobber
           BODY=$(gh release view "$TAG" --json body -q .body)
           gh release edit "$TAG" --notes "${BODY}
-          <!-- app-bundle-sha256:${SHA256} -->"
+          <!-- app-bundle-sha256:${SHA256} -->
+          <!-- admin-manifest:${{ steps.manifest.outputs.json }} -->"
 
   update-release:
     needs: [ci, deploy-fly-stack, deploy-landing, build-app-bundle]

@@ -43,6 +43,7 @@ export async function enrichWithTailscale(
     tailscaleNodeId: d.tailscaleNodeId,
     userId: d.userId,
     name: d.name,
+    validateProxyHash: d.validateProxyHash,
     ...live,
     createdAt: d.createdAt.toISOString(),
   };

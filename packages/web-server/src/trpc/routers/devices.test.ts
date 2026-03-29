@@ -78,6 +78,9 @@ const deviceRow = {
   name: "Kiosk",
   hostname: "kiosk-1",
   pairingCode: null,
+  backupIntervalHours: 2,
+  maxRetainedBackups: 30,
+  validateProxyHash: true,
   lastSeen: null,
   createdAt: new Date("2025-01-01T00:00:00Z"),
 };

@@ -1,4 +1,4 @@
-import { Datagrid, DateField, List, ReferenceField, TextField } from "react-admin";
+import { BooleanField, Datagrid, DateField, List, ReferenceField, TextField } from "react-admin";
 import { OnlineStatusField } from "../../components/OnlineStatusField.js";
 import { RelativeTimeField } from "../../components/RelativeTimeField.js";
 import { DeviceFilterSidebar } from "./DeviceFilterSidebar.js";
@@ -15,6 +15,7 @@ export function DeviceList() {
         <ReferenceField source="userId" reference="users" link="show" emptyText="Unassigned">
           <TextField source="name" />
         </ReferenceField>
+        <BooleanField source="validateProxyHash" label="Proxy hash verification" />
         <DateField source="createdAt" label="Created" />
       </Datagrid>
     </List>

@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774537080406,
-      "tag": "0000_flaky_jack_murdock",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774723176905,
-      "tag": "0001_military_tombstone",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774740685584,
-      "tag": "0002_steep_stranger",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1774780937029,
-      "tag": "0003_curved_thunderball",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1774784554789,
-      "tag": "0004_clever_klaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1774792110735,
-      "tag": "0005_yellow_otto_octavius",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1774998000000,
-      "tag": "0006_unify_releases_schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1775001600000,
-      "tag": "0007_add_error_and_sha_unique",
+      "when": 1774815603020,
+      "tag": "0000_initial",
       "breakpoints": true
     }
   ]
