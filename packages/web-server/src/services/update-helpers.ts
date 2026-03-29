@@ -74,9 +74,13 @@ export async function fetchAndStreamToDevice(
       return { ok: false, error: `Release has no ${opts.releaseType} asset`, status: 404 };
     }
 
+    const fetchHeaders: Record<string, string> = { Accept: "application/octet-stream" };
+    if (process.env.GITHUB_TOKEN) {
+      fetchHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+    }
     upstream = await fetch(assetUrl, {
       signal: AbortSignal.timeout(opts.fetchTimeout),
-      headers: { Accept: "application/octet-stream" },
+      headers: fetchHeaders,
     });
   } catch {
     return { ok: false, error: "Failed to fetch image from upstream", status: 502 };

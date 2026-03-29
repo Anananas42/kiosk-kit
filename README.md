@@ -140,6 +140,8 @@ pnpm --filter web-server run db:migrate       # run migrations
 
 ## Environment
 
+See `.env.example` for local development setup. Copy it to `.env` and fill in the values.
+
 | Variable | Used by | Default | Description |
 |----------|---------|---------|-------------|
 | `PORT` | kiosk-server | `3001` | Kiosk API port |
@@ -148,6 +150,45 @@ pnpm --filter web-server run db:migrate       # run migrations
 | `GOOGLE_CLIENT_ID` | web-server | — | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | web-server | — | Google OAuth client secret |
 | `GOOGLE_REDIRECT_URI` | web-server | `http://localhost:3002/api/auth/google/callback` | OAuth redirect URI |
+| `TAILSCALE_OAUTH_CLIENT_ID` | web-server | — | Tailscale OAuth client ID |
+| `TAILSCALE_OAUTH_CLIENT_SECRET` | web-server | — | Tailscale OAuth client secret |
+| `TAILSCALE_TAILNET` | web-server | — | Tailscale tailnet name |
+| `TAILSCALE_WEBHOOK_SECRET` | web-server | — | HMAC secret for Tailscale device webhooks |
+| `GITHUB_WEBHOOK_SECRET` | web-server | — | HMAC secret for GitHub release webhooks |
+| `S3_ENDPOINT` | web-server | — | S3-compatible endpoint for device backups |
+| `S3_BUCKET` | web-server | — | S3 bucket name |
+| `S3_ACCESS_KEY_ID` | web-server | — | S3 access key |
+| `S3_SECRET_ACCESS_KEY` | web-server | — | S3 secret key |
+
+### Production secrets (Fly.io)
+
+These are set via `fly secrets set` and must be configured when deploying to a new environment:
+
+| Secret | Description |
+|--------|-------------|
+| `DATABASE_URL` | Postgres connection string (Neon) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `GOOGLE_REDIRECT_URI` | OAuth redirect URI (production URL) |
+| `TAILSCALE_OAUTH_CLIENT_ID` | Tailscale OAuth client ID |
+| `TAILSCALE_OAUTH_CLIENT_SECRET` | Tailscale OAuth client secret |
+| `TAILSCALE_TAILNET` | Tailscale tailnet name |
+| `TAILSCALE_WEBHOOK_SECRET` | Tailscale webhook HMAC secret (configured in Tailscale admin) |
+| `GITHUB_WEBHOOK_SECRET` | GitHub webhook HMAC secret (configured in repo Settings > Webhooks) |
+| `GITHUB_TOKEN` | Fine-grained PAT with `contents:read` on this repo (for downloading private release assets). Create at https://github.com/settings/personal-access-tokens/new — select only this repository, grant Contents read-only, no other permissions. |
+| `S3_ENDPOINT` | S3-compatible endpoint |
+| `S3_BUCKET` | S3 bucket name |
+| `S3_ACCESS_KEY_ID` | S3 access key |
+| `S3_SECRET_ACCESS_KEY` | S3 secret key |
+
+### GitHub Actions secrets
+
+Set in repo Settings > Secrets and variables > Actions:
+
+| Secret | Description |
+|--------|-------------|
+| `DATABASE_URL` | Postgres connection string (for migrations during deploy) |
+| `FLY_API_TOKEN` | Fly.io deploy token |
 
 ## Pi Deployment
 

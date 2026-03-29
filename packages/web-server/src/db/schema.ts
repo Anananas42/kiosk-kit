@@ -98,6 +98,8 @@ export const releases = pgTable(
   },
   (table) => [
     unique("releases_version_unique").on(table.version),
+    unique("releases_ota_sha256_unique").on(table.otaSha256),
+    unique("releases_app_sha256_unique").on(table.appSha256),
     check(
       "releases_at_least_one_asset",
       sql`${table.otaAssetUrl} IS NOT NULL OR ${table.appAssetUrl} IS NOT NULL`,
