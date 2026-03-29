@@ -57,6 +57,13 @@
       "when": 1775001600000,
       "tag": "0007_add_error_and_sha_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775088000000,
+      "tag": "0008_add_admin_manifest",
+      "breakpoints": true
     }
   ]
 }

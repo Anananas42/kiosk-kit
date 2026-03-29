@@ -88,6 +88,7 @@ export const releases = pgTable(
     otaSha256: text("ota_sha256"),
     appAssetUrl: text("app_asset_url"),
     appSha256: text("app_sha256"),
+    adminManifest: jsonb("admin_manifest").$type<Record<string, string>>(),
     releaseNotes: text("release_notes"),
     isPublished: boolean("is_published").notNull().default(false),
     isArchived: boolean("is_archived").notNull().default(false),

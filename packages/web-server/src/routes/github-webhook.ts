@@ -86,6 +86,12 @@ export function githubWebhookRoute(db: Db) {
     }
     const sha256 = sha256Match[1]!;
 
+    // Parse admin manifest from release body (CI writes <!-- admin-manifest:JSON --> into it)
+    const manifestMatch = payload.release.body?.match(/<!-- admin-manifest:([\s\S]*?) -->/);
+    const adminManifest = manifestMatch
+      ? (JSON.parse(manifestMatch[1]!) as Record<string, string>)
+      : null;
+
     // Upsert release record
     const [existing] = await db
       .select({ id: releases.id })
@@ -95,7 +101,11 @@ export function githubWebhookRoute(db: Db) {
     if (existing) {
       await db
         .update(releases)
-        .set({ appAssetUrl: tarball.browser_download_url, appSha256: sha256 })
+        .set({
+          appAssetUrl: tarball.browser_download_url,
+          appSha256: sha256,
+          ...(adminManifest && { adminManifest }),
+        })
         .where(eq(releases.version, version));
       console.log(`[github-webhook] Updated release ${version} with app bundle asset`);
     } else {
@@ -115,6 +125,7 @@ export function githubWebhookRoute(db: Db) {
         releaseType: "app",
         appAssetUrl: tarball.browser_download_url,
         appSha256: sha256,
+        adminManifest: adminManifest ?? undefined,
         isPublished: false,
         publishedBy: admin.id,
       });
