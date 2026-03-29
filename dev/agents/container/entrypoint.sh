@@ -181,6 +181,8 @@ start_log_tailer() {
 
 stop_log_tailer() {
   if [ -n "${LOG_TAILER_PID:-}" ]; then
+    # Kill children (tail, jq) first — killing only the subshell leaves them as orphans
+    pkill -P "$LOG_TAILER_PID" 2>/dev/null || true
     kill "$LOG_TAILER_PID" 2>/dev/null || true
     wait "$LOG_TAILER_PID" 2>/dev/null || true
   fi
