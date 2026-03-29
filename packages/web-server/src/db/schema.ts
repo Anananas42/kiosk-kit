@@ -1,6 +1,8 @@
 import { ReleaseType } from "@kioskkit/shared";
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -82,8 +84,10 @@ export const releases = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     version: text("version").notNull(),
     releaseType: text("release_type").notNull().default(ReleaseType.Ota),
-    githubAssetUrl: text("github_asset_url").notNull(),
-    sha256: text("sha256").notNull(),
+    otaAssetUrl: text("ota_asset_url"),
+    otaSha256: text("ota_sha256"),
+    appAssetUrl: text("app_asset_url"),
+    appSha256: text("app_sha256"),
     releaseNotes: text("release_notes"),
     isPublished: boolean("is_published").notNull().default(false),
     isArchived: boolean("is_archived").notNull().default(false),
@@ -92,7 +96,39 @@ export const releases = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [unique("releases_version_type_unique").on(table.version, table.releaseType)],
+  (table) => [
+    unique("releases_version_type_unique").on(table.version, table.releaseType),
+    check(
+      "releases_at_least_one_asset",
+      sql`${table.otaAssetUrl} IS NOT NULL OR ${table.appAssetUrl} IS NOT NULL`,
+    ),
+  ],
+);
+
+export const updateTypeEnum = pgEnum("update_type", ["full", "live"]);
+export const updateActionEnum = pgEnum("update_action", ["push", "install"]);
+export const updateResultEnum = pgEnum("update_result", ["pending", "success", "failed"]);
+
+export const deviceUpdateOps = pgTable(
+  "device_update_ops",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deviceId: uuid("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    updateType: updateTypeEnum("update_type").notNull(),
+    action: updateActionEnum("action").notNull(),
+    version: text("version").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    result: updateResultEnum("result").notNull().default("pending"),
+    triggeredBy: text("triggered_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("device_update_ops_device_started_idx").on(table.deviceId, table.startedAt.desc()),
+  ],
 );
 
 export const sessions = pgTable("sessions", {

@@ -7,6 +7,7 @@ import { otaRouter } from "./routers/ota.js";
 import { recordsRouter } from "./routers/records.js";
 import { reportsRouter } from "./routers/reports.js";
 import { settingsRouter } from "./routers/settings.js";
+import { updateRouter } from "./routers/update.js";
 import { router } from "./trpc.js";
 
 export const appRouter = router({
@@ -19,6 +20,7 @@ export const appRouter = router({
   ...networkRouter._def.procedures,
   ...otaRouter._def.procedures,
   ...appUpdateRouter._def.procedures,
+  ...updateRouter._def.procedures,
 });
 
 export type AppRouter = typeof appRouter;

@@ -43,6 +43,13 @@
       "when": 1774792110735,
       "tag": "0005_yellow_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774998000000,
+      "tag": "0006_unify_releases_schema",
+      "breakpoints": true
     }
   ]
 }

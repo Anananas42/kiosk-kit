@@ -1,23 +1,33 @@
-import { Create, required, SimpleForm, TextInput } from "react-admin";
+import { Create, SimpleForm, TextInput } from "react-admin";
 
 export function ReleaseCreate() {
   return (
     <Create redirect="show">
       <SimpleForm>
-        <TextInput source="version" validate={required()} helperText="e.g. 1.3.0" />
+        <TextInput source="version" isRequired helperText="e.g. 1.3.0" />
         <TextInput
-          source="githubAssetUrl"
-          label="GitHub Asset URL"
-          validate={required()}
+          source="otaAssetUrl"
+          label="OTA Asset URL"
           fullWidth
-          helperText="URL to the rootfs image asset on GitHub Releases"
+          helperText="URL to the rootfs image asset (required if no app bundle)"
         />
         <TextInput
-          source="sha256"
-          label="SHA256 Checksum"
-          validate={required()}
+          source="otaSha256"
+          label="OTA SHA256 Checksum"
           fullWidth
-          helperText="64-character hex digest of the image"
+          helperText="64-character hex digest of the OTA image"
+        />
+        <TextInput
+          source="appAssetUrl"
+          label="App Bundle URL"
+          fullWidth
+          helperText="URL to the app bundle asset (required if no OTA image)"
+        />
+        <TextInput
+          source="appSha256"
+          label="App Bundle SHA256 Checksum"
+          fullWidth
+          helperText="64-character hex digest of the app bundle"
         />
         <TextInput source="releaseNotes" label="Release Notes" multiline rows={4} fullWidth />
       </SimpleForm>

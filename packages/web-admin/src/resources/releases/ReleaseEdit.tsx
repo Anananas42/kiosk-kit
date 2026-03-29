@@ -5,8 +5,10 @@ export function ReleaseEdit() {
     <Edit redirect="show">
       <SimpleForm>
         <TextInput source="version" disabled />
-        <TextInput source="githubAssetUrl" label="GitHub Asset URL" disabled fullWidth />
-        <TextInput source="sha256" label="SHA256 Checksum" disabled fullWidth />
+        <TextInput source="otaAssetUrl" label="OTA Asset URL" disabled fullWidth />
+        <TextInput source="otaSha256" label="OTA SHA256 Checksum" disabled fullWidth />
+        <TextInput source="appAssetUrl" label="App Bundle URL" disabled fullWidth />
+        <TextInput source="appSha256" label="App Bundle SHA256 Checksum" disabled fullWidth />
         <TextInput source="releaseNotes" label="Release Notes" multiline rows={4} fullWidth />
         <BooleanInput
           source="isPublished"

@@ -44,7 +44,12 @@ export function otaProxyRoutes(db: Db) {
     }
 
     // Fetch the image from GitHub and stream it
-    const upstream = await fetch(release.githubAssetUrl, {
+    const assetUrl = release.otaAssetUrl;
+    if (!assetUrl) {
+      return c.json({ error: "Release has no OTA asset" }, 404);
+    }
+
+    const upstream = await fetch(assetUrl, {
       signal: AbortSignal.timeout(OTA_PROXY_TIMEOUT_MS),
       headers: { Accept: "application/octet-stream" },
     });
@@ -57,7 +62,7 @@ export function otaProxyRoutes(db: Db) {
       status: 200,
       headers: {
         "Content-Type": "application/octet-stream",
-        "X-Checksum-SHA256": release.sha256,
+        "X-Checksum-SHA256": release.otaSha256 ?? "",
         ...(upstream.headers.get("content-length")
           ? { "Content-Length": upstream.headers.get("content-length")! }
           : {}),

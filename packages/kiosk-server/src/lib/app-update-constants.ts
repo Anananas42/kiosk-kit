@@ -9,7 +9,7 @@ export const APP_UPDATE_VERSION_FILE = "/data/app-update/pending/version";
 // Must match the sudoers rule in deploy/pi/ansible/roles/kioskkit/templates/sudoers-app-update.j2
 export const APP_UPDATE_BUNDLE_FILE = "/data/app-update/pending/app-bundle.tar.gz";
 
-export const APP_VERSION_FILE = "/etc/kioskkit/app-version";
+export const APP_VERSION_FILE = "/etc/kioskkit/version";
 export const APP_PKG_VERSION_FILE = "/opt/kioskkit/current/package.json";
 export const APP_RELEASES_DIR = "/opt/kioskkit/releases";
 

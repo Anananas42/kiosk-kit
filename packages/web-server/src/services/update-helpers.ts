@@ -50,7 +50,7 @@ export type FetchAndStreamOptions = {
  * Fetch a release asset from GitHub and stream it to a device endpoint.
  *
  * 1. Looks up the release by version and type
- * 2. Fetches the asset from GitHub (githubAssetUrl)
+ * 2. Fetches the asset from the release URL (otaAssetUrl or appAssetUrl)
  * 3. Streams it to the device at the given endpoint path
  */
 export async function fetchAndStreamToDevice(
@@ -69,7 +69,12 @@ export async function fetchAndStreamToDevice(
   // Fetch asset from GitHub
   let upstream: Response;
   try {
-    upstream = await fetch(release.githubAssetUrl, {
+    const assetUrl = release.otaAssetUrl;
+    if (!assetUrl) {
+      return { ok: false, error: "Release has no OTA asset", status: 404 };
+    }
+
+    upstream = await fetch(assetUrl, {
       signal: AbortSignal.timeout(opts.fetchTimeout),
       headers: { Accept: "application/octet-stream" },
     });
@@ -96,7 +101,7 @@ export async function fetchAndStreamToDevice(
   // Populate sha256 from release
   for (const [key, value] of Object.entries(deviceHeaders)) {
     if (value === "__SHA256__") {
-      deviceHeaders[key] = release.sha256;
+      deviceHeaders[key] = release.otaSha256 ?? "";
     }
   }
 

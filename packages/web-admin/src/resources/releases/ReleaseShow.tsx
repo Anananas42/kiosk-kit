@@ -22,8 +22,10 @@ export function ReleaseShow() {
     <Show actions={<ReleaseShowActions />}>
       <SimpleShowLayout>
         <TextField source="version" />
-        <TextField source="githubAssetUrl" label="GitHub Asset URL" />
-        <TextField source="sha256" label="SHA256 Checksum" />
+        <TextField source="otaAssetUrl" label="OTA Asset URL" />
+        <TextField source="otaSha256" label="OTA SHA256 Checksum" />
+        <TextField source="appAssetUrl" label="App Bundle URL" />
+        <TextField source="appSha256" label="App Bundle SHA256 Checksum" />
         <TextField source="releaseNotes" label="Release Notes" />
         <BooleanField source="isPublished" label="Published" />
         <BooleanField source="isArchived" label="Archived" />

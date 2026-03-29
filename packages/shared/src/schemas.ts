@@ -472,11 +472,60 @@ export const AppUpdateStatusSchema = z.object({
 
 export type AppUpdateStatus = z.infer<typeof AppUpdateStatusSchema>;
 
+// ── Unified update schemas ──────────────────────────────────────────
+
+export enum UpdateStep {
+  Idle = "idle",
+  Uploading = "uploading",
+  Downloaded = "downloaded",
+  Installing = "installing",
+  RollingBack = "rolling_back",
+}
+
+export enum UpdateResult {
+  Success = "success",
+  FailedHealthCheck = "failed_health_check",
+  FailedUpload = "failed_upload",
+  FailedInstall = "failed_install",
+  RolledBack = "rolled_back",
+}
+
+export const UpdateStatusSchema = z.object({
+  currentVersion: z.string().nullable(),
+  status: z.nativeEnum(UpdateStep),
+  upload: z
+    .object({
+      version: z.string(),
+      progress: z.number(),
+      bytesReceived: z.number(),
+      bytesTotal: z.number(),
+    })
+    .nullable(),
+  lastResult: z.nativeEnum(UpdateResult).nullable(),
+  rollbackAvailable: z.boolean(),
+});
+
+export type UpdateStatus = z.infer<typeof UpdateStatusSchema>;
+
+export const UpdateTypeSchema = z.enum(["full", "live"]);
+export type UpdateType = z.infer<typeof UpdateTypeSchema>;
+
+export const DeviceUpdateInfoSchema = z.object({
+  type: z.enum(["full", "live", "up_to_date"]),
+  targetVersion: z.string().optional(),
+  releaseNotes: z.string().nullable().optional(),
+  publishedAt: z.string().optional(),
+});
+
+export type DeviceUpdateInfo = z.infer<typeof DeviceUpdateInfoSchema>;
+
 // ── Release schemas ─────────────────────────────────────────────────
 
 export const ReleaseInfoSchema = z.object({
   version: z.string(),
-  sha256: z.string(),
+  releaseType: z.string(),
+  otaSha256: z.string().nullable(),
+  appSha256: z.string().nullable(),
   releaseNotes: z.string().nullable(),
   publishedAt: z.string(),
 });
