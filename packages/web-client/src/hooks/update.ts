@@ -1,4 +1,3 @@
-import type { UpdateStatus } from "@kioskkit/shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   fetchDeviceUpdateStatus,
@@ -21,16 +20,13 @@ export function useUpdateInfo(deviceId: string) {
 export function useDeviceUpdateStatus(
   deviceId: string,
   options?: {
-    refetchInterval?:
-      | number
-      | false
-      | ((query: { state: { data: UpdateStatus | undefined } }) => number | false);
+    refetchInterval?: number | false;
   },
 ) {
   return useQuery({
     queryKey: queryKeys.deviceUpdateStatus(deviceId),
     queryFn: () => fetchDeviceUpdateStatus(deviceId),
-    refetchInterval: options?.refetchInterval as number | false | undefined,
+    refetchInterval: options?.refetchInterval,
   });
 }
 

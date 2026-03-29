@@ -11,8 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Spinner,
 } from "@kioskkit/ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useDeviceUpdateStatus,
   useServerUpdateStatus,
@@ -109,19 +110,18 @@ export function UpdateCard({ deviceId }: { deviceId: string }) {
 
   const { data: updateInfo, isLoading: infoLoading } = useUpdateInfo(deviceId);
 
+  const [pollInterval, setPollInterval] = useState<number | false>(false);
   const {
     data: deviceStatus,
     isLoading: deviceStatusLoading,
     error: deviceStatusError,
-  } = useDeviceUpdateStatus(deviceId, {
-    refetchInterval: (query) => {
-      const data = (query as { state: { data: UpdateStatus | undefined } }).state.data;
-      if (!data) return false;
-      if (data.status === UpdateStep.Uploading) return 3000;
-      if (data.status === UpdateStep.Installing) return 5000;
-      return false;
-    },
-  });
+  } = useDeviceUpdateStatus(deviceId, { refetchInterval: pollInterval });
+
+  useEffect(() => {
+    if (deviceStatus?.status === UpdateStep.Uploading) setPollInterval(3000);
+    else if (deviceStatus?.status === UpdateStep.Installing) setPollInterval(5000);
+    else setPollInterval(false);
+  }, [deviceStatus?.status]);
 
   const { data: serverStatus } = useServerUpdateStatus(deviceId, !!deviceStatusError);
 
@@ -151,21 +151,21 @@ export function UpdateCard({ deviceId }: { deviceId: string }) {
   const handlePush = () => {
     setActionError(null);
     updatePush.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Download failed"),
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("update.failed")),
     });
   };
 
   const handleInstall = () => {
     setActionError(null);
     updateInstall.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Install failed"),
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("update.failed")),
     });
   };
 
   const handleCancel = () => {
     setActionError(null);
     updateCancel.mutate(undefined, {
-      onError: (e) => setActionError(e instanceof Error ? e.message : "Cancel failed"),
+      onError: (e) => setActionError(e instanceof Error ? e.message : t("update.failed")),
     });
   };
 
@@ -173,7 +173,7 @@ export function UpdateCard({ deviceId }: { deviceId: string }) {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-4">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          <Spinner className="h-4 w-4" />
           <span className="text-muted-foreground text-sm">{t("update.checking")}</span>
         </CardContent>
       </Card>
@@ -303,7 +303,7 @@ export function UpdateCard({ deviceId }: { deviceId: string }) {
 
         {effectiveCardState === CardState.Installing && (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <Spinner className="h-4 w-4" />
             <p className="text-sm">
               {updateType === "full" ? t("update.rebooting") : t("update.installing")}
             </p>
@@ -312,7 +312,7 @@ export function UpdateCard({ deviceId }: { deviceId: string }) {
 
         {effectiveCardState === CardState.ServerInProgress && (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <Spinner className="h-4 w-4" />
             <p className="text-sm">{t("update.downloading")}</p>
           </div>
         )}
