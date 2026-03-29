@@ -1,3 +1,7 @@
+import dotenv from "dotenv";
+
+dotenv.config({ path: "../../.env" });
+
 import { ReleaseType } from "@kioskkit/shared";
 import { createDb } from "./db/index.js";
 import { backups, devices, releases, users } from "./db/schema.js";
