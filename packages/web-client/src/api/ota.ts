@@ -39,7 +39,15 @@ function normalizeOtaStatus(response: StatusResponse): OtaStatus | null {
   }
 
   if ("status" in response && response.status === "none") {
-    return null;
+    return {
+      status: OtaStep.Idle,
+      activeSlot: "A",
+      committedSlot: "A",
+      currentVersion: null,
+      upload: null,
+      lastUpdate: null,
+      lastResult: null,
+    };
   }
 
   const op = (response as { source: "server"; operation: ServerOperation }).operation;

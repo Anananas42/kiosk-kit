@@ -35,7 +35,14 @@ function normalizeAppStatus(response: StatusResponse): AppUpdateStatus | null {
   }
 
   if ("status" in response && response.status === "none") {
-    return null;
+    return {
+      status: AppUpdateStep.Idle,
+      currentVersion: null,
+      upload: null,
+      lastUpdate: null,
+      lastResult: null,
+      rollbackAvailable: false,
+    };
   }
 
   const op = (response as { source: "server"; operation: ServerOperation }).operation;
