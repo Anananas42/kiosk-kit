@@ -436,6 +436,7 @@ $NEEDS_ACTION"; then
     echo "==> Running testing agent for PR #$PR_NUMBER..."
     TESTING_CMD=$(cat .claude/commands/testing.md 2>/dev/null || echo "")
     if [ -n "$TESTING_CMD" ]; then
+      TESTING_BEFORE_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
       PR_BODY=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json body --jq .body 2>/dev/null || echo "")
       CHANGED_FILES=$(GH_TOKEN="${GH_TOKEN}" gh pr view "$PR_NUMBER" --json files --jq '.files[].path' 2>/dev/null || echo "")
 
@@ -459,17 +460,37 @@ TESTING_EOF
       )" || true
 
       echo "==> Testing agent finished for PR #$PR_NUMBER."
+
+      # Capture the tester's comment(s) and hand them to the main agent.
+      # Both agents post as kiosk-kit-agent[bot], so the loop's normal comment
+      # detection (which filters bot comments) will never see tester output.
+      GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
+      TESTER_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" \
+        --jq "[.[] | select(.user.login == \"kiosk-kit-agent[bot]\" and .created_at > \"$TESTING_BEFORE_TIMESTAMP\")] | map({id, body})" 2>/dev/null || echo "[]")
+      TESTER_COMMENT_COUNT=$(echo "$TESTER_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+
+      if [ "$TESTER_COMMENT_COUNT" -gt 0 ]; then
+        echo "==> Handing $TESTER_COMMENT_COUNT tester comment(s) to the main agent..."
+        TESTER_COMMENT_IDS=$(echo "$TESTER_COMMENTS" | jq -r '.[].id' 2>/dev/null || echo "")
+
+        ATTEMPT_COUNT=$((ATTEMPT_COUNT + 1))
+        if [ "$ATTEMPT_COUNT" -le "$MAX_ATTEMPTS" ]; then
+          resume_claude "The testing agent ran on PR #$PR_NUMBER and posted the following results:
+
+$TESTER_COMMENTS
+
+Review the testing results. If there are real failures that need code changes, fix them, commit, and push. If the results look fine (all passing, or failures are not actionable), leave a thumbs up reaction on each tester comment using: gh api repos/Anananas42/kiosk-kit/issues/comments/COMMENT_ID/reactions -f content='+1'
+
+Tester comment IDs: $TESTER_COMMENT_IDS" || true
+        fi
+
+        LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      fi
     else
       echo "==> Warning: .claude/commands/testing.md not found. Skipping testing agent."
     fi
 
     touch "$TESTING_DONE_MARKER"
-
-    # Re-count comments after testing agent (it may have posted comments)
-    GH_TOKEN=$(./dev/agents/scripts/github-app-token.sh)
-    SEEN_PR_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
-    SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
-    LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   fi
 
   echo "==> Sleeping ${POLL_INTERVAL}s..."
