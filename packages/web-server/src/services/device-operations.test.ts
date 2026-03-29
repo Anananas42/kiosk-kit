@@ -6,6 +6,7 @@ import {
   failOperation,
   formatOperationResponse,
   getLatestOperation,
+  OperationType,
   startOperation,
 } from "./device-operations.js";
 
@@ -107,7 +108,7 @@ describe("device-operations service", () => {
 
       const { operation, isNew } = await startOperation(db, {
         deviceId: DEVICE_ID,
-        type: "backup",
+        type: OperationType.Backup,
         staleThresholdMs: 5 * 60 * 1000,
       });
 
@@ -121,7 +122,7 @@ describe("device-operations service", () => {
 
       const { operation, isNew } = await startOperation(db, {
         deviceId: DEVICE_ID,
-        type: "backup",
+        type: OperationType.Backup,
         staleThresholdMs: 5 * 60 * 1000,
       });
 
@@ -141,7 +142,7 @@ describe("device-operations service", () => {
 
       const { operation, isNew } = await startOperation(db, {
         deviceId: DEVICE_ID,
-        type: "backup",
+        type: OperationType.Backup,
         staleThresholdMs: 5 * 60 * 1000,
       });
 
@@ -156,7 +157,7 @@ describe("device-operations service", () => {
 
       const { operation } = await startOperation(db, {
         deviceId: DEVICE_ID,
-        type: "restore",
+        type: OperationType.Restore,
         metadata: { backupId: "abc-123" },
         staleThresholdMs: 5 * 60 * 1000,
       });
@@ -198,7 +199,7 @@ describe("device-operations service", () => {
       const op = makeOp();
       const db = createMockDb({ selectResult: [op] });
 
-      const result = await getLatestOperation(db, DEVICE_ID, "backup");
+      const result = await getLatestOperation(db, DEVICE_ID, OperationType.Backup);
 
       expect(result).toEqual(op);
     });
@@ -206,7 +207,7 @@ describe("device-operations service", () => {
     it("returns null when no operations exist", async () => {
       const db = createMockDb({ selectResult: [] });
 
-      const result = await getLatestOperation(db, DEVICE_ID, "backup");
+      const result = await getLatestOperation(db, DEVICE_ID, OperationType.Backup);
 
       expect(result).toBeNull();
     });

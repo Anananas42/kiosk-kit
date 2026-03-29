@@ -6,7 +6,7 @@ import { fetchDeviceProxy } from "../services/device-network.js";
 import {
   completeOperation,
   failOperation,
-  OP_TYPE_BACKUP,
+  OperationType,
   startOperation,
 } from "../services/device-operations.js";
 import { deleteFile, uploadFile } from "../services/s3.js";
@@ -85,7 +85,7 @@ export async function pullBackupsFromAllDevices(db: Db): Promise<void> {
   for (const device of reachable) {
     const { operation: op } = await startOperation(db, {
       deviceId: device.id,
-      type: OP_TYPE_BACKUP,
+      type: OperationType.Backup,
       staleThresholdMs: BACKUP_STALE_OP_MS,
     });
 

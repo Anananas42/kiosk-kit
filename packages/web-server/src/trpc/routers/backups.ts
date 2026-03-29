@@ -14,8 +14,7 @@ import {
   completeOperation,
   failOperation,
   formatOperationResponse,
-  OP_TYPE_BACKUP,
-  OP_TYPE_RESTORE,
+  OperationType,
   startOperation,
 } from "../../services/device-operations.js";
 import { downloadFile, getSignedDownloadUrl } from "../../services/s3.js";
@@ -114,7 +113,7 @@ export const backupsRouter = router({
       // Track the restore operation
       const { operation: op } = await startOperation(ctx.db, {
         deviceId: device.id,
-        type: OP_TYPE_RESTORE,
+        type: OperationType.Restore,
         metadata: { backupId: backup.id },
         staleThresholdMs: RESTORE_STALE_OP_MS,
       });
@@ -188,7 +187,7 @@ export const backupsRouter = router({
         .where(
           and(
             eq(deviceOperations.deviceId, input.deviceId),
-            inArray(deviceOperations.type, [OP_TYPE_BACKUP, OP_TYPE_RESTORE]),
+            inArray(deviceOperations.type, [OperationType.Backup, OperationType.Restore]),
           ),
         )
         .orderBy(desc(deviceOperations.startedAt))
@@ -221,7 +220,7 @@ export const backupsRouter = router({
 
       const { operation: op, isNew } = await startOperation(ctx.db, {
         deviceId: device.id,
-        type: OP_TYPE_BACKUP,
+        type: OperationType.Backup,
         staleThresholdMs: BACKUP_STALE_OP_MS,
       });
 

@@ -2,31 +2,20 @@ import { and, desc, eq, lt, or } from "drizzle-orm";
 import type { Db } from "../db/index.js";
 import { deviceOperations } from "../db/schema.js";
 
-// ── Operation types ─────────────────────────────────────────────────
-export const OP_TYPE_BACKUP = "backup" as const;
-export const OP_TYPE_RESTORE = "restore" as const;
-export const OP_TYPE_OTA_PUSH = "ota_push" as const;
-export const OP_TYPE_OTA_INSTALL = "ota_install" as const;
-export const OP_TYPE_APP_PUSH = "app_push" as const;
-export const OP_TYPE_APP_INSTALL = "app_install" as const;
+export enum OperationType {
+  Backup = "backup",
+  Restore = "restore",
+  OtaPush = "ota_push",
+  OtaInstall = "ota_install",
+  AppPush = "app_push",
+  AppInstall = "app_install",
+}
 
-export type OperationType =
-  | typeof OP_TYPE_BACKUP
-  | typeof OP_TYPE_RESTORE
-  | typeof OP_TYPE_OTA_PUSH
-  | typeof OP_TYPE_OTA_INSTALL
-  | typeof OP_TYPE_APP_PUSH
-  | typeof OP_TYPE_APP_INSTALL;
-
-// ── Operation statuses ──────────────────────────────────────────────
-export const OP_STATUS_IN_PROGRESS = "in_progress" as const;
-export const OP_STATUS_COMPLETED = "completed" as const;
-export const OP_STATUS_FAILED = "failed" as const;
-
-export type OperationStatus =
-  | typeof OP_STATUS_IN_PROGRESS
-  | typeof OP_STATUS_COMPLETED
-  | typeof OP_STATUS_FAILED;
+export enum OperationStatus {
+  InProgress = "in_progress",
+  Completed = "completed",
+  Failed = "failed",
+}
 
 export type OperationRecord = typeof deviceOperations.$inferSelect;
 
@@ -82,7 +71,7 @@ export async function startOperation(
       and(
         eq(deviceOperations.deviceId, opts.deviceId),
         eq(deviceOperations.type, opts.type),
-        eq(deviceOperations.status, OP_STATUS_IN_PROGRESS),
+        eq(deviceOperations.status, OperationStatus.InProgress),
       ),
     )
     .orderBy(desc(deviceOperations.startedAt))
@@ -96,7 +85,11 @@ export async function startOperation(
     // Stale — mark it failed
     await db
       .update(deviceOperations)
-      .set({ status: OP_STATUS_FAILED, completedAt: new Date(), error: "Operation timed out" })
+      .set({
+        status: OperationStatus.Failed,
+        completedAt: new Date(),
+        error: "Operation timed out",
+      })
       .where(eq(deviceOperations.id, existing.id));
   }
 
@@ -105,7 +98,7 @@ export async function startOperation(
     .values({
       deviceId: opts.deviceId,
       type: opts.type,
-      status: OP_STATUS_IN_PROGRESS,
+      status: OperationStatus.InProgress,
       metadata: opts.metadata ?? null,
     })
     .returning();
@@ -117,7 +110,7 @@ export async function startOperation(
 export async function completeOperation(db: Db, operationId: string) {
   await db
     .update(deviceOperations)
-    .set({ status: OP_STATUS_COMPLETED, completedAt: new Date() })
+    .set({ status: OperationStatus.Completed, completedAt: new Date() })
     .where(eq(deviceOperations.id, operationId));
 }
 
@@ -125,7 +118,7 @@ export async function completeOperation(db: Db, operationId: string) {
 export async function failOperation(db: Db, operationId: string, error: string) {
   await db
     .update(deviceOperations)
-    .set({ status: OP_STATUS_FAILED, completedAt: new Date(), error })
+    .set({ status: OperationStatus.Failed, completedAt: new Date(), error })
     .where(eq(deviceOperations.id, operationId));
 }
 
@@ -155,8 +148,8 @@ export async function cleanupStale(db: Db, thresholds: Record<string, number>): 
 
   const stale = await db
     .update(deviceOperations)
-    .set({ status: OP_STATUS_FAILED, completedAt: new Date(), error: "Operation timed out" })
-    .where(and(eq(deviceOperations.status, OP_STATUS_IN_PROGRESS), or(...conditions)))
+    .set({ status: OperationStatus.Failed, completedAt: new Date(), error: "Operation timed out" })
+    .where(and(eq(deviceOperations.status, OperationStatus.InProgress), or(...conditions)))
     .returning({ id: deviceOperations.id });
 
   return stale.length;

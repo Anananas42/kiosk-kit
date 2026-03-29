@@ -9,15 +9,7 @@ import {
 } from "./config.js";
 import { createDb } from "./db/index.js";
 import { startBackupScheduler } from "./services/backup-scheduler.js";
-import {
-  cleanupStale,
-  OP_TYPE_APP_INSTALL,
-  OP_TYPE_APP_PUSH,
-  OP_TYPE_BACKUP,
-  OP_TYPE_OTA_INSTALL,
-  OP_TYPE_OTA_PUSH,
-  OP_TYPE_RESTORE,
-} from "./services/device-operations.js";
+import { cleanupStale, OperationType } from "./services/device-operations.js";
 
 const db = createDb(process.env.DATABASE_URL!);
 
@@ -42,12 +34,12 @@ serve({ fetch: app.fetch, port }, (info) => {
 
 // Per-type stale thresholds for cleanup
 const staleThresholds: Record<string, number> = {
-  [OP_TYPE_BACKUP]: BACKUP_STALE_OP_MS,
-  [OP_TYPE_RESTORE]: RESTORE_STALE_OP_MS,
-  [OP_TYPE_OTA_PUSH]: UPDATE_STALE_OP_MS,
-  [OP_TYPE_OTA_INSTALL]: UPDATE_STALE_OP_MS,
-  [OP_TYPE_APP_PUSH]: UPDATE_STALE_OP_MS,
-  [OP_TYPE_APP_INSTALL]: UPDATE_STALE_OP_MS,
+  [OperationType.Backup]: BACKUP_STALE_OP_MS,
+  [OperationType.Restore]: RESTORE_STALE_OP_MS,
+  [OperationType.OtaPush]: UPDATE_STALE_OP_MS,
+  [OperationType.OtaInstall]: UPDATE_STALE_OP_MS,
+  [OperationType.AppPush]: UPDATE_STALE_OP_MS,
+  [OperationType.AppInstall]: UPDATE_STALE_OP_MS,
 };
 
 // Clean up stale device operations on startup, then periodically
