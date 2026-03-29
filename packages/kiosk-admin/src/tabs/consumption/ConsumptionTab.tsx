@@ -24,12 +24,12 @@ export function ConsumptionTab() {
 
   const { data: buyersData, isLoading: buyersLoading } = useQuery({
     queryKey: queryKeys.buyers.list(),
-    queryFn: () => trpc["buyers.list"].query(),
+    queryFn: () => trpc["buyers.list"].query().then((r) => r.buyers),
   });
 
   const locale = settings?.locale ?? "cs";
   const currency = settings?.currency ?? "CZK";
-  const buyers = buyersData?.buyers ?? [];
+  const buyers = buyersData ?? [];
   const selectedBuyer = buyer === "all" ? undefined : Number(buyer);
 
   if (buyersLoading) {
