@@ -1,6 +1,8 @@
 export {
   Accordion,
+  AccordionChevron,
   AccordionContent,
+  AccordionHeader,
   AccordionItem,
   AccordionTrigger,
 } from "./components/ui/accordion";

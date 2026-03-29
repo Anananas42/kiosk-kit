@@ -117,23 +117,14 @@ function InlineEdit({
   }
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: uses div instead of button to allow nesting inside other interactive elements (e.g. AccordionTrigger)
-    <div
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      aria-disabled={disabled || undefined}
+    <button
+      type="button"
+      disabled={disabled}
       className={cn(
         "group hover:bg-muted/50 flex w-full cursor-pointer items-center gap-2 rounded-md border border-transparent px-3 py-1 text-left",
-        disabled && "pointer-events-none opacity-50",
         className,
       )}
       onClick={handleEdit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleEdit();
-        }
-      }}
     >
       <span className="flex-1 truncate">
         {currentValue || <span className="text-muted-foreground italic">Click to edit...</span>}
@@ -141,7 +132,7 @@ function InlineEdit({
       {!disabled && (
         <Pencil className="text-muted-foreground h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
       )}
-    </div>
+    </button>
   );
 }
 
