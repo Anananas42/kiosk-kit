@@ -97,9 +97,9 @@ export function CategoryTrigger({ category, isFirst, isLast }: CategoryTriggerPr
             </Button>
           </span>
 
-          {category.preorder && <Badge variant="secondary">preorder</Badge>}
-
           <div className="flex-1" />
+
+          {category.preorder && <Badge variant="secondary">preorder</Badge>}
 
           <ChevronDown className="chevron-icon size-4 shrink-0 text-muted-foreground transition-transform duration-200" />
         </div>
