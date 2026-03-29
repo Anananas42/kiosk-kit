@@ -343,6 +343,12 @@ while true; do
       HAS_REVIEWER=true
       rm -f "/tmp/.reviewing-done-${PR_NUMBER}"
     fi
+    # Mark command comments as seen so they don't re-trigger on the next iteration.
+    # Don't update LAST_ACTION_TIMESTAMP here — the feedback query still needs
+    # to see non-command comments from the same window.
+    if [ "$HAS_TESTER" = true ] || [ "$HAS_REVIEWER" = true ]; then
+      SEEN_ISSUE_COMMENTS=$ISSUE_COMMENTS
+    fi
   fi
 
   NEEDS_ACTION=""
@@ -368,7 +374,7 @@ Fix the failing checks, commit, and push."
   if [ "$REVIEW_DECISION" = "CHANGES_REQUESTED" ] || [ "$PR_COMMENTS" -gt "$SEEN_PR_COMMENTS" ] || [ "$ISSUE_COMMENTS" -gt "$SEEN_ISSUE_COMMENTS" ]; then
     # Fetch comments newer than LAST_ACTION_TIMESTAMP to avoid re-processing old ones
     REVIEW_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\"))]" 2>/dev/null || echo "[]")
-    CONVERSATION_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\"))]" 2>/dev/null || echo "[]")
+    CONVERSATION_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and (.created_at > \"$LAST_ACTION_TIMESTAMP\" or .updated_at > \"$LAST_ACTION_TIMESTAMP\") and (.body | test(\"^\\\\s*@(tester|reviewer|continue)\\\\s*$\") | not))]" 2>/dev/null || echo "[]")
     # Fetch review bodies (Changes Requested reviews have a body that doesn't appear in comments APIs)
     REVIEW_BODIES=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/pulls/$PR_NUMBER/reviews" --jq "[.[] | select(.user.login != \"kiosk-kit-agent[bot]\" and .state == \"CHANGES_REQUESTED\" and (.submitted_at > \"$LAST_ACTION_TIMESTAMP\") and (.body | length > 0))]" 2>/dev/null || echo "[]")
 
@@ -503,6 +509,9 @@ Tester comment IDs: $TESTER_COMMENT_IDS" || true
       echo "==> Warning: .claude/commands/testing.md not found. Skipping testing agent."
     fi
 
+    # Always advance timestamps after testing agent so its activity isn't re-processed
+    SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+    LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     touch "$TESTING_DONE_MARKER"
   fi
 
@@ -574,6 +583,9 @@ Reviewer comment IDs: $REVIEWER_COMMENT_IDS" || true
       echo "==> Warning: .claude/commands/reviewing.md not found. Skipping reviewing agent."
     fi
 
+    # Always advance timestamps after reviewing agent so its activity isn't re-processed
+    SEEN_ISSUE_COMMENTS=$(GH_TOKEN="${GH_TOKEN}" gh api "repos/Anananas42/kiosk-kit/issues/$PR_NUMBER/comments" --jq 'map(select(.user.login != "kiosk-kit-agent[bot]")) | length' 2>/dev/null || echo "0")
+    LAST_ACTION_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     touch "$REVIEWING_DONE_MARKER"
   fi
 
