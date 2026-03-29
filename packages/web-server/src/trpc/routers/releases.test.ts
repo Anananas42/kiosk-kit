@@ -51,7 +51,7 @@ function createMockDb(returnValue: unknown[] = [], insertReturnValue?: unknown[]
   const terminal = Object.assign(Promise.resolve(returnValue), {
     returning: vi.fn().mockResolvedValue(returnValue),
   });
-  const chainable = {
+  const chainable = Object.assign(Promise.resolve(returnValue), {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -62,9 +62,7 @@ function createMockDb(returnValue: unknown[] = [], insertReturnValue?: unknown[]
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue(insertResult),
-    // biome-ignore lint/suspicious/noThenProperty: mock db needs thenable for drizzle query chain
-    then: (resolve: (v: unknown) => void) => Promise.resolve(returnValue).then(resolve),
-  };
+  });
   return chainable as unknown as Db;
 }
 

@@ -97,7 +97,7 @@ export const releases = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    unique("releases_version_type_unique").on(table.version, table.releaseType),
+    unique("releases_version_unique").on(table.version),
     check(
       "releases_at_least_one_asset",
       sql`${table.otaAssetUrl} IS NOT NULL OR ${table.appAssetUrl} IS NOT NULL`,

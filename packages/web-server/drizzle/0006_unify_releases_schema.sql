@@ -10,6 +10,10 @@ ALTER TABLE "releases" ALTER COLUMN "ota_sha256" DROP NOT NULL;--> statement-bre
 ALTER TABLE "releases" ADD COLUMN "app_asset_url" text;--> statement-breakpoint
 ALTER TABLE "releases" ADD COLUMN "app_sha256" text;--> statement-breakpoint
 
+-- Replace (version, release_type) unique with version-only unique
+ALTER TABLE "releases" DROP CONSTRAINT IF EXISTS "releases_version_type_unique";--> statement-breakpoint
+ALTER TABLE "releases" ADD CONSTRAINT "releases_version_unique" UNIQUE ("version");--> statement-breakpoint
+
 -- At least one asset must be present
 ALTER TABLE "releases" ADD CONSTRAINT "releases_at_least_one_asset" CHECK ("releases"."ota_asset_url" IS NOT NULL OR "releases"."app_asset_url" IS NOT NULL);--> statement-breakpoint
 
