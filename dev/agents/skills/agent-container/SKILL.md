@@ -205,10 +205,11 @@ To add new Postgres seed data, edit `packages/web-server/src/seed-test-user.ts`.
 
 ### SQLite (kiosk-server)
 
-kiosk-server uses SQLite and seeds on first run via `packages/kiosk-server/src/seed.ts`:
+On container start, the entrypoint automatically seeds the kiosk-server SQLite database via `pnpm --filter @kioskkit/kiosk-server seed`. The seed is idempotent (skips if data exists). Seeded data:
 - 5 buyers (labels 101–103, 201–202)
-- 3 catalog categories (Drinks, Snacks, Pastries) with items
+- 3 catalog categories (Drinks, Snacks, Pastries) with 9 items
 - Default kiosk settings (locale, currency, etc.)
+- 18 transaction records spread across all 5 buyers and 7 days, with varying items and quantities (1–3 per record). Record IDs are prefixed `seed-record-`.
 
 To drop and re-seed the kiosk-server SQLite database:
 
