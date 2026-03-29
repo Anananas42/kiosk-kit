@@ -1,7 +1,8 @@
 import type { Buyer, ConsumptionSummaryRow } from "@kioskkit/shared";
 import { Spinner, Table, TableBody } from "@kioskkit/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import type { MutableRefObject } from "react";
+import { useCallback, useMemo } from "react";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
 import { SummaryFooter } from "./SummaryFooter.js";
@@ -15,6 +16,7 @@ interface SummaryTableProps {
   buyers: Buyer[];
   locale: string;
   currency: string;
+  csvRef: MutableRefObject<(() => string[][]) | null>;
 }
 
 export function SummaryTable({
@@ -24,13 +26,14 @@ export function SummaryTable({
   buyers,
   locale,
   currency,
+  csvRef,
 }: SummaryTableProps) {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.consumption.summary(from, to || undefined),
     queryFn: () => trpc["reports.consumption"].query({ from, to: to || undefined }),
   });
 
-  const { summary, buyerTotals, activeBuyers } = useMemo(() => {
+  const { summary, buyerTotals, activeBuyers, buyerGrandTotals } = useMemo(() => {
     const rawSummary = data?.summary ?? [];
     const rawBuyerTotals = data?.buyerTotals ?? [];
 
@@ -49,8 +52,70 @@ export function SummaryTable({
     }
     const active = buyers.filter((b) => activeBuyerIds.has(b.id));
 
-    return { summary: filtered, buyerTotals: filteredBuyerTotals, activeBuyers: active };
+    const grandTotals = new Map<number, { total: number; count: number }>();
+    for (const row of filtered) {
+      for (const [buyerId, agg] of Object.entries(row.byBuyer)) {
+        const id = Number(buyerId);
+        const existing = grandTotals.get(id) ?? { total: 0, count: 0 };
+        grandTotals.set(id, {
+          total: existing.total + agg.total,
+          count: existing.count + agg.count,
+        });
+      }
+    }
+
+    return {
+      summary: filtered,
+      buyerTotals: filteredBuyerTotals,
+      activeBuyers: active,
+      buyerGrandTotals: grandTotals,
+    };
   }, [data, selectedBuyer, buyers]);
+
+  const getCsvData = useCallback((): string[][] => {
+    const headers = [
+      "Item",
+      "Quantity",
+      "Unit Price",
+      "Tax Rate",
+      ...activeBuyers.map((b) => b.label),
+      "Grand Total",
+    ];
+    const rows: string[][] = [headers];
+
+    for (const row of summary) {
+      const cells = [
+        row.item,
+        row.quantity ?? "",
+        row.unitPrice != null ? String(row.unitPrice) : "",
+        row.taxRate ? `${row.taxRate}%` : "",
+        ...activeBuyers.map((b) => {
+          const agg = row.byBuyer[String(b.id)];
+          return agg ? `${agg.total} (${agg.count})` : "";
+        }),
+        `${row.grandTotal} (${row.totalCount})`,
+      ];
+      rows.push(cells);
+    }
+
+    const grandTotal = summary.reduce((sum, r) => sum + r.grandTotal, 0);
+    const grandCount = summary.reduce((sum, r) => sum + r.totalCount, 0);
+    rows.push([
+      "Grand Total",
+      "",
+      "",
+      "",
+      ...activeBuyers.map((b) => {
+        const agg = buyerGrandTotals.get(b.id);
+        return agg ? `${agg.total} (${agg.count})` : "";
+      }),
+      `${grandTotal} (${grandCount})`,
+    ]);
+
+    return rows;
+  }, [summary, activeBuyers, buyerGrandTotals]);
+
+  csvRef.current = getCsvData;
 
   if (isLoading) {
     return (
@@ -84,6 +149,7 @@ export function SummaryTable({
         <SummaryFooter
           summary={summary}
           buyerTotals={buyerTotals}
+          buyerGrandTotals={buyerGrandTotals}
           buyers={activeBuyers}
           locale={locale}
           currency={currency}

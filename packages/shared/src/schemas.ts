@@ -265,6 +265,11 @@ export const AdminItemUpdateSchema = z.object({
   sortOrder: z.number().int().optional().default(0),
 });
 
+export const AdminMoveSchema = z.object({
+  id: z.number().int(),
+  direction: z.enum(["up", "down"]),
+});
+
 export const AdminItemDeleteSchema = z.object({
   id: z.number().int(),
 });

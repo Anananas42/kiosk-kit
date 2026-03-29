@@ -1,6 +1,6 @@
-import { Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from "@kioskkit/ui";
+import { ExportCsvButton, Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from "@kioskkit/ui";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { queryKeys } from "../../lib/query.js";
 import { trpc } from "../../trpc.js";
 import { DateFilterBar } from "./DateFilterBar.js";
@@ -12,10 +12,18 @@ function getStartOfMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+function getCsvFilename(tab: string, from: string, to: string): string {
+  const endDate = to || new Date().toISOString().slice(0, 10);
+  const prefix = tab === "logs" ? "consumption-logs" : "consumption-summary";
+  return `${prefix}_${from}_${endDate}.csv`;
+}
+
 export function ConsumptionTab() {
   const [from, setFrom] = useState(getStartOfMonth);
   const [to, setTo] = useState("");
   const [buyer, setBuyer] = useState("all");
+  const [activeTab, setActiveTab] = useState("summary");
+  const csvRef = useRef<(() => string[][]) | null>(null);
 
   const { data: settings } = useQuery({
     queryKey: queryKeys.settings.get(),
@@ -24,12 +32,12 @@ export function ConsumptionTab() {
 
   const { data: buyersData, isLoading: buyersLoading } = useQuery({
     queryKey: queryKeys.buyers.list(),
-    queryFn: () => trpc["buyers.list"].query(),
+    queryFn: () => trpc["buyers.list"].query().then((r) => r.buyers),
   });
 
   const locale = settings?.locale ?? "cs";
   const currency = settings?.currency ?? "CZK";
-  const buyers = buyersData?.buyers ?? [];
+  const buyers = buyersData ?? [];
   const selectedBuyer = buyer === "all" ? undefined : Number(buyer);
 
   if (buyersLoading) {
@@ -52,11 +60,17 @@ export function ConsumptionTab() {
         onBuyerChange={setBuyer}
       />
 
-      <Tabs defaultValue="summary">
-        <TabsList>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="summary" onValueChange={setActiveTab}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
+          </TabsList>
+          <ExportCsvButton
+            getData={() => csvRef.current?.() ?? []}
+            filename={getCsvFilename(activeTab, from, to)}
+          />
+        </div>
 
         <TabsContent value="summary">
           <SummaryTable
@@ -66,6 +80,7 @@ export function ConsumptionTab() {
             buyers={buyers}
             locale={locale}
             currency={currency}
+            csvRef={csvRef}
           />
         </TabsContent>
 
@@ -77,6 +92,7 @@ export function ConsumptionTab() {
             buyers={buyers}
             locale={locale}
             currency={currency}
+            csvRef={csvRef}
           />
         </TabsContent>
       </Tabs>

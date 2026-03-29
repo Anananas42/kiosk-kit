@@ -8,6 +8,7 @@ import {
   AdminItemCreateSchema,
   AdminItemDeleteSchema,
   AdminItemUpdateSchema,
+  AdminMoveSchema,
   DEFAULT_KIOSK_SETTINGS,
   KioskSettingsSchema,
   KioskSettingsUpdateSchema,
@@ -77,6 +78,14 @@ export const adminRouter = router({
       return { ok: true };
     }),
 
+  "admin.catalog.moveCategory": baseProcedure
+    .input(AdminMoveSchema)
+    .output(OkSchema)
+    .mutation(({ ctx, input }) => {
+      ctx.store.moveCategory(input.id, input.direction);
+      return { ok: true };
+    }),
+
   // ── Catalog items ───────────────────────────────────────────────────
   "admin.catalog.createItem": baseProcedure
     .input(AdminItemCreateSchema)
@@ -105,6 +114,14 @@ export const adminRouter = router({
         input.taxRate,
         input.sortOrder,
       );
+      return { ok: true };
+    }),
+
+  "admin.catalog.moveItem": baseProcedure
+    .input(AdminMoveSchema)
+    .output(OkSchema)
+    .mutation(({ ctx, input }) => {
+      ctx.store.moveItem(input.id, input.direction);
       return { ok: true };
     }),
 

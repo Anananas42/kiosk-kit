@@ -1,7 +1,7 @@
 import type { CatalogCategory } from "@kioskkit/shared";
 import { Button } from "@kioskkit/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "../../components/ConfirmDialog.js";
@@ -10,26 +10,23 @@ import { trpc } from "../../trpc.js";
 
 interface CategoryActionsProps {
   category: CatalogCategory;
-  isFirst: boolean;
-  isLast: boolean;
-  adjacentCategory: { prev?: CatalogCategory; next?: CatalogCategory };
 }
 
-export function CategoryActions({
-  category,
-  isFirst,
-  isLast,
-  adjacentCategory,
-}: CategoryActionsProps) {
+export function CategoryActions({ category }: CategoryActionsProps) {
   const queryClient = useQueryClient();
   const invalidateCatalog = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.catalog.list() });
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const updateMutation = useMutation({
-    mutationFn: (input: { id: number; name: string; preorder: boolean; sortOrder: number }) =>
-      trpc["admin.catalog.updateCategory"].mutate(input),
+  const togglePreorderMutation = useMutation({
+    mutationFn: () =>
+      trpc["admin.catalog.updateCategory"].mutate({
+        id: Number(category.id),
+        name: category.name,
+        preorder: !category.preorder,
+        sortOrder: category.sortOrder,
+      }),
     onSuccess: () => {
       invalidateCatalog();
     },
@@ -45,63 +42,18 @@ export function CategoryActions({
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function handleMoveUp() {
-    const prev = adjacentCategory.prev;
-    if (!prev) return;
-    updateMutation.mutate({
-      id: Number(category.id),
-      name: category.name,
-      preorder: category.preorder,
-      sortOrder: prev.sortOrder,
-    });
-    updateMutation.mutate({
-      id: Number(prev.id),
-      name: prev.name,
-      preorder: prev.preorder,
-      sortOrder: category.sortOrder,
-    });
-  }
-
-  function handleMoveDown() {
-    const next = adjacentCategory.next;
-    if (!next) return;
-    updateMutation.mutate({
-      id: Number(category.id),
-      name: category.name,
-      preorder: category.preorder,
-      sortOrder: next.sortOrder,
-    });
-    updateMutation.mutate({
-      id: Number(next.id),
-      name: next.name,
-      preorder: next.preorder,
-      sortOrder: category.sortOrder,
-    });
-  }
-
   return (
     <div className="flex items-center gap-1 border-t border-border/50 pt-3 mt-2">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        onClick={handleMoveUp}
-        disabled={isFirst || updateMutation.isPending}
         className="h-7 gap-1 text-xs"
+        onClick={() => togglePreorderMutation.mutate()}
+        disabled={togglePreorderMutation.isPending}
       >
-        <ArrowUp className="size-3" />
-        Move up
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={handleMoveDown}
-        disabled={isLast || updateMutation.isPending}
-        className="h-7 gap-1 text-xs"
-      >
-        <ArrowDown className="size-3" />
-        Move down
+        <RefreshCw className="size-3" />
+        {category.preorder ? "Switch to standard" : "Switch to preorder"}
       </Button>
 
       <div className="flex-1" />
