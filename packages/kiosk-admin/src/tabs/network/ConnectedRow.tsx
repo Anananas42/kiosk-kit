@@ -20,11 +20,10 @@ export function ConnectedRow({ current, forgettingSsid, onForget }: ConnectedRow
         <span className="inline-flex items-center gap-1.5">
           {current.ssid}
           {current.security === "wpa" && <Lock className="h-3 w-3 text-muted-foreground" />}
+          <Badge className="bg-success text-white">Connected</Badge>
         </span>
       </TableCell>
-      <TableCell>
-        <Badge className="bg-success text-white">Connected</Badge>
-      </TableCell>
+      <TableCell />
       <TableCell className="w-12 text-right">
         <ForgetButton ssid={current.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
       </TableCell>

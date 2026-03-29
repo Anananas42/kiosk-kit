@@ -18,6 +18,7 @@ interface SavedRowProps {
 
 export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle }: SavedRowProps) {
   const [password, setPassword] = useState("");
+  const isOutOfRange = !(network.inRange && network.signal != null);
 
   const connectMutation = useConnectMutation(() => {
     onToggle();
@@ -32,34 +33,34 @@ export function SavedRow({ network, forgettingSsid, onForget, expanded, onToggle
   return (
     <>
       <TableRow
-        className="cursor-pointer hover:bg-secondary"
-        onClick={() => {
-          onToggle();
-          setPassword("");
-        }}
+        className={isOutOfRange ? "opacity-50" : "cursor-pointer hover:bg-secondary"}
+        onClick={
+          isOutOfRange
+            ? undefined
+            : () => {
+                onToggle();
+                setPassword("");
+              }
+        }
       >
         <TableCell className="w-8">
-          {network.inRange && network.signal != null ? (
-            <SignalIcon dBm={network.signal} />
-          ) : (
-            <SignalIcon dBm={-100} offline />
-          )}
+          {isOutOfRange ? <SignalIcon dBm={-100} offline /> : <SignalIcon dBm={network.signal!} />}
         </TableCell>
         <TableCell className="font-medium">
           <span className="inline-flex items-center gap-1.5">
             {network.ssid}
             {network.security === "wpa" && <Lock className="h-3 w-3 text-muted-foreground" />}
+            {isOutOfRange && (
+              <span className="text-xs italic text-muted-foreground">out of range</span>
+            )}
           </span>
-          {!(network.inRange && network.signal != null) && (
-            <span className="ml-2 text-xs italic text-muted-foreground">out of range</span>
-          )}
         </TableCell>
         <TableCell />
         <TableCell className="w-12 text-right">
           <ForgetButton ssid={network.ssid} forgettingSsid={forgettingSsid} onForget={onForget} />
         </TableCell>
       </TableRow>
-      {expanded && (
+      {expanded && !isOutOfRange && (
         <TableRow>
           <TableCell colSpan={4}>
             <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2 py-1">
