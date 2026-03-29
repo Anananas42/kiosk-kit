@@ -15,7 +15,7 @@ export function DeviceList() {
         <ReferenceField source="userId" reference="users" link="show" emptyText="Unassigned">
           <TextField source="name" />
         </ReferenceField>
-        <BooleanField source="hashVerifyEnabled" label="Hash Verify" />
+        <BooleanField source="hashVerifyEnabled" label="Proxy hash verification" />
         <DateField source="createdAt" label="Created" />
       </Datagrid>
     </List>
