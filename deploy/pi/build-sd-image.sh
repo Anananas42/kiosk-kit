@@ -480,7 +480,7 @@ PARTUUID=${partuuid_p2}  /               ext4  defaults,noatime  0  1
 LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  0
 /data/kioskkit        /opt/kioskkit/data   none  bind          0  0
 /data/tailscale       /var/lib/tailscale   none  bind          0  0
-/data/wpa             /etc/wpa_supplicant  none  bind          0  0
+/data/nm              /etc/NetworkManager/system-connections  none  bind  0  0
 /data/kioskkit-config /etc/kioskkit        none  bind          0  0
 /data/journal         /var/log/journal     none  bind          0  0
 tmpfs                 /tmp             tmpfs defaults,nosuid,nodev,size=64M 0 0
@@ -505,7 +505,7 @@ FSTAB
     echo "mkdir-p /data"
     echo "mkdir-p /opt/kioskkit/data"
     echo "mkdir-p /var/lib/tailscale"
-    echo "mkdir-p /etc/wpa_supplicant"
+    echo "mkdir-p /etc/NetworkManager/system-connections"
     echo "mkdir-p /etc/kioskkit"
     echo "mkdir-p /var/log/journal"
     if [[ -n "$virt_kver" ]]; then
@@ -552,9 +552,6 @@ FSTAB
 
     # Patched sshd_config
     echo "upload $sshd_cfg /etc/ssh/sshd_config"
-
-    # Unmask wpa_supplicant for real hardware
-    echo "rm-f /etc/systemd/system/wpa_supplicant@wlan0.service"
 
     # Remove build SSH key
     echo "rm-f /home/pi/.ssh/authorized_keys"
@@ -819,7 +816,6 @@ main() {
     boot_qemu
     provision_base
     verify_base
-    ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
     wait_for_reboot
     shutdown_qemu
     cp "$DISK_IMAGE" "$BASE_IMAGE"
@@ -838,8 +834,6 @@ main() {
     boot_qemu
     provision_base
     verify_base
-    # Mask wpa_supplicant — no wlan0 in QEMU (unmasked in Layer 4 for real hardware)
-    ssh_pi "sudo systemctl mask wpa_supplicant@wlan0.service"
     wait_for_reboot
     shutdown_qemu
     cp "$DISK_IMAGE" "$BASE_IMAGE"

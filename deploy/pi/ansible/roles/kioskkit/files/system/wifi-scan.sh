@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 # Managed by Ansible — do not edit manually.
-# Scans for nearby WiFi networks and outputs JSON.
-# No sudo required.
+# Scans for nearby WiFi networks via NetworkManager and outputs JSON.
 set -euo pipefail
 
-# Trigger a fresh scan (may fail if one is already running — that's fine)
-/sbin/wpa_cli -i wlan0 scan >/dev/null 2>&1 || true
+# Trigger a fresh scan (returns immediately, results populate async)
+nmcli device wifi rescan ifname wlan0 2>/dev/null || true
 sleep 2
 
-RAW=$(/sbin/wpa_cli -i wlan0 scan_results 2>/dev/null) || {
-    echo '{"error": "/sbin/wpa_cli scan_results failed"}'
-    exit 1
-}
-
-# Parse scan results: skip header line, filter empty SSIDs, deduplicate keeping strongest signal
-echo "$RAW" | awk -F'\t' '
+# Parse scan results: SSID, signal (0-100), security
+# Using --terse with \: field separator; NM escapes colons in SSIDs
+nmcli -t -f ssid,signal,security dev wifi list ifname wlan0 2>/dev/null | awk -F: '
 BEGIN { print "[" }
-NR > 1 && $5 != "" {
-    ssid = $5
-    signal = $3 + 0
-    flags = $4
+{
+    # Skip empty SSIDs
+    if ($1 == "") next
+
+    ssid = $1
+    signal_pct = $2 + 0
+    flags = $3
+
+    # Convert NM percentage (0-100) to approximate dBm
+    signal = int((signal_pct / 2) - 100)
 
     # Determine security type
     sec = "open"

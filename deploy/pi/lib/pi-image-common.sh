@@ -216,7 +216,7 @@ patch_image_for_virt() {
 LABEL=kioskkit-data   /data            ext4  defaults,noatime  0  0
 /data/kioskkit        /opt/kioskkit/data   none  bind          0  0
 /data/tailscale       /var/lib/tailscale   none  bind          0  0
-/data/wpa             /etc/wpa_supplicant  none  bind          0  0
+/data/nm              /etc/NetworkManager/system-connections  none  bind  0  0
 /data/kioskkit-config /etc/kioskkit        none  bind          0  0
 /data/journal         /var/log/journal     none  bind          0  0
 FSTAB
@@ -237,7 +237,7 @@ FSTAB
     echo "mkdir-p /data"
     echo "mkdir-p /opt/kioskkit/data"
     echo "mkdir-p /var/lib/tailscale"
-    echo "mkdir-p /etc/wpa_supplicant"
+    echo "mkdir-p /etc/NetworkManager/system-connections"
     echo "mkdir-p /etc/kioskkit"
     echo "mkdir-p /var/log/journal"
     # Must use /usr/lib/modules/ — /lib/ is a symlink on Pi OS.

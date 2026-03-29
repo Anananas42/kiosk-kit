@@ -35,8 +35,11 @@ describe("admin.network.list", () => {
       saved: [{ ssid: "Home" }, { ssid: "OldNetwork" }],
     });
 
-    // isWifiEnabled() and checkEthernet() use promisify(execFile)
-    mockExecFilePromise.mockResolvedValue({ stdout: "1", stderr: "" });
+    // isWifiEnabled() checks nmcli radio wifi → "enabled", checkEthernet() reads carrier → "1"
+    mockExecFilePromise.mockImplementation((_cmd: string, args: string[]) => {
+      if (args?.includes("radio")) return Promise.resolve({ stdout: "enabled\n", stderr: "" });
+      return Promise.resolve({ stdout: "1", stderr: "" });
+    });
 
     // runPrivileged is used for wifi-scan and wifi-status
     mockRunPrivileged.mockImplementation((action: string) => {

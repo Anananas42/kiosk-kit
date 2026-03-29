@@ -19,8 +19,8 @@ function parseJson<T>(stdout: string, label: string): T {
 
 async function isWifiEnabled(): Promise<boolean> {
   try {
-    await execFile("systemctl", ["is-active", "--quiet", "wpa_supplicant@wlan0.service"]);
-    return true;
+    const { stdout } = await execFile("nmcli", ["-t", "-f", "WIFI", "radio"]);
+    return stdout.trim() === "enabled";
   } catch {
     return false;
   }

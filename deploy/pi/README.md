@@ -116,10 +116,10 @@ The full Ansible provisioning playbook runs inside the VM:
 
 | Component | Details |
 |-----------|---------|
-| **OS packages** | Node.js 24, labwc, Chromium, nftables, wpa_supplicant |
+| **OS packages** | Node.js 24, labwc, Chromium, nftables, NetworkManager |
 | **Kiosk user** | Locked system user, autologin on tty1, no SSH password access |
 | **Application** | kiosk-server, kiosk-client, kiosk-admin, shared, ui (other packages excluded) |
-| **Systemd services** | kioskkit.service, nftables, wpa_supplicant |
+| **Systemd services** | kioskkit.service, nftables, NetworkManager |
 | **Security** | nftables firewall (drop-all except Tailscale/DHCP), SSH password auth disabled, USB storage blocked, sysctl hardening |
 | **Display** | labwc compositor, Chromium kiosk mode, hidden cursor |
 | **Watchdog** | bcm2835_wdt configured (activates on real Pi hardware) |
