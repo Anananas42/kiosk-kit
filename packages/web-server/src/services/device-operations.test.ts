@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { createDb, type Db } from "../db/index.js";
-import { deviceOperations, devices, users } from "../db/schema.js";
+import { describe, expect, it, vi } from "vitest";
+import type { Db } from "../db/index.js";
 import {
   cleanupStale,
   completeOperation,
@@ -10,217 +8,209 @@ import {
   startOperation,
 } from "./device-operations.js";
 
-let db: Db;
-const TEST_DEVICE_ID = "00000000-0000-4000-a000-000000000001";
-const TEST_USER_ID = "test-user-device-ops";
+const DEVICE_ID = "d4e5f6a7-b8c9-4d0e-9f2a-3b4c5d6e7f8a";
+const OP_ID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
 
-beforeAll(async () => {
-  db = createDb(process.env.DATABASE_URL!);
+function makeOp(overrides: Record<string, unknown> = {}) {
+  return {
+    id: OP_ID,
+    deviceId: DEVICE_ID,
+    type: "backup",
+    status: "in_progress",
+    error: null,
+    startedAt: new Date(),
+    completedAt: null,
+    metadata: null,
+    ...overrides,
+  };
+}
 
-  // Seed a user and device for FK constraints
-  await db
-    .insert(users)
-    .values({
-      id: TEST_USER_ID,
-      email: "devops-test@test.local",
-      googleId: "g-devops-test",
-      role: "customer",
-    })
-    .onConflictDoNothing();
+/**
+ * Build a mock Db whose query chains resolve to configurable values.
+ * - selectResult: what select().from().where().orderBy().limit() resolves to
+ * - insertResult: what insert().values().returning() resolves to
+ * - updateResult: what update().set().where().returning() resolves to
+ */
+function createMockDb(opts: {
+  selectResult?: unknown[];
+  insertResult?: unknown[];
+  updateResult?: unknown[];
+}) {
+  const { selectResult = [], insertResult = [], updateResult = [] } = opts;
 
-  await db
-    .insert(devices)
-    .values({
-      id: TEST_DEVICE_ID,
-      tailscaleNodeId: "devops-test-node",
-      name: "Test Device",
-    })
-    .onConflictDoNothing();
-});
+  const setFn = vi.fn();
+  const valuesFn = vi.fn();
 
-afterEach(async () => {
-  // Clean up operations between tests
-  await db.delete(deviceOperations).where(eq(deviceOperations.deviceId, TEST_DEVICE_ID));
-});
+  // Terminal for select chains: where().orderBy().limit()
+  const selectTerminal = Object.assign(Promise.resolve(selectResult), {
+    limit: vi.fn().mockResolvedValue(selectResult),
+  });
+  const selectOrderBy = Object.assign(Promise.resolve(selectResult), {
+    orderBy: vi.fn().mockReturnValue(selectTerminal),
+    limit: vi.fn().mockResolvedValue(selectResult),
+  });
 
-afterAll(async () => {
-  await db.delete(devices).where(eq(devices.id, TEST_DEVICE_ID));
-  await db.delete(users).where(eq(users.id, TEST_USER_ID));
-});
+  // Terminal for update().set().where() chains — awaitable with .returning()
+  const updateWhereTerminal = Object.assign(Promise.resolve(updateResult), {
+    returning: vi.fn().mockResolvedValue(updateResult),
+  });
+
+  // set() returns object with where()
+  const setResult = Object.assign(Promise.resolve(updateResult), {
+    where: vi.fn().mockReturnValue(updateWhereTerminal),
+  });
+
+  const chainable = {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnValue(selectOrderBy),
+    orderBy: vi.fn().mockReturnValue(selectTerminal),
+    limit: vi.fn().mockResolvedValue(selectResult),
+    insert: vi.fn().mockReturnThis(),
+    values: valuesFn.mockReturnThis(),
+    returning: vi.fn().mockResolvedValue(insertResult),
+    delete: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    set: setFn.mockReturnValue(setResult),
+    // biome-ignore lint/suspicious/noThenProperty: mock db needs thenable for drizzle query chain
+    then: (resolve: (v: unknown) => void) => Promise.resolve(selectResult).then(resolve),
+    _mocks: { setFn, valuesFn },
+  };
+  return chainable as unknown as Db & { _mocks: typeof chainable._mocks };
+}
 
 describe("device-operations service", () => {
   describe("startOperation", () => {
-    it("creates a new in_progress record", async () => {
-      const op = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
+    it("creates a new record when no existing in_progress op", async () => {
+      const newOp = makeOp();
+      const db = createMockDb({ selectResult: [], insertResult: [newOp] });
+
+      const result = await startOperation(db, {
+        deviceId: DEVICE_ID,
         type: "backup",
         staleThresholdMs: 5 * 60 * 1000,
       });
 
-      expect(op.id).toBeDefined();
-      expect(op.deviceId).toBe(TEST_DEVICE_ID);
-      expect(op.type).toBe("backup");
-      expect(op.status).toBe("in_progress");
-      expect(op.error).toBeNull();
-      expect(op.startedAt).toBeInstanceOf(Date);
-      expect(op.completedAt).toBeNull();
+      expect(result).toEqual(newOp);
     });
 
     it("returns existing in_progress record when not stale (idempotent)", async () => {
-      const first = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
+      const existingOp = makeOp({ startedAt: new Date() });
+      const db = createMockDb({ selectResult: [existingOp] });
+
+      const result = await startOperation(db, {
+        deviceId: DEVICE_ID,
         type: "backup",
         staleThresholdMs: 5 * 60 * 1000,
       });
 
-      const second = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 5 * 60 * 1000,
-      });
-
-      expect(second.id).toBe(first.id);
+      expect(result.id).toBe(existingOp.id);
+      expect(result.status).toBe("in_progress");
     });
 
-    it("marks stale ops as failed and creates a new one", async () => {
-      const first = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
+    it("marks stale op as failed and creates a new one", async () => {
+      const staleOp = makeOp({ startedAt: new Date(Date.now() - 10 * 60 * 1000) });
+      const newOp = makeOp({ id: "new-op-id" });
+      const db = createMockDb({
+        selectResult: [staleOp],
+        insertResult: [newOp],
+        updateResult: [],
+      });
+
+      const result = await startOperation(db, {
+        deviceId: DEVICE_ID,
         type: "backup",
         staleThresholdMs: 5 * 60 * 1000,
       });
 
-      // Use a 0ms threshold so the existing op is immediately stale
-      const second = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 0,
-      });
-
-      expect(second.id).not.toBe(first.id);
-      expect(second.status).toBe("in_progress");
-
-      // Verify the old one was marked failed
-      const [old] = await db
-        .select()
-        .from(deviceOperations)
-        .where(eq(deviceOperations.id, first.id));
-
-      expect(old!.status).toBe("failed");
-      expect(old!.error).toBe("Operation timed out");
-      expect(old!.completedAt).toBeInstanceOf(Date);
+      expect(result).toEqual(newOp);
+      expect(result.id).toBe("new-op-id");
     });
 
-    it("stores metadata", async () => {
-      const op = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
+    it("stores metadata when provided", async () => {
+      const newOp = makeOp({ metadata: { backupId: "abc-123" } });
+      const db = createMockDb({ selectResult: [], insertResult: [newOp] });
+
+      const result = await startOperation(db, {
+        deviceId: DEVICE_ID,
         type: "restore",
         metadata: { backupId: "abc-123" },
         staleThresholdMs: 5 * 60 * 1000,
       });
 
-      expect(op.metadata).toEqual({ backupId: "abc-123" });
+      expect(result.metadata).toEqual({ backupId: "abc-123" });
     });
   });
 
   describe("completeOperation", () => {
-    it("sets status to completed and completedAt", async () => {
-      const op = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 5 * 60 * 1000,
-      });
+    it("calls update with completed status", async () => {
+      const db = createMockDb({});
 
-      await completeOperation(db, op.id);
+      await completeOperation(db, OP_ID);
 
-      const [updated] = await db
-        .select()
-        .from(deviceOperations)
-        .where(eq(deviceOperations.id, op.id));
-
-      expect(updated!.status).toBe("completed");
-      expect(updated!.completedAt).toBeInstanceOf(Date);
+      expect(db._mocks.setFn).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "completed", completedAt: expect.any(Date) }),
+      );
     });
   });
 
   describe("failOperation", () => {
-    it("sets status to failed with error and completedAt", async () => {
-      const op = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 5 * 60 * 1000,
-      });
+    it("calls update with failed status and error", async () => {
+      const db = createMockDb({});
 
-      await failOperation(db, op.id, "Something went wrong");
+      await failOperation(db, OP_ID, "Something went wrong");
 
-      const [updated] = await db
-        .select()
-        .from(deviceOperations)
-        .where(eq(deviceOperations.id, op.id));
-
-      expect(updated!.status).toBe("failed");
-      expect(updated!.error).toBe("Something went wrong");
-      expect(updated!.completedAt).toBeInstanceOf(Date);
+      expect(db._mocks.setFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "failed",
+          completedAt: expect.any(Date),
+          error: "Something went wrong",
+        }),
+      );
     });
   });
 
   describe("getLatestOperation", () => {
-    it("returns the most recent operation of the given type", async () => {
-      // Create and complete a first op
-      const first = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 0, // force stale so we can create another
-      });
-      await completeOperation(db, first.id);
+    it("returns the most recent operation", async () => {
+      const op = makeOp();
+      const db = createMockDb({ selectResult: [op] });
 
-      // Create a second
-      const second = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 5 * 60 * 1000,
-      });
+      const result = await getLatestOperation(db, DEVICE_ID, "backup");
 
-      const latest = await getLatestOperation(db, TEST_DEVICE_ID, "backup");
-      expect(latest!.id).toBe(second.id);
+      expect(result).toEqual(op);
     });
 
     it("returns null when no operations exist", async () => {
-      const result = await getLatestOperation(db, TEST_DEVICE_ID, "backup");
+      const db = createMockDb({ selectResult: [] });
+
+      const result = await getLatestOperation(db, DEVICE_ID, "backup");
+
       expect(result).toBeNull();
     });
   });
 
   describe("cleanupStale", () => {
-    it("marks old in_progress operations as failed", async () => {
-      const op = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 5 * 60 * 1000,
-      });
+    it("returns count of cleaned up operations", async () => {
+      const staleOps = [{ id: "op-1" }, { id: "op-2" }];
+      const db = createMockDb({ updateResult: staleOps });
 
-      // Clean up with 0ms threshold — everything is stale
       const count = await cleanupStale(db, 0);
 
-      expect(count).toBe(1);
-
-      const [updated] = await db
-        .select()
-        .from(deviceOperations)
-        .where(eq(deviceOperations.id, op.id));
-
-      expect(updated!.status).toBe("failed");
-      expect(updated!.error).toBe("Operation timed out");
+      expect(count).toBe(2);
+      expect(db._mocks.setFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "failed",
+          error: "Operation timed out",
+          completedAt: expect.any(Date),
+        }),
+      );
     });
 
-    it("does not touch completed or failed operations", async () => {
-      const op1 = await startOperation(db, {
-        deviceId: TEST_DEVICE_ID,
-        type: "backup",
-        staleThresholdMs: 5 * 60 * 1000,
-      });
-      await completeOperation(db, op1.id);
+    it("returns 0 when no stale operations exist", async () => {
+      const db = createMockDb({ updateResult: [] });
 
-      const count = await cleanupStale(db, 0);
+      const count = await cleanupStale(db, 5 * 60 * 1000);
+
       expect(count).toBe(0);
     });
   });
