@@ -27,8 +27,8 @@ export async function getAccessibleDevice(db: Db, deviceId: string, userId: stri
         await db.update(devices).set({ tailscaleIp: ip }).where(eq(devices.id, device.id));
         return { ...device, tailscaleIp: ip };
       }
-    } catch {
-      // Tailscale API unavailable
+    } catch (err) {
+      console.warn("Failed to fetch Tailscale IP for device %s: %s", device.id, err);
     }
   }
 
