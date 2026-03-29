@@ -46,6 +46,10 @@ Read every changed file in full. Also read neighboring files in the same directo
 
 - **Check that schema changes have corresponding migrations.** If the PR modifies Drizzle schemas (`schema.ts` files), verify that a migration was generated. If there's no migration file, flag it — the CI migration check will fail.
 
+### Data fetching and mutations
+
+- **Extract queries and mutations into dedicated hook files.** Frontend data fetching (queries) and server mutations must not live inline in components. Extract them into a separate hook file named with a `Query` or `Mutation` suffix (e.g., `useDevicesQuery.ts`, `useUpdateDeviceMutation.ts`). The hook itself must also end with `Query` or `Mutation` (e.g., `useDevicesQuery`, `useUpdateDeviceMutation`). This keeps components focused on rendering and makes data logic reusable and testable.
+
 ### Conventions check
 
 - Look at other files in the same package for established patterns (data fetching, state management, component composition, file organization). Flag deviations unless they are clearly intentional improvements.
