@@ -42,6 +42,7 @@ services:
       CI: "true"
       DATABASE_URL: postgresql://kioskkit:kioskkit@postgres:5432/kioskkit
       DOCKER_HOST: tcp://dind:2375
+      CLAUDE_MODEL: claude-opus-4-6
       AGENT_TASK: ${AGENT_TASK:-}
       AGENT_NO_LOOP: ${AGENT_NO_LOOP:-}
     stdin_open: true
