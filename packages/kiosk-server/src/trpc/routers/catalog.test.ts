@@ -11,15 +11,15 @@ const mockCatalog = [
     name: "Drinks",
     preorder: false,
     items: [
-      { id: "10", name: "Coffee", quantity: "1 cup", price: "50", dphRate: "21" },
-      { id: "11", name: "Tea", quantity: "1 cup", price: "30", dphRate: "21" },
+      { id: "10", name: "Coffee", quantity: "1 cup", price: "50", taxRate: "21" },
+      { id: "11", name: "Tea", quantity: "1 cup", price: "30", taxRate: "21" },
     ],
   },
   {
     id: "2",
     name: "Snacks",
     preorder: true,
-    items: [{ id: "20", name: "Cookie", quantity: "1 pc", price: "25", dphRate: "15" }],
+    items: [{ id: "20", name: "Cookie", quantity: "1 pc", price: "25", taxRate: "15" }],
   },
 ];
 

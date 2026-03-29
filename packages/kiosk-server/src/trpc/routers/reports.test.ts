@@ -17,7 +17,7 @@ describe("reports.consumption procedure", () => {
         itemId: "10",
         quantity: "1 cup",
         price: "50",
-        dphRate: "21",
+        taxRate: "21",
       },
       {
         timestamp: "2024-01-01T11:00:00Z",
@@ -28,7 +28,7 @@ describe("reports.consumption procedure", () => {
         itemId: "10",
         quantity: "1 cup",
         price: "50",
-        dphRate: "21",
+        taxRate: "21",
       },
     ];
     const store = { getRecords: () => records } as unknown as Store;
@@ -58,7 +58,7 @@ describe("reports.consumptionV2 procedure", () => {
           itemId: "10",
           category: "Drinks",
           quantity: "1 cup",
-          dphRate: "21",
+          taxRate: "21",
           byBuyer: '{"1":{"count":2,"total":100},"2":{"count":1,"total":50}}',
           totalCount: 3,
           grandTotal: 150,

@@ -74,7 +74,7 @@ describe("Store", () => {
       itemId: "item-1",
       quantity: "",
       price: "",
-      dphRate: "",
+      taxRate: "",
     });
     store.insertRecord({
       id: "r2",
@@ -86,7 +86,7 @@ describe("Store", () => {
       itemId: "item-1",
       quantity: "",
       price: "",
-      dphRate: "",
+      taxRate: "",
     });
     expect(store.getItemBalance(1, "Beer", "item-1")).toBe(3);
   });
@@ -103,7 +103,7 @@ describe("Store", () => {
       itemId: "",
       quantity: "",
       price: "",
-      dphRate: "",
+      taxRate: "",
     });
     store.insertRecord({
       id: "r2",
@@ -115,7 +115,7 @@ describe("Store", () => {
       itemId: "item-1",
       quantity: "",
       price: "",
-      dphRate: "",
+      taxRate: "",
     });
     // Should sum both legacy (itemId='') and new (itemId='item-1')
     expect(store.getItemBalance(1, "Beer", "item-1")).toBe(15);
@@ -133,7 +133,7 @@ describe("Store", () => {
       itemId: "",
       quantity: "",
       price: "",
-      dphRate: "",
+      taxRate: "",
     });
     expect(store.getItemBalance(1, "Beer")).toBe(7);
   });
@@ -215,7 +215,7 @@ describe("Store", () => {
       itemId: "10",
       quantity: "1 cup",
       price: "150",
-      dphRate: "21",
+      taxRate: "21",
     });
     store.insertRecord({
       id: "r2",
@@ -227,7 +227,7 @@ describe("Store", () => {
       itemId: "10",
       quantity: "1 cup",
       price: "100",
-      dphRate: "21",
+      taxRate: "21",
     });
     store.insertRecord({
       id: "r3",
@@ -239,7 +239,7 @@ describe("Store", () => {
       itemId: "10",
       quantity: "1 cup",
       price: "-50",
-      dphRate: "21",
+      taxRate: "21",
     });
 
     const rows = store.getConsumptionSummary("2024-01-01T00:00:00Z", "2024-02-01T00:00:00Z");
@@ -247,7 +247,7 @@ describe("Store", () => {
     const row = rows[0];
     expect(row.itemKey).toBe("10");
     expect(row.item).toBe("Coffee");
-    expect(row.dphRate).toBe("21");
+    expect(row.taxRate).toBe("21");
     expect(row.totalCount).toBe(4); // 3 + 2 - 1
     expect(row.grandTotal).toBe(200); // 150 + 100 - 50
 
@@ -270,7 +270,7 @@ describe("Store", () => {
       itemId: "20",
       quantity: "1ks",
       price: "30",
-      dphRate: "15",
+      taxRate: "15",
     });
     store.insertRecord({
       id: "r2",
@@ -282,7 +282,7 @@ describe("Store", () => {
       itemId: "20",
       quantity: "1ks",
       price: "30",
-      dphRate: "15",
+      taxRate: "15",
     });
 
     const rows = store.getConsumptionSummary("2024-02-01T00:00:00Z");
@@ -290,7 +290,7 @@ describe("Store", () => {
     expect(rows[0].totalCount).toBe(1);
   });
 
-  it("getTotalsByBuyerAndTaxRate groups by buyer and dphRate", () => {
+  it("getTotalsByBuyerAndTaxRate groups by buyer and taxRate", () => {
     store.createBuyer(1, "101");
     store.createBuyer(2, "102");
     store.insertRecord({
@@ -303,7 +303,7 @@ describe("Store", () => {
       itemId: "10",
       quantity: "",
       price: "100",
-      dphRate: "21",
+      taxRate: "21",
     });
     store.insertRecord({
       id: "r2",
@@ -315,7 +315,7 @@ describe("Store", () => {
       itemId: "20",
       quantity: "",
       price: "30",
-      dphRate: "15",
+      taxRate: "15",
     });
     store.insertRecord({
       id: "r3",
@@ -327,7 +327,7 @@ describe("Store", () => {
       itemId: "10",
       quantity: "",
       price: "150",
-      dphRate: "21",
+      taxRate: "21",
     });
 
     const totals = store.getTotalsByBuyerAndTaxRate("2024-01-01T00:00:00Z");

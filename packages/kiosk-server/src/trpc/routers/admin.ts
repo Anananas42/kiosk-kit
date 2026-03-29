@@ -87,7 +87,7 @@ export const adminRouter = router({
         input.name,
         input.quantity,
         input.price,
-        input.dphRate,
+        input.taxRate,
         input.sortOrder,
       );
       return { ok: true, id };
@@ -102,7 +102,7 @@ export const adminRouter = router({
         input.name,
         input.quantity,
         input.price,
-        input.dphRate,
+        input.taxRate,
         input.sortOrder,
       );
       return { ok: true };

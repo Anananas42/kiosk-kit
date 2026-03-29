@@ -62,7 +62,7 @@ export const recordsRouter = router({
           }
         }
 
-        const dphRate = ctx.store.getCatalogItemTaxRate(input.itemId ?? "", input.item);
+        const taxRate = ctx.store.getCatalogItemTaxRate(input.itemId ?? "", input.item);
 
         const entry: RecordEntry = {
           id: randomUUID(),
@@ -74,7 +74,7 @@ export const recordsRouter = router({
           itemId: input.itemId ?? "",
           quantity: input.quantity ?? "",
           price: input.price ?? "",
-          dphRate,
+          taxRate,
         };
 
         ctx.store.insertRecord(entry);

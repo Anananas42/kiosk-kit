@@ -15,7 +15,7 @@ const mockRecords = [
     itemId: "10",
     quantity: "1 cup",
     price: "50",
-    dphRate: "21",
+    taxRate: "21",
   },
 ];
 

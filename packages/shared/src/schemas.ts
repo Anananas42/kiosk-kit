@@ -34,7 +34,7 @@ export const CatalogItemSchema = z.object({
   name: z.string(),
   quantity: z.string(),
   price: z.string(),
-  dphRate: z.string(),
+  taxRate: z.string(),
 });
 
 export const CatalogCategorySchema = z.object({
@@ -140,7 +140,7 @@ export const RecordEntrySchema = z.object({
   itemId: z.string(),
   quantity: z.string(),
   price: z.string(),
-  dphRate: z.string(),
+  taxRate: z.string(),
 });
 
 export type RecordEntry = z.infer<typeof RecordEntrySchema>;
@@ -154,7 +154,7 @@ export const RecordRowSchema = z.object({
   itemId: z.string(),
   quantity: z.string(),
   price: z.string(),
-  dphRate: z.string(),
+  taxRate: z.string(),
 });
 
 export type RecordRow = z.infer<typeof RecordRowSchema>;
@@ -241,7 +241,7 @@ export const AdminItemCreateSchema = z.object({
   name: z.string().trim().min(1, "Invalid name"),
   quantity: z.string().optional().default(""),
   price: z.string().optional().default(""),
-  dphRate: z.string().optional().default(""),
+  taxRate: z.string().optional().default(""),
   sortOrder: z.number().int().optional().default(0),
 });
 
@@ -250,7 +250,7 @@ export const AdminItemUpdateSchema = z.object({
   name: z.string().trim().min(1, "Invalid name"),
   quantity: z.string().optional().default(""),
   price: z.string().optional().default(""),
-  dphRate: z.string().optional().default(""),
+  taxRate: z.string().optional().default(""),
   sortOrder: z.number().int().optional().default(0),
 });
 
@@ -309,7 +309,7 @@ export const ConsumptionSummaryRowSchema = z.object({
   itemId: z.string(),
   category: z.string(),
   quantity: z.string(),
-  dphRate: z.string(),
+  taxRate: z.string(),
   byBuyer: z.record(z.string(), BuyerAggSchema),
   totalCount: z.number(),
   grandTotal: z.number(),
